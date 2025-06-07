@@ -50,6 +50,12 @@ const server = http.createServer(async (req, res) => {
         else if (pathname.startsWith('/images/')) {
             await serveFile(res, `frontend${pathname}`, getImageMimeType(pathname));
         }
+        else if (pathname === '/client/dashboard') {
+            await serveFile(res, 'frontend/pages/dashboard.html', 'text/html');
+        }
+        else if (pathname === '/schedule') {
+            await serveFile(res, 'frontend/pages/schedule.html', 'text/html');
+        }
         else {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('Not Found');

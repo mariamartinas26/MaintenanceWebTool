@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panou Client - Repair Queens</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
 <header>
     <div class="container">
         <div class="logo-container">
-            <img src="../assets/logo.png" alt="Repair Queens Logo" class="logo">
+            <img src="/images/logo.png" alt="Repair Queens Logo" class="logo">
         </div>
         <nav>
             <ul>
@@ -47,6 +47,9 @@
 
                     <div class="appointments-list" id="appointments-container">
                         <!-- Appointments will be loaded here dynamically -->
+                        <div class="empty-message">
+                            <p>Nu ai încă programări. Creează prima ta programare!</p>
+                        </div>
                     </div>
                 </div>
 
@@ -130,6 +133,16 @@
     </div>
 </div>
 
-<script src="../js/dashboard.js"></script>
+<!-- Loading Overlay -->
+<div id="loading" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Message Toast -->
+<div id="message-toast" class="message-toast" style="display: none;">
+    <span id="message-text"></span>
+</div>
+
+<script src="/js/dashboard.js"></script>
 </body>
 </html>
