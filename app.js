@@ -6,6 +6,7 @@ const querystring = require('querystring');
 require('dotenv').config();
 
 const authController = require('./controllers/authController');
+const appointmentsController = require('./controllers/appointmentsController');
 
 const PORT = process.env.PORT || 3000;
 
@@ -28,7 +29,7 @@ const server = http.createServer(async (req, res) => {
     try {
         // API Routes
         if (pathname.startsWith('/api/')) {
-            await handleApiRoutes(req, res, pathname, method);
+            await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
         }
         // Static file routes
         else if (pathname === '/' || pathname === '/homepage') {
@@ -50,12 +51,16 @@ const server = http.createServer(async (req, res) => {
         else if (pathname.startsWith('/images/')) {
             await serveFile(res, `frontend${pathname}`, getImageMimeType(pathname));
         }
-        else if (pathname === '/client/dashboard') {
+        else if (pathname === '/client/dashboard' || pathname === '/dashboard') {
             await serveFile(res, 'frontend/pages/dashboard.html', 'text/html');
         }
         else if (pathname === '/schedule') {
             await serveFile(res, 'frontend/pages/schedule.html', 'text/html');
         }
+        else if (pathname === '/admin/dashboard') {
+            await serveFile(res, 'frontend/pages/admin-dashboard.html', 'text/html');
+        }
+
         else {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
             res.end('Not Found');
@@ -67,7 +72,8 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
-async function handleApiRoutes(req, res, pathname, method) {
+async function handleApiRoutes(req, res, pathname, method, queryParams) {
+    // Auth routes
     if (pathname === '/api/auth/register' && method === 'POST') {
         const body = await getRequestBody(req);
         await authController.register(req, res, body);
@@ -76,10 +82,40 @@ async function handleApiRoutes(req, res, pathname, method) {
         const body = await getRequestBody(req);
         await authController.login(req, res, body);
     }
+
+    // Appointments routes
+    else if (pathname === '/api/appointments' && method === 'GET') {
+        await appointmentsController.getAppointments(req, res);
+    }
+    else if (pathname === '/api/appointments' && method === 'POST') {
+        const body = await getRequestBody(req);
+        await appointmentsController.createAppointment(req, res, body);
+    }
+    else if (pathname.startsWith('/api/appointments/') && method === 'PUT') {
+        const appointmentId = pathname.split('/')[3];
+        const body = await getRequestBody(req);
+        await appointmentsController.updateAppointment(req, res, appointmentId, body);
+    }
+    else if (pathname.startsWith('/api/appointments/') && method === 'DELETE') {
+        const appointmentId = pathname.split('/')[3];
+        await appointmentsController.updateAppointment(req, res, appointmentId, { status: 'cancelled' });
+    }
+
+    // Calendar routes
+    else if (pathname === '/api/calendar/available-slots' && method === 'GET') {
+        await appointmentsController.getAvailableSlots(req, res, queryParams);
+    }
+
+    // Vehicles routes
+    else if (pathname === '/api/vehicles' && method === 'GET') {
+        await appointmentsController.getUserVehicles(req, res);
+    }
+
     else {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'API route not found' }));
     }
+
 }
 
 async function getRequestBody(req) {

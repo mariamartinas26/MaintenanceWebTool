@@ -4,8 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (!token || !user.id) {
-        // Redirect to login if not authenticated
-        window.location.href = '/login';
+        window.location.href = 'login.html';
         return;
     }
 
@@ -14,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadUserInfo();
     loadAppointments();
     setupEventListeners();
-    setMinDate();
 
     function initializeDashboard() {
         console.log('Dashboard initialized for user:', user.first_name);
@@ -28,6 +26,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setupEventListeners() {
+        const closeModal = document.querySelector('.close-modal');
+        const modal = document.getElementById('appointment-modal');
+
+        if (closeModal && modal) {
+            // Event listener pentru butonul X
+            closeModal.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+
+            // Event listener pentru click în afara modal-ului
+            window.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Event listener pentru tasta Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.style.display === 'flex') {
+                    modal.style.display = 'none';
+                }
+            });
+        }
         // Tab switching
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabPanes = document.querySelectorAll('.tab-pane');
@@ -42,235 +63,429 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Update active tab pane
                 tabPanes.forEach(pane => pane.classList.remove('active'));
-                document.getElementById(targetTab).classList.add('active');
+                const targetPane = document.getElementById(targetTab);
+                if (targetPane) {
+                    targetPane.classList.add('active');
+                }
             });
         });
 
         // New appointment button - redirect to schedule page
         const newAppointmentBtn = document.getElementById('new-appointment-btn');
-        newAppointmentBtn.addEventListener('click', function() {
-            window.location.href = '/schedule';
-        });
+        if (newAppointmentBtn) {
+            newAppointmentBtn.addEventListener('click', function() {
+                window.location.href = '/schedule';
+            });
+        }
 
         // Logout button
         const logoutBtn = document.getElementById('logout-btn');
-        logoutBtn.addEventListener('click', logout);
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', logout);
+        }
 
-        // Cancel button
-        const cancelBtn = document.getElementById('cancel-btn');
-        cancelBtn.addEventListener('click', function() {
-            // Switch back to appointments tab
-            document.querySelector('[data-tab="appointments"]').click();
-            clearForm();
-        });
-
-        // Appointment form
-        const appointmentForm = document.getElementById('appointment-form');
-        appointmentForm.addEventListener('submit', handleAppointmentSubmit);
-
-        // File upload handling
-        const fileInput = document.getElementById('attachment');
-        fileInput.addEventListener('change', handleFileUpload);
-
-        // Modal close
-        const closeModal = document.querySelector('.close-modal');
-        const modal = document.getElementById('appointment-modal');
-
-        closeModal.addEventListener('click', function() {
-            modal.style.display = 'none';
-        });
-
-        window.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    }
-
-    function setMinDate() {
-        const dateInput = document.getElementById('appointment-date');
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const minDate = tomorrow.toISOString().split('T')[0];
-        dateInput.setAttribute('min', minDate);
+        // Refresh appointments button
+        const refreshBtn = document.getElementById('refresh-appointments');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', loadAppointments);
+        }
     }
 
     async function loadAppointments() {
         try {
             showLoading(true);
 
-            // This would be an API call to get user's appointments
-            // For now, we'll show a placeholder
             const appointmentsContainer = document.getElementById('appointments-container');
+            if (!appointmentsContainer) {
+                showLoading(false);
+                return;
+            }
 
-            // Simulate API call
-            setTimeout(() => {
+            const response = await fetch('/api/appointments', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.appointments.length === 0) {
+                    appointmentsContainer.innerHTML = `
+                        <div class="empty-message">
+                            <p>Nu ai încă programări. Creează prima ta programare!</p>
+                            <button onclick="window.location.href='/schedule'" class="primary-btn">
+                                Programează acum
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    displayAppointments(data.appointments);
+                }
+            } else {
                 appointmentsContainer.innerHTML = `
-                    <div class="empty-message">
-                        <p>Nu ai încă programări. Creează prima ta programare!</p>
+                    <div class="error-message">
+                        <p>Eroare la încărcarea programărilor: ${data.message}</p>
+                        <button onclick="loadAppointments()" class="secondary-btn">Încearcă din nou</button>
                     </div>
                 `;
-                showLoading(false);
-            }, 1000);
+            }
+
+            showLoading(false);
 
         } catch (error) {
             console.error('Error loading appointments:', error);
-            showMessage('Eroare la încărcarea programărilor', 'error');
+            const appointmentsContainer = document.getElementById('appointments-container');
+            if (appointmentsContainer) {
+                appointmentsContainer.innerHTML = `
+                    <div class="error-message">
+                        <p>Eroare de conexiune. Te rog verifică conexiunea la internet.</p>
+                        <button onclick="loadAppointments()" class="secondary-btn">Încearcă din nou</button>
+                    </div>
+                `;
+            }
             showLoading(false);
         }
     }
 
-    async function handleAppointmentSubmit(e) {
-        e.preventDefault();
+    function displayAppointments(appointments) {
+        window.currentAppointments = appointments;
 
-        const formData = new FormData(e.target);
-        const appointmentData = {
-            serviceType: formData.get('serviceType'),
-            appointmentDate: formData.get('appointmentDate'),
-            appointmentTime: formData.get('appointmentTime'),
-            description: formData.get('description')
+        const appointmentsContainer = document.getElementById('appointments-container');
+        // Sortează programările după dată (cele mai recente primul)
+        appointments.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+
+        appointmentsContainer.innerHTML = appointments.map(appointment => {
+            const appointmentDate = new Date(appointment.date);
+            const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            const statusText = getStatusText(appointment.status);
+            const statusClass = getStatusClass(appointment.status);
+
+            // Calculează dacă programarea poate fi anulată (24h înainte)
+            const appointmentDateTime = new Date(appointment.date + 'T' + appointment.time);
+            const now = new Date();
+            const timeDiff = appointmentDateTime.getTime() - now.getTime();
+            const hoursDiff = timeDiff / (1000 * 3600);
+            const canCancel = appointment.status === 'pending' && hoursDiff >= 24;
+
+            return `
+                <div class="appointment-card" data-appointment-id="${appointment.id}">
+                    <div class="appointment-header">
+                        <div class="appointment-date">
+                            <h3>${formattedDate}</h3>
+                            <p class="appointment-time">${appointment.time}</p>
+                        </div>
+                        <div class="appointment-status ${statusClass}">
+                            ${statusText}
+                        </div>
+                    </div>
+                    <div class="appointment-details">
+                        ${appointment.serviceType ? `
+                            <div class="service-type">
+                                <strong>Serviciu:</strong> ${getServiceTypeText(appointment.serviceType)}
+                            </div>
+                        ` : ''}
+                        <div class="description">
+                            <strong>Descriere:</strong> ${appointment.description}
+                        </div>
+                        ${appointment.adminResponse ? `
+                            <div class="admin-response">
+                                <strong>Răspuns admin:</strong> ${appointment.adminResponse}
+                            </div>
+                        ` : ''}
+                        ${appointment.estimatedPrice ? `
+                            <div class="estimated-price">
+                                <strong>Preț estimat:</strong> ${appointment.estimatedPrice} RON
+                            </div>
+                        ` : ''}
+                        ${appointment.vehicle ? `
+                            <div class="vehicle-info">
+                                <strong>Vehicul:</strong> ${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})
+                            </div>
+                        ` : ''}
+                        <div class="created-at">
+                            <small>Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}</small>
+                        </div>
+                    </div>
+                    <div class="appointment-actions">
+                        ${canCancel ? `
+                            <button class="secondary-btn" onclick="cancelAppointment('${appointment.id}')">
+                                Anulează
+                            </button>
+                        ` : ''}
+                       <button class="primary-btn" onclick="viewAppointmentDetails('${appointment.id}')">
+                            Detalii
+                       </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function getStatusText(status) {
+        const statusMap = {
+            'pending': 'În așteptare',
+            'approved': 'Aprobată',
+            'rejected': 'Respinsă',
+            'completed': 'Finalizată',
+            'cancelled': 'Anulată'
         };
+        return statusMap[status] || status;
+    }
 
-        // Validate form
-        if (!validateAppointmentForm(appointmentData)) {
+    function getStatusClass(status) {
+        return `status-${status}`;
+    }
+
+    function getServiceTypeText(serviceType) {
+        const serviceMap = {
+            'mentenanta': 'Mentenanță Generală',
+            'reparatii': 'Reparații',
+            'diagnoza': 'Diagnoză',
+            'piese': 'Înlocuire Piese',
+            'general': 'Serviciu General'
+        };
+        return serviceMap[serviceType] || serviceType;
+    }
+
+    // Funcții globale pentru butoanele din HTML
+    window.cancelAppointment = async function(appointmentId) {
+        if (!confirm('Ești sigur că vrei să anulezi această programare?')) {
             return;
         }
 
         try {
             showLoading(true);
 
-            // This would be an API call to create appointment
-            // For now, we'll simulate success
-            setTimeout(() => {
-                showMessage('Programarea a fost trimisă cu succes!', 'success');
-                clearForm();
-                // Switch back to appointments tab
-                document.querySelector('[data-tab="appointments"]').click();
-                // Reload appointments
-                loadAppointments();
-                showLoading(false);
-            }, 1500);
+            const response = await fetch(`/api/appointments/${appointmentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: 'cancelled' })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showMessage('Programarea a fost anulată cu succes', 'success');
+                loadAppointments(); // Reîncarcă lista
+            } else {
+                showMessage(data.message || 'Eroare la anularea programării', 'error');
+            }
+
+            showLoading(false);
 
         } catch (error) {
-            console.error('Error creating appointment:', error);
-            showMessage('Eroare la crearea programării', 'error');
+            console.error('Error cancelling appointment:', error);
+            showMessage('Eroare de rețea. Te rog încearcă din nou.', 'error');
             showLoading(false);
         }
-    }
+    };
 
-    function validateAppointmentForm(data) {
-        if (!data.serviceType) {
-            showMessage('Te rog selectează tipul serviciului', 'error');
-            return false;
+    // Înlocuiește funcția viewAppointmentDetails în dashboard.js cu:
+
+    window.viewAppointmentDetails = function(appointmentId) {
+        // Găsește programarea în lista curentă de programări
+        const appointments = window.currentAppointments || []; // Păstrează referința la programări
+        const appointment = appointments.find(apt => apt.id == appointmentId);
+
+        if (!appointment) {
+            alert('Programarea nu a fost găsită');
+            return;
         }
 
-        if (!data.appointmentDate) {
-            showMessage('Te rog selectează data', 'error');
-            return false;
+        // Populează modal-ul cu detaliile programării
+        const modal = document.getElementById('appointment-modal');
+        const detailsContainer = document.getElementById('appointment-details');
+
+        if (!modal || !detailsContainer) {
+            // Fallback la alert dacă modal-ul nu există
+            const details = `
+Detalii Programare:
+
+Data: ${appointment.date}
+Ora: ${appointment.time}
+Serviciu: ${getServiceTypeText(appointment.serviceType)}
+Status: ${getStatusText(appointment.status)}
+Descriere: ${appointment.description}
+${appointment.adminResponse ? '\nRăspuns admin: ' + appointment.adminResponse : ''}
+${appointment.estimatedPrice ? '\nPreț estimat: ' + appointment.estimatedPrice + ' RON' : ''}
+${appointment.vehicle ? '\nVehicul: ' + appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' (' + appointment.vehicle.year + ')' : ''}
+Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
+        `;
+            alert(details);
+            return;
         }
 
-        if (!data.appointmentTime) {
-            showMessage('Te rog selectează ora', 'error');
-            return false;
-        }
-
-        if (!data.description || data.description.trim().length < 10) {
-            showMessage('Descrierea trebuie să conțină cel puțin 10 caractere', 'error');
-            return false;
-        }
-
-        // Check if date is not in the past
-        const selectedDate = new Date(data.appointmentDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (selectedDate <= today) {
-            showMessage('Data programării trebuie să fie în viitor', 'error');
-            return false;
-        }
-
-        return true;
-    }
-
-    function handleFileUpload(e) {
-        const files = Array.from(e.target.files);
-        const fileList = document.getElementById('file-list');
-
-        fileList.innerHTML = '';
-
-        files.forEach((file, index) => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            fileItem.innerHTML = `
-                <span class="file-name">${file.name}</span>
-                <button type="button" class="remove-file" data-index="${index}">&times;</button>
-            `;
-            fileList.appendChild(fileItem);
+        // Formatează data pentru afișare
+        const appointmentDate = new Date(appointment.date);
+        const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
         });
 
-        // Add event listeners for remove buttons
-        fileList.querySelectorAll('.remove-file').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const index = parseInt(this.getAttribute('data-index'));
-                removeFile(index);
-            });
-        });
-    }
+        // Calculează dacă programarea poate fi anulată
+        const appointmentDateTime = new Date(appointment.date + 'T' + appointment.time);
+        const now = new Date();
+        const timeDiff = appointmentDateTime.getTime() - now.getTime();
+        const hoursDiff = timeDiff / (1000 * 3600);
+        const canCancel = appointment.status === 'pending' && hoursDiff >= 1;
 
-    function removeFile(index) {
-        const fileInput = document.getElementById('attachment');
-        const dt = new DataTransfer();
-        const files = Array.from(fileInput.files);
+        // Creează conținutul modal-ului
+        detailsContainer.innerHTML = `
+        <div class="detail-item">
+            <div class="detail-label">Data și Ora:</div>
+            <div class="detail-value">
+                <strong>${formattedDate}</strong> la <strong>${appointment.time}</strong>
+            </div>
+        </div>
 
-        files.forEach((file, i) => {
-            if (i !== index) {
-                dt.items.add(file);
-            }
-        });
+        <div class="detail-item">
+            <div class="detail-label">Status:</div>
+            <div class="detail-value">
+                <span class="appointment-status ${getStatusClass(appointment.status)}">
+                    ${getStatusText(appointment.status)}
+                </span>
+            </div>
+        </div>
 
-        fileInput.files = dt.files;
-        handleFileUpload({ target: fileInput });
-    }
+        <div class="detail-item">
+            <div class="detail-label">Tip Serviciu:</div>
+            <div class="detail-value">${getServiceTypeText(appointment.serviceType)}</div>
+        </div>
 
-    function clearForm() {
-        const form = document.getElementById('appointment-form');
-        form.reset();
-        document.getElementById('file-list').innerHTML = '';
-    }
+        <div class="detail-item">
+            <div class="detail-label">Descrierea Problemei:</div>
+            <div class="detail-value">${appointment.description}</div>
+        </div>
+
+        ${appointment.adminResponse ? `
+            <div class="detail-item">
+                <div class="detail-label">Răspuns Administrator:</div>
+                <div class="detail-value" style="background-color: #e8f5e8; border-left: 4px solid var(--success);">
+                    ${appointment.adminResponse}
+                </div>
+            </div>
+        ` : ''}
+
+        ${appointment.estimatedPrice ? `
+            <div class="detail-item">
+                <div class="detail-label">Preț Estimat:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--success); font-size: 1.2em;">
+                        ${appointment.estimatedPrice} RON
+                    </strong>
+                </div>
+            </div>
+        ` : ''}
+
+        ${appointment.estimatedCompletionTime ? `
+            <div class="detail-item">
+                <div class="detail-label">Data Estimată de Finalizare:</div>
+                <div class="detail-value">
+                    ${new Date(appointment.estimatedCompletionTime).toLocaleDateString('ro-RO')}
+                </div>
+            </div>
+        ` : ''}
+
+        ${appointment.vehicle ? `
+            <div class="detail-item">
+                <div class="detail-label">Vehicul:</div>
+                <div class="detail-value">
+                    <strong>${appointment.vehicle.brand} ${appointment.vehicle.model}</strong> 
+                    (${appointment.vehicle.year}) - ${appointment.vehicle.type}
+                </div>
+            </div>
+        ` : ''}
+
+        <div class="detail-item">
+            <div class="detail-label">Data Creării:</div>
+            <div class="detail-value">
+                ${new Date(appointment.createdAt).toLocaleDateString('ro-RO', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}
+            </div>
+        </div>
+
+        ${canCancel ? `
+            <div class="form-actions" style="margin-top: 20px;">
+                <button class="secondary-btn" onclick="cancelAppointmentFromModal('${appointment.id}')">
+                    Anulează Programarea
+                </button>
+            </div>
+        ` : ''}
+    `;
+
+        // Afișează modal-ul
+        modal.style.display = 'flex';
+    };
+
+// Funcție pentru anularea din modal
+    window.cancelAppointmentFromModal = function(appointmentId) {
+        const modal = document.getElementById('appointment-modal');
+        modal.style.display = 'none';
+
+        // Apelează funcția de anulare existentă
+        cancelAppointment(appointmentId);
+    };
+
+    // Fă funcția loadAppointments globală pentru a putea fi apelată din HTML
+    window.loadAppointments = loadAppointments;
 
     function logout() {
         if (confirm('Ești sigur că vrei să te deconectezi?')) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            window.location.href = '/homepage';
         }
     }
 
     function showLoading(show) {
         const loading = document.getElementById('loading');
-        loading.style.display = show ? 'flex' : 'none';
+        if (loading) {
+            loading.style.display = show ? 'flex' : 'none';
+        }
     }
 
     function showMessage(message, type = 'info') {
         const toast = document.getElementById('message-toast');
         const messageText = document.getElementById('message-text');
 
-        messageText.textContent = message;
-        toast.className = `message-toast ${type}`;
-        toast.style.display = 'block';
+        if (toast && messageText) {
+            messageText.textContent = message;
+            toast.className = `message-toast ${type}`;
+            toast.style.display = 'block';
 
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 4000);
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 4000);
+        } else {
+            // Fallback la alert dacă toast-ul nu există
+            alert(message);
+        }
     }
 
     // Check token validity periodically
     setInterval(function() {
         const currentToken = localStorage.getItem('token');
         if (!currentToken) {
-            window.location.href = '/login';
+            window.location.href = 'login.html';
         }
     }, 60000); // Check every minute
 });

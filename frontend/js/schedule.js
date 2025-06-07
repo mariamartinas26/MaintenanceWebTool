@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     if (!token || !user.id) {
-        window.location.href = '/login';
+        window.location.href = 'login.html';
         return;
     }
 
@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentDate = new Date();
     let selectedDate = null;
     let selectedTimeSlot = null;
+    let userVehicles = [];
 
     // Calendar elements
     const monthYearElement = document.getElementById('monthYear');
@@ -27,20 +28,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const appointmentForm = document.getElementById('appointmentForm');
     const cancelBtn = document.getElementById('cancel-btn');
 
-    // Working hours (9 AM to 5 PM)
-    const workingHours = [
-        '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-        '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-        '15:00', '15:30', '16:00', '16:30', '17:00'
-    ];
-
     // Initialize
     initializeCalendar();
+    loadUserVehicles();
     setupEventListeners();
 
     function initializeCalendar() {
         updateCalendarDisplay();
         hideTimeSlots();
+    }
+
+    async function loadUserVehicles() {
+        try {
+            const response = await fetch('/api/vehicles', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                userVehicles = data.vehicles;
+                populateVehicleSelect();
+            } else {
+                console.error('Error loading vehicles:', data.message);
+            }
+        } catch (error) {
+            console.error('Error loading vehicles:', error);
+        }
+    }
+
+    function populateVehicleSelect() {
+        // Dacă există un select pentru vehicule în modal, îl populează
+        const vehicleSelect = document.getElementById('vehicle-select');
+        if (vehicleSelect && userVehicles.length > 0) {
+            vehicleSelect.innerHTML = '<option value="">Selectează vehiculul (opțional)</option>';
+            userVehicles.forEach(vehicle => {
+                const option = document.createElement('option');
+                option.value = vehicle.id;
+                option.textContent = `${vehicle.brand} ${vehicle.model} (${vehicle.year}) - ${vehicle.vehicle_type}`;
+                vehicleSelect.appendChild(option);
+            });
+        }
     }
 
     function setupEventListeners() {
@@ -62,7 +94,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // File upload handling
         const fileInput = document.getElementById('attachment');
-        fileInput.addEventListener('change', handleFileUpload);
+        if (fileInput) {
+            fileInput.addEventListener('change', handleFileUpload);
+        }
 
         // Close modal on outside click
         window.addEventListener('click', function(e) {
@@ -135,28 +169,58 @@ document.addEventListener('DOMContentLoaded', function() {
         showTimeSlots(date);
     }
 
-    function showTimeSlots(date) {
+    async function showTimeSlots(date) {
         const dateString = formatDate(date);
         document.getElementById('selectedDate').textContent = dateString;
 
         timeSlotSection.style.display = 'block';
-        timeSlotsElement.innerHTML = '';
+        timeSlotsElement.innerHTML = '<p>Se încarcă sloturile disponibile...</p>';
 
-        workingHours.forEach(time => {
-            const slotElement = document.createElement('div');
-            slotElement.className = 'time-slot';
-            slotElement.textContent = time;
+        try {
+            const dateParam = date.toISOString().split('T')[0];
+            const response = await fetch(`/api/calendar/available-slots?date=${dateParam}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
 
-            // Check if slot is available (simplified - in real app, check with server)
-            const isAvailable = Math.random() > 0.3; // 70% chance of being available
+            const data = await response.json();
 
-            if (!isAvailable) {
-                slotElement.classList.add('occupied');
-                slotElement.textContent += ' (Ocupat)';
+            if (data.success) {
+                displayTimeSlots(data.availableSlots);
             } else {
-                slotElement.addEventListener('click', () => selectTimeSlot(time, date));
+                timeSlotsElement.innerHTML = `<p class="error-message">${data.message}</p>`;
             }
 
+        } catch (error) {
+            console.error('Error loading time slots:', error);
+            timeSlotsElement.innerHTML = '<p class="error-message">Eroare la încărcarea sloturilor disponibile</p>';
+        }
+    }
+
+    function displayTimeSlots(availableSlots) {
+        timeSlotsElement.innerHTML = '';
+
+        if (availableSlots.length === 0) {
+            timeSlotsElement.innerHTML = '<p class="no-slots-message">Nu sunt sloturile disponibile pentru această dată</p>';
+            return;
+        }
+
+        availableSlots.forEach(slot => {
+            const slotElement = document.createElement('div');
+            slotElement.className = 'time-slot';
+
+            const startTime = slot.startTime.substring(0, 5); // HH:MM format
+            const endTime = slot.endTime.substring(0, 5);
+
+            slotElement.innerHTML = `
+                <span class="slot-time">${startTime} - ${endTime}</span>
+                <span class="slot-availability">${slot.availableSpots} locuri disponibile</span>
+            `;
+
+            slotElement.addEventListener('click', () => selectTimeSlot(startTime, selectedDate));
             timeSlotsElement.appendChild(slotElement);
         });
     }
@@ -191,7 +255,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeAppointmentModal() {
         modal.style.display = 'none';
         appointmentForm.reset();
-        document.getElementById('file-list').innerHTML = '';
+        const fileList = document.getElementById('file-list');
+        if (fileList) {
+            fileList.innerHTML = '';
+        }
     }
 
     function formatDate(date) {
@@ -209,11 +276,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData(e.target);
         const appointmentData = {
+            date: selectedDate.toISOString().split('T')[0],
+            time: selectedTimeSlot,
             serviceType: formData.get('serviceType'),
-            appointmentDate: formData.get('appointmentDate'),
-            appointmentTime: formData.get('appointmentTime'),
-            slotId: formData.get('slotId'),
-            description: formData.get('description')
+            description: formData.get('description'),
+            vehicleId: formData.get('vehicleId') || null
         };
 
         if (!validateAppointmentForm(appointmentData)) {
@@ -223,23 +290,40 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             showLoading(true);
 
-            // This would be an API call to create appointment
-            // For now, simulate success
-            setTimeout(() => {
+            const response = await fetch('/api/appointments', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(appointmentData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
                 showMessage('Programarea a fost creată cu succes!', 'success');
                 closeAppointmentModal();
 
-                // Redirect back to dashboard after success
+                // Refresh time slots to show updated availability
                 setTimeout(() => {
-                    window.location.href = '/client/dashboard';
+                    showTimeSlots(selectedDate);
+                }, 1000);
+
+                // Redirect to dashboard after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
                 }, 2000);
 
-                showLoading(false);
-            }, 1500);
+            } else {
+                showMessage(data.message || 'Eroare la crearea programării', 'error');
+            }
+
+            showLoading(false);
 
         } catch (error) {
             console.error('Error creating appointment:', error);
-            showMessage('Eroare la crearea programării', 'error');
+            showMessage('Eroare de rețea. Te rog încearcă din nou.', 'error');
             showLoading(false);
         }
     }
@@ -255,12 +339,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
+        if (!data.date || !data.time) {
+            showMessage('Te rog selectează data și ora', 'error');
+            return false;
+        }
+
         return true;
     }
 
     function handleFileUpload(e) {
         const files = Array.from(e.target.files);
         const fileList = document.getElementById('file-list');
+
+        if (!fileList) return;
 
         fileList.innerHTML = '';
 
@@ -285,6 +376,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function removeFile(index) {
         const fileInput = document.getElementById('attachment');
+        if (!fileInput) return;
+
         const dt = new DataTransfer();
         const files = Array.from(fileInput.files);
 
@@ -300,19 +393,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showLoading(show) {
         const loading = document.getElementById('loading');
-        loading.style.display = show ? 'flex' : 'none';
+        if (loading) {
+            loading.style.display = show ? 'flex' : 'none';
+        }
     }
 
     function showMessage(message, type = 'info') {
         const toast = document.getElementById('message-toast');
         const messageText = document.getElementById('message-text');
 
-        messageText.textContent = message;
-        toast.className = `message-toast ${type}`;
-        toast.style.display = 'block';
+        if (toast && messageText) {
+            messageText.textContent = message;
+            toast.className = `message-toast ${type}`;
+            toast.style.display = 'block';
 
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 4000);
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 4000);
+        }
     }
 });
