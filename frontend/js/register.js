@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     closeButton.addEventListener('click', function() {
         window.location.href = '/';
     });
-
+//coment pt push
     registerForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
