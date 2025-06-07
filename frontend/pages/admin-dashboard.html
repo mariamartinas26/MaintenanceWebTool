@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Repair Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/admin-dashboard.css">
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <img src="../assets/logo.png" alt="Repair Queens Logo">
+            <h2>Repair Queens</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li class="active"><a href="#"><span class="icon">📅</span>Programări</a></li>
+                <li><a href="#"><span class="icon">👥</span>Clienți</a></li>
+                <li><a href="#"><span class="icon">🔧</span>Servicii</a></li>
+                <li><a href="#"><span class="icon">📊</span>Rapoarte</a></li>
+                <li><a href="#"><span class="icon">⚙️</span>Setări</a></li>
+            </ul>
+        </nav>
+        <div class="user-info">
+            <div class="user-avatar">A</div>
+            <div class="user-details">
+                <h3 id="admin-name">Admin</h3>
+                <p>Administrator</p>
+            </div>
+            <button id="logout-btn" class="logout-btn">
+                <span class="icon">🚪</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <div class="search-container">
+                <input type="text" placeholder="Caută programări..." id="search-input">
+                <button class="search-btn">🔍</button>
+            </div>
+            <div class="notifications">
+                <span class="notification-icon">🔔</span>
+                <span class="notification-count">3</span>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-header">
+                <h1>Gestionare Programări</h1>
+                <div class="filters">
+                    <select id="status-filter">
+                        <option value="all">Toate</option>
+                        <option value="pending">În așteptare</option>
+                        <option value="approved">Aprobate</option>
+                        <option value="rejected">Respinse</option>
+                    </select>
+                    <select id="date-filter">
+                        <option value="all">Toate datele</option>
+                        <option value="today">Astăzi</option>
+                        <option value="tomorrow">Mâine</option>
+                        <option value="week">Această săptămână</option>
+                        <option value="month">Această lună</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="appointments-section">
+                <div class="appointments-list" id="appointments-container">
+                    <!-- Appointment cards will be loaded here dynamically -->
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- View Appointment Modal -->
+<div class="modal" id="view-appointment-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Detalii Programare</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body" id="appointment-details">
+            <!-- Appointment details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Edit Appointment Modal -->
+<div class="modal" id="edit-appointment-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Gestionează Programarea</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="appointment-form">
+                <input type="hidden" id="appointment-id">
+
+                <div class="form-group">
+                    <label>Status Programare</label>
+                    <div class="status-toggle">
+                        <input type="radio" id="status-pending" name="status" value="pending">
+                        <label for="status-pending" class="status-label pending">În așteptare</label>
+
+                        <input type="radio" id="status-approved" name="status" value="approved">
+                        <label for="status-approved" class="status-label approved">Aprobă</label>
+
+                        <input type="radio" id="status-rejected" name="status" value="rejected">
+                        <label for="status-rejected" class="status-label rejected">Respinge</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="client-name">Client</label>
+                    <input type="text" id="client-name" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="service-type">Tip Serviciu</label>
+                    <input type="text" id="service-type" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="appointment-date">Data și Ora</label>
+                    <input type="text" id="appointment-date" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="client-message">Descrierea Clientului</label>
+                    <textarea id="client-message" readonly rows="2"></textarea>
+                </div>
+
+                <div class="form-group" id="approval-fields">
+                    <h3>Detalii Aprobare</h3>
+                    <div class="sub-form-group">
+                        <label for="estimated-price">Preț Estimativ (RON)</label>
+                        <input type="number" id="estimated-price" min="0" step="1">
+                    </div>
+                    <div class="sub-form-group">
+                        <label for="warranty">Garanție (luni)</label>
+                        <input type="number" id="warranty" min="0" step="1">
+                    </div>
+                </div>
+
+                <div class="form-group" id="rejection-fields">
+                    <h3>Detalii Respingere</h3>
+                    <div class="sub-form-group">
+                        <label for="rejection-reason">Motiv Respingere</label>
+                        <select id="rejection-reason">
+                            <option value="">Selectează un motiv</option>
+                            <option value="parts">Piese indisponibile</option>
+                            <option value="schedule">Program complet</option>
+                            <option value="expertise">În afara experienței noastre</option>
+                            <option value="other">Alt motiv</option>
+                        </select>
+                    </div>
+                    <div class="sub-form-group">
+                        <label for="retry-days">Reîncercați peste (zile)</label>
+                        <input type="number" id="retry-days" min="0" step="1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="admin-message">Mesaj pentru Client</label>
+                    <textarea id="admin-message" rows="4" placeholder="Introduceți mesajul pentru client..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn secondary-btn" id="cancel-edit-btn">Anulează</button>
+                    <button type="submit" class="btn primary-btn">Salvează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="../js/admin-dashboard.js"></script>
+</body>
+</html>

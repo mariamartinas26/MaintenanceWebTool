@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Înregistrare</title>
+    <link rel="stylesheet" href="/css/register.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="register-container">
+    <button class="close-button" id="closeButton">X</button>
+    <img src="/images/logo.png" alt="Logo" class="logo">
+    <h1 class="app-title">Inregistrare Client</h1>
+
+    <form id="registerForm">
+        <div class="form-grid">
+            <input type="text" id="prenume" placeholder="Prenume" required>
+            <input type="text" id="nume" placeholder="Nume" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="tel" id="telefon" placeholder="Telefon (ex: 07xxxxxxxx)" required pattern="^0\d{9}$">
+            <input type="password" id="parola" placeholder="Parolă" required minlength="6">
+        </div>
+        <button type="submit" class="register-button">Înregistrează-te</button>
+        <p id="mesaj"></p>
+    </form>
+</div>
+
+<script src="/js/register.js"></script>
+</body>
+</html>

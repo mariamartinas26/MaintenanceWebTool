@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Repair Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+<div class="login-container">
+    <button class="close-button">X</button>
+
+    <div class="header-login">
+        <h2 class="login-title">Autentificare</h2>
+    </div>
+
+    <form id="loginForm">
+        <div class="input-group">
+            <input type="email" name="Email" id="email" placeholder="Email" required>
+        </div>
+        <div class="input-group">
+            <input type="password" name="Password" id="password" placeholder="Parolă" required>
+        </div>
+        <div class="forgot-password">
+            <a href="#">Ai uitat parola?</a>
+        </div>
+        <button type="submit" class="login-button">Conectare</button>
+    </form>
+
+    <div class="register-link">
+        <p>Nu ai cont? <a href="../register/register.html">Înregistrează-te</a></p>
+    </div>
+
+    <div id="mesaj"></div>
+</div>
+
+<script src="../js/login.js"></script>
+</body>
+</html>

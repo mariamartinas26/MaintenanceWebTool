@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panou Client - Repair Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+<header>
+    <div class="container">
+        <div class="logo-container">
+            <img src="../assets/logo.png" alt="Repair Queens Logo" class="logo">
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#" class="active">Programări</a></li>
+                <li><a href="#">Profil</a></li>
+                <li><a href="#">Istoric</a></li>
+            </ul>
+        </nav>
+        <div class="user-menu">
+            <span class="username">Bună, <span id="user-name">Utilizator</span></span>
+            <button id="logout-btn">Deconectare</button>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="container">
+        <section class="dashboard-header">
+            <h1>Panou de Control</h1>
+            <button id="new-appointment-btn" class="primary-btn">Programare Nouă</button>
+        </section>
+
+        <section class="dashboard-content">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="appointments">Programările Mele</button>
+                <button class="tab-btn" data-tab="new-appointment">Programare Nouă</button>
+            </div>
+
+            <div class="tab-content">
+                <!-- Appointments Tab -->
+                <div id="appointments" class="tab-pane active">
+                    <h2>Programările Tale</h2>
+
+                    <div class="appointments-list" id="appointments-container">
+                        <!-- Appointments will be loaded here dynamically -->
+                    </div>
+                </div>
+
+                <!-- New Appointment Tab -->
+                <div id="new-appointment" class="tab-pane">
+                    <h2>Programare Nouă</h2>
+
+                    <form id="appointment-form">
+                        <div class="form-group">
+                            <label for="service-type">Tip Serviciu</label>
+                            <select id="service-type" name="serviceType" required>
+                                <option value="">Selectează un serviciu</option>
+                                <option value="mentenanta">Mentenanță Generală</option>
+                                <option value="reparatii">Reparații</option>
+                                <option value="diagnoza">Diagnoză</option>
+                                <option value="piese">Înlocuire Piese</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="appointment-date">Data Dorită</label>
+                            <input type="date" id="appointment-date" name="appointmentDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="appointment-time">Ora</label>
+                            <select id="appointment-time" name="appointmentTime" required>
+                                <option value="">Selectează ora</option>
+                                <option value="09:00">09:00</option>
+                                <option value="10:00">10:00</option>
+                                <option value="11:00">11:00</option>
+                                <option value="12:00">12:00</option>
+                                <option value="13:00">13:00</option>
+                                <option value="14:00">14:00</option>
+                                <option value="15:00">15:00</option>
+                                <option value="16:00">16:00</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Descriere Problemă</label>
+                            <textarea id="description" name="description" rows="4" placeholder="Descrie problema sau serviciul dorit..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attachment">Atașamente (Opțional)</label>
+                            <div class="file-upload">
+                                <input type="file" id="attachment" name="attachment" multiple>
+                                <div class="upload-label">
+                                    <span>Trage fișiere aici sau click pentru încărcare</span>
+                                </div>
+                            </div>
+                            <div id="file-list" class="file-list"></div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="secondary-btn" id="cancel-btn">Anulează</button>
+                            <button type="submit" class="primary-btn">Trimite Programarea</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <p>&copy; 2025 Repair Queens. Toate drepturile rezervate.</p>
+    </div>
+</footer>
+
+<!-- Appointment Details Modal -->
+<div id="appointment-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Detalii Programare</h2>
+        <div id="appointment-details">
+            <!-- Appointment details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script src="../js/dashboard.js"></script>
+</body>
+</html>
