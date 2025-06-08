@@ -40,8 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('user', JSON.stringify(data.user));
 
                 showMessage('Login successful! Redirecting...', 'success');
-
+                // mama mea e florareaasa au au au au
                 // Redirect based on user role
+
                 setTimeout(() => {
                     if (data.user.role === 'admin') {
                         window.location.href = '/admin/dashboard';
