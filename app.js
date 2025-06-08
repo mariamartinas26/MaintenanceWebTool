@@ -6,7 +6,10 @@ const querystring = require('querystring');
 require('dotenv').config();
 
 const authController = require('./controllers/authController');
+// Importă noile controllere
 const appointmentsController = require('./controllers/appointmentsController');
+const calendarController = require('./controllers/calendarController');
+const vehicleController = require('./controllers/vehicleController');
 const adminRoutes = require('./routes/adminRoute');
 
 const PORT = process.env.PORT || 3000;
@@ -65,53 +68,98 @@ const server = http.createServer(async (req, res) => {
             res.end('Not Found');
         }
     } catch (error) {
+        console.error('Server error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'Internal server error' }));
     }
 });
 
 async function handleApiRoutes(req, res, pathname, method, queryParams) {
-    // Auth routes
-    if (pathname === '/api/auth/register' && method === 'POST') {
-        const body = await getRequestBody(req);
-        await authController.register(req, res, body);
-    }
-    else if (pathname === '/api/auth/login' && method === 'POST') {
-        const body = await getRequestBody(req);
-        await authController.login(req, res, body);
-    }
+    try {
+        // Auth routes
+        if (pathname === '/api/auth/register' && method === 'POST') {
+            const body = await getRequestBody(req);
+            await authController.register(req, res, body);
+        }
+        else if (pathname === '/api/auth/login' && method === 'POST') {
+            const body = await getRequestBody(req);
+            await authController.login(req, res, body);
+        }
 
-    // Appointments routes (client)
-    else if (pathname === '/api/appointments' && method === 'GET') {
-        await appointmentsController.getAppointments(req, res);
-    }
-    else if (pathname === '/api/appointments' && method === 'POST') {
-        const body = await getRequestBody(req);
-        await appointmentsController.createAppointment(req, res, body);
-    }
-    else if (pathname.startsWith('/api/appointments/') && method === 'PUT') {
-        const appointmentId = pathname.split('/')[3];
-        const body = await getRequestBody(req);
-        await appointmentsController.updateAppointment(req, res, appointmentId, body);
-    }
-    else if (pathname.startsWith('/api/appointments/') && method === 'DELETE') {
-        const appointmentId = pathname.split('/')[3];
-        await appointmentsController.updateAppointment(req, res, appointmentId, { status: 'cancelled' });
-    }
+        // Appointments routes (client)
+        else if (pathname === '/api/appointments' && method === 'GET') {
+            await appointmentsController.getAppointments(req, res)
+        }
+        else if (pathname === '/api/appointments' && method === 'POST') {
 
-    // Calendar routes
-    else if (pathname === '/api/calendar/available-slots' && method === 'GET') {
-        await appointmentsController.getAvailableSlots(req, res, queryParams);
-    }
+            const body = await getRequestBody(req);
+            await appointmentsController.createAppointment(req, res, body);
+        }
+        else if (pathname.startsWith('/api/appointments/') && method === 'PUT') {
+            const appointmentId = pathname.split('/')[3];
+            const body = await getRequestBody(req);
+            await appointmentsController.updateAppointment(req, res, appointmentId, body);
+        }
+        else if (pathname.startsWith('/api/appointments/') && method === 'DELETE') {
+            const appointmentId = pathname.split('/')[3];
+            await appointmentsController.updateAppointment(req, res, appointmentId, { status: 'cancelled' });
+        }
 
-    // Vehicles routes
-    else if (pathname === '/api/vehicles' && method === 'GET') {
-        await appointmentsController.getUserVehicles(req, res);
-    }
+        // Calendar routes
+        else if (pathname === '/api/calendar/available-slots' && method === 'GET') {
+            await calendarController.getAvailableSlots(req, res, queryParams);
+        }
+        else if (pathname.startsWith('/api/calendar/week/') && method === 'GET') {
+            const startDate = pathname.split('/')[4];
+            await calendarController.getWeeklySchedule(req, res, startDate);
+        }
+        else if (pathname === '/api/calendar/slot-availability' && method === 'GET') {
+            await calendarController.checkSlotAvailability(req, res, queryParams);
+        }
 
-    else {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, message: 'API route not found' }));
+        // Vehicles routes
+        else if (pathname === '/api/vehicles' && method === 'GET') {
+            await vehicleController.getUserVehicles(req, res);
+        }
+        else if (pathname === '/api/vehicles' && method === 'POST') {
+            const body = await getRequestBody(req);
+            await vehicleController.createVehicle(req, res, body);
+        }
+        else if (pathname.startsWith('/api/vehicles/') && method === 'PUT') {
+            const vehicleId = pathname.split('/')[3];
+            if (vehicleId === 'stats') {
+                await vehicleController.getUserVehicleStats(req, res);
+            } else {
+                const body = await getRequestBody(req);
+                await vehicleController.updateVehicle(req, res, vehicleId, body);
+            }
+        }
+        else if (pathname.startsWith('/api/vehicles/') && method === 'DELETE') {
+            const vehicleId = pathname.split('/')[3];
+            await vehicleController.deleteVehicle(req, res, vehicleId);
+        }
+        else if (pathname.startsWith('/api/vehicles/') && method === 'GET') {
+            const vehicleId = pathname.split('/')[3];
+            if (vehicleId === 'stats') {
+                await vehicleController.getUserVehicleStats(req, res);
+            } else {
+                await vehicleController.getVehicleById(req, res, vehicleId);
+            }
+        }
+
+        else {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, message: 'API route not found' }));
+        }
+
+    } catch (error) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: 'Internal server error in API route',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }));
     }
 }
 
@@ -138,6 +186,7 @@ async function serveFile(res, filePath, contentType) {
         res.writeHead(200, { 'Content-Type': contentType });
         res.end(data);
     } catch (error) {
+        console.error('File serve error:', error);
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('File not found');
     }
@@ -159,5 +208,4 @@ function getImageMimeType(pathname) {
 
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-
 });

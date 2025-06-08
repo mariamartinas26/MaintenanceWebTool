@@ -1,113 +1,264 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panou Client - Repair Queens</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Client Dashboard - Repair Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
-<header>
+<header class="main-header">
     <div class="container">
-        <div class="logo-container">
-            <img src="/images/logo.png" alt="Repair Queens Logo" class="logo">
-        </div>
-        <nav>
-            <ul>
-                <li><a href="#" class="active">Programări</a></li>
-                <li><a href="#">Profil</a></li>
-                <li><a href="#">Istoric</a></li>
-            </ul>
-        </nav>
-        <div class="user-menu">
-            <span class="username">Bună, <span id="user-name">Utilizator</span></span>
-            <button id="logout-btn">Deconectare</button>
+        <div class="header-content">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <div class="logo-container">
+                    <img src="/images/logo.png" alt="Repair Queens Logo" class="logo">
+                </div>
+                <div class="brand-info">
+                    <h1 class="brand-name">Repair Queens</h1>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="main-nav">
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active" data-tab="appointments">
+                            <span class="nav-text">My Appointments</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <span class="nav-text">Profile</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" id="contact-btn">
+                            <span class="nav-text">Contact</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- User Menu -->
+            <div class="user-menu">
+                <div class="user-info">
+                    <div class="user-details">
+                        <span class="user-greeting">Welcome back,</span>
+                        <span class="user-name" id="user-name">User</span>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="action-btn logout-btn" id="logout-btn" title="Logout">
+                        <span class="btn-text">Logout</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
         </div>
     </div>
 </header>
 
+<!-- Mobile Navigation Overlay -->
+<div class="mobile-nav-overlay" id="mobile-nav-overlay">
+    <div class="mobile-nav-content">
+        <div class="mobile-nav-header">
+            <h3>Menu</h3>
+            <button class="mobile-nav-close" id="mobile-nav-close">×</button>
+        </div>
+        <nav class="mobile-nav">
+            <ul class="mobile-nav-list">
+                <li><a href="#" class="mobile-nav-link active" data-tab="appointments">My Appointments</a></li>
+                <li><a href="#" class="mobile-nav-link" data-tab="new-appointment">New Appointment</a></li>
+                <li><a href="#" class="mobile-nav-link">Profile</a></li>
+                <li><a href="#" class="mobile-nav-link">History</a></li>
+                <li><a href="#" class="mobile-nav-link" id="mobile-contact-btn">Contact</a></li>
+            </ul>
+            <div class="mobile-user-actions">
+                <button class="mobile-action-btn" id="mobile-logout-btn">Logout</button>
+            </div>
+        </nav>
+    </div>
+</div>
+
 <main>
     <div class="container">
         <section class="dashboard-header">
-            <h1>Panou de Control</h1>
-            <button id="new-appointment-btn" class="primary-btn">Programare Nouă</button>
+            <div class="dashboard-title">
+                <h2>Dashboard</h2>
+                <p class="dashboard-subtitle">Manage your vehicle service appointments</p>
+            </div>
+            <button id="new-appointment-btn" class="primary-btn">
+                <span class="btn-text">New Appointment</span>
+            </button>
         </section>
 
         <section class="dashboard-content">
             <div class="tabs">
-                <button class="tab-btn active" data-tab="appointments">Programările Mele</button>
-                <button class="tab-btn" data-tab="new-appointment">Programare Nouă</button>
+                <button class="tab-btn active" data-tab="appointments">
+                    <span class="tab-text">My Appointments</span>
+                </button>
+                <button class="tab-btn" data-tab="new-appointment">
+                    <span class="tab-text">New Appointment</span>
+                </button>
             </div>
 
             <div class="tab-content">
                 <!-- Appointments Tab -->
                 <div id="appointments" class="tab-pane active">
-                    <h2>Programările Tale</h2>
+                    <div class="section-header">
+                        <h3>Your Appointments</h3>
+                        <p class="section-description">View and manage all your service appointments</p>
+                    </div>
 
                     <div class="appointments-list" id="appointments-container">
-                        <!-- Appointments will be loaded here dynamically -->
                         <div class="empty-message">
-                            <p>Nu ai încă programări. Creează prima ta programare!</p>
+                            <div class="empty-icon">Calendar</div>
+                            <h4>No Appointments Yet</h4>
+                            <p>You don't have any appointments scheduled. Create your first appointment to get started!</p>
+                            <button onclick="document.querySelector('[data-tab=\"new-appointment\"]').click()" class="primary-btn">
+                            <span class="btn-text">Schedule Now</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- New Appointment Tab -->
                 <div id="new-appointment" class="tab-pane">
-                    <h2>Programare Nouă</h2>
+                    <div class="section-header">
+                        <h3>Book New Appointment</h3>
+                        <p class="section-description">Schedule a service appointment for your vehicle</p>
+                    </div>
 
                     <form id="appointment-form">
-                        <div class="form-group">
-                            <label for="service-type">Tip Serviciu</label>
-                            <select id="service-type" name="serviceType" required>
-                                <option value="">Selectează un serviciu</option>
-                                <option value="mentenanta">Mentenanță Generală</option>
-                                <option value="reparatii">Reparații</option>
-                                <option value="diagnoza">Diagnoză</option>
-                                <option value="piese">Înlocuire Piese</option>
-                            </select>
-                        </div>
+                        <!-- Vehicle Section -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                <h4>Vehicle Information</h4>
+                                <p>Select your vehicle or add a new one</p>
+                            </div>
 
-                        <div class="form-group">
-                            <label for="appointment-date">Data Dorită</label>
-                            <input type="date" id="appointment-date" name="appointmentDate" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="appointment-time">Ora</label>
-                            <select id="appointment-time" name="appointmentTime" required>
-                                <option value="">Selectează ora</option>
-                                <option value="09:00">09:00</option>
-                                <option value="10:00">10:00</option>
-                                <option value="11:00">11:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="13:00">13:00</option>
-                                <option value="14:00">14:00</option>
-                                <option value="15:00">15:00</option>
-                                <option value="16:00">16:00</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="description">Descriere Problemă</label>
-                            <textarea id="description" name="description" rows="4" placeholder="Descrie problema sau serviciul dorit..." required></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="attachment">Atașamente (Opțional)</label>
-                            <div class="file-upload">
-                                <input type="file" id="attachment" name="attachment" multiple>
-                                <div class="upload-label">
-                                    <span>Trage fișiere aici sau click pentru încărcare</span>
+                            <div class="vehicle-selection">
+                                <div class="form-group">
+                                    <label for="existing-vehicle">Choose existing vehicle:</label>
+                                    <select id="existing-vehicle" name="vehicleId">
+                                        <option value="">Select vehicle or add a new one</option>
+                                    </select>
                                 </div>
                             </div>
-                            <div id="file-list" class="file-list"></div>
+
+                            <div class="or-divider">
+                                <span>OR</span>
+                            </div>
+
+                            <div class="new-vehicle-section" id="new-vehicle-section">
+                                <h5>Add New Vehicle</h5>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="vehicle-type">Vehicle Type *</label>
+                                        <select id="vehicle-type" name="vehicle_type">
+                                            <option value="">Select type</option>
+                                            <option value="motocicleta">Motorcycle</option>
+                                            <option value="bicicleta">Bicycle</option>
+                                            <option value="trotineta">Scooter</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="is-electric" class="checkbox-label">
+                                            <input type="checkbox" id="is-electric" name="is_electric">
+                                            <span class="checkbox-custom"></span>
+                                            Electric Vehicle
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="brand">Brand *</label>
+                                        <input type="text" id="brand" name="brand" maxlength="100"
+                                               placeholder="Ex: Honda, Trek, Xiaomi">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="model">Model *</label>
+                                        <input type="text" id="model" name="model" maxlength="100"
+                                               placeholder="Ex: CBR600, X-Caliber, Pro 2">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="year">Manufacturing Year *</label>
+                                    <input type="number" id="year" name="year" min="1900" max="2026"
+                                           placeholder="Ex: 2020">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="vehicle-notes">Vehicle notes (optional)</label>
+                                    <textarea id="vehicle-notes" name="notes" rows="2"
+                                              placeholder="Additional information about vehicle (color, license plate, modifications, etc.)"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Appointment Section -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                <h4>Appointment Details</h4>
+                                <p>When and what type of service do you need?</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="service-type">Service Type</label>
+                                <select id="service-type" name="serviceType" required>
+                                    <option value="">Select a service</option>
+                                    <option value="mentenanta">General Maintenance</option>
+                                    <option value="reparatii">Repairs</option>
+                                    <option value="diagnoza">Diagnosis</option>
+                                    <option value="piese">Parts Replacement</option>
+                                    <option value="general">General Service</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="appointment-date">Preferred Date *</label>
+                                    <input type="date" id="appointment-date" name="date" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="appointment-time">Preferred Time *</label>
+                                    <select id="appointment-time" name="time" required>
+                                        <option value="">Select date first</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="description">Problem Description *</label>
+                                <textarea id="description" name="description" rows="4" required
+                                          placeholder="Describe the problem or service you need (minimum 10 characters)"></textarea>
+                                <small class="char-counter">0/10 minimum characters</small>
+                            </div>
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" class="secondary-btn" id="cancel-btn">Anulează</button>
-                            <button type="submit" class="primary-btn">Trimite Programarea</button>
+                            <button type="button" class="secondary-btn" id="cancel-btn">
+                                <span class="btn-text">Cancel</span>
+                            </button>
+                            <button type="submit" class="primary-btn">
+                                <span class="btn-text">Book Appointment</span>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -116,17 +267,55 @@
     </div>
 </main>
 
-<footer>
-    <div class="container">
-        <p>&copy; 2025 Repair Queens. Toate drepturile rezervate.</p>
+<!-- Contact Modal -->
+<div id="contact-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Contact Information</h3>
+            <span class="close-modal" id="close-contact-modal">&times;</span>
+        </div>
+        <div class="contact-info">
+            <div class="contact-item">
+                <div class="contact-icon">Address:</div>
+                <div class="contact-details">
+                    <h4>Address</h4>
+                    <p>123 Repair Street, Service City, SC 12345</p>
+                </div>
+            </div>
+            <div class="contact-item">
+                <div class="contact-icon">Phone:</div>
+                <div class="contact-details">
+                    <h4>Phone</h4>
+                    <p>+1 (555) 123-4567</p>
+                </div>
+            </div>
+            <div class="contact-item">
+                <div class="contact-icon">Email:</div>
+                <div class="contact-details">
+                    <h4>Email</h4>
+                    <p>support@repairqueens.com</p>
+                </div>
+            </div>
+            <div class="contact-item">
+                <div class="contact-icon">Hours:</div>
+                <div class="contact-details">
+                    <h4>Business Hours</h4>
+                    <p>Monday - Friday: 8:00 AM - 6:00 PM<br>
+                        Saturday: 9:00 AM - 4:00 PM<br>
+                        Sunday: Closed</p>
+                </div>
+            </div>
+        </div>
     </div>
-</footer>
+</div>
 
 <!-- Appointment Details Modal -->
 <div id="appointment-modal" class="modal">
     <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Detalii Programare</h2>
+        <div class="modal-header">
+            <h3>Appointment Details</h3>
+            <span class="close-modal">&times;</span>
+        </div>
         <div id="appointment-details">
             <!-- Appointment details will be loaded here -->
         </div>
@@ -136,6 +325,7 @@
 <!-- Loading Overlay -->
 <div id="loading" class="loading-overlay" style="display: none;">
     <div class="loading-spinner"></div>
+    <p class="loading-text">Processing...</p>
 </div>
 
 <!-- Message Toast -->

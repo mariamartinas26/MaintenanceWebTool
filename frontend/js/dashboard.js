@@ -12,10 +12,20 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDashboard();
     loadUserInfo();
     loadAppointments();
+    loadUserVehicles();
     setupEventListeners();
+    setupFormHandlers();
+    setupMobileMenu();
 
     function initializeDashboard() {
         console.log('Dashboard initialized for user:', user.first_name);
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('appointment-date');
+        if (dateInput) {
+            dateInput.min = today;
+        }
     }
 
     function loadUserInfo() {
@@ -25,69 +35,465 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function setupEventListeners() {
-        const closeModal = document.querySelector('.close-modal');
-        const modal = document.getElementById('appointment-modal');
-
-        if (closeModal && modal) {
-            // Event listener pentru butonul X
-            closeModal.addEventListener('click', function() {
-                modal.style.display = 'none';
-            });
-
-            // Event listener pentru click în afara modal-ului
-            window.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
+    async function loadUserVehicles() {
+        try {
+            const response = await fetch('/api/vehicles', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
-            // Event listener pentru tasta Escape
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modal.style.display === 'flex') {
-                    modal.style.display = 'none';
+            const data = await response.json();
+
+            if (data.success) {
+                populateVehicleSelect(data.vehicles);
+            } else {
+                console.error('Error loading vehicles:', data.message);
+            }
+
+        } catch (error) {
+            console.error('Error loading vehicles:', error);
+        }
+    }
+
+    function populateVehicleSelect(vehicles) {
+        const select = document.getElementById('existing-vehicle');
+        if (!select) return;
+
+        // Clear existing options except the first one
+        select.innerHTML = '<option value="">Select vehicle or add a new one</option>';
+
+        vehicles.forEach(vehicle => {
+            const option = document.createElement('option');
+            option.value = vehicle.id;
+            option.textContent = `${vehicle.brand} ${vehicle.model} (${vehicle.year}) - ${vehicle.vehicle_type}${vehicle.is_electric ? ' Electric' : ''}`;
+            select.appendChild(option);
+        });
+    }
+
+    function setupMobileMenu() {
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
+        const mobileNavClose = document.getElementById('mobile-nav-close');
+
+        if (mobileMenuToggle && mobileNavOverlay) {
+            mobileMenuToggle.addEventListener('click', function() {
+                mobileNavOverlay.style.display = 'block';
+            });
+        }
+
+        if (mobileNavClose && mobileNavOverlay) {
+            mobileNavClose.addEventListener('click', function() {
+                mobileNavOverlay.style.display = 'none';
+            });
+        }
+
+        if (mobileNavOverlay) {
+            mobileNavOverlay.addEventListener('click', function(e) {
+                if (e.target === mobileNavOverlay) {
+                    mobileNavOverlay.style.display = 'none';
                 }
             });
         }
-        // Tab switching
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabPanes = document.querySelectorAll('.tab-pane');
 
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
+        // Mobile nav links
+        const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+        mobileNavLinks.forEach(link => {
+            link.addEventListener('click', function() {
                 const targetTab = this.getAttribute('data-tab');
+                if (targetTab) {
+                    // Update active states for mobile nav
+                    mobileNavLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
 
-                // Update active tab button
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
+                    // Switch tab
+                    switchTab(targetTab);
 
-                // Update active tab pane
-                tabPanes.forEach(pane => pane.classList.remove('active'));
-                const targetPane = document.getElementById(targetTab);
-                if (targetPane) {
-                    targetPane.classList.add('active');
+                    // Close mobile menu
+                    mobileNavOverlay.style.display = 'none';
                 }
             });
         });
 
-        // New appointment button - redirect to schedule page
-        const newAppointmentBtn = document.getElementById('new-appointment-btn');
-        if (newAppointmentBtn) {
-            newAppointmentBtn.addEventListener('click', function() {
-                window.location.href = '/schedule';
+        // Mobile logout button
+        const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+        if (mobileLogoutBtn) {
+            mobileLogoutBtn.addEventListener('click', logout);
+        }
+
+        // Mobile contact button
+        const mobileContactBtn = document.getElementById('mobile-contact-btn');
+        if (mobileContactBtn) {
+            mobileContactBtn.addEventListener('click', function() {
+                showContactModal();
+                mobileNavOverlay.style.display = 'none';
+            });
+        }
+    }
+
+    function setupEventListeners() {
+        // Contact modal
+        const contactBtn = document.getElementById('contact-btn');
+        const contactModal = document.getElementById('contact-modal');
+        const closeContactModal = document.getElementById('close-contact-modal');
+
+        if (contactBtn) {
+            contactBtn.addEventListener('click', showContactModal);
+        }
+
+        if (closeContactModal && contactModal) {
+            closeContactModal.addEventListener('click', function() {
+                contactModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', function(e) {
+                if (e.target === contactModal) {
+                    contactModal.style.display = 'none';
+                }
             });
         }
 
-        // Logout button
+        // Appointment modal
+        const appointmentModal = document.getElementById('appointment-modal');
+        const closeAppointmentModal = appointmentModal?.querySelector('.close-modal');
+
+        if (closeAppointmentModal && appointmentModal) {
+            closeAppointmentModal.addEventListener('click', function() {
+                appointmentModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', function(e) {
+                if (e.target === appointmentModal) {
+                    appointmentModal.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (appointmentModal.style.display === 'flex') {
+                        appointmentModal.style.display = 'none';
+                    }
+                    if (contactModal && contactModal.style.display === 'flex') {
+                        contactModal.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Navigation tab switching
+        const navLinks = document.querySelectorAll('.nav-link[data-tab]');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetTab = this.getAttribute('data-tab');
+
+                // Update active states for main nav
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+
+                switchTab(targetTab);
+            });
+        });
+
+        // Tab buttons
+        const tabButtons = document.querySelectorAll('.tab-btn[data-tab]');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                switchTab(targetTab);
+            });
+        });
+
+        // New appointment button
+        const newAppointmentBtn = document.getElementById('new-appointment-btn');
+        if (newAppointmentBtn) {
+            newAppointmentBtn.addEventListener('click', function() {
+                switchTab('new-appointment');
+            });
+        }
+
+        // Logout buttons
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', logout);
         }
 
-        // Refresh appointments button
-        const refreshBtn = document.getElementById('refresh-appointments');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', loadAppointments);
+        // Cancel button
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to cancel? All entered data will be lost.')) {
+                    resetForm();
+                    switchTab('appointments');
+                }
+            });
+        }
+    }
+
+    function switchTab(targetTab) {
+        // Update tab buttons
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        const targetTabBtn = document.querySelector(`[data-tab="${targetTab}"].tab-btn`);
+        if (targetTabBtn) {
+            targetTabBtn.classList.add('active');
+        }
+
+        // Update nav links
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => link.classList.remove('active'));
+        const targetNavLink = document.querySelector(`[data-tab="${targetTab}"].nav-link`);
+        if (targetNavLink) {
+            targetNavLink.classList.add('active');
+        }
+
+        // Switch tab panes
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        tabPanes.forEach(pane => pane.classList.remove('active'));
+        const targetPane = document.getElementById(targetTab);
+        if (targetPane) {
+            targetPane.classList.add('active');
+        }
+    }
+
+    function showContactModal() {
+        const contactModal = document.getElementById('contact-modal');
+        if (contactModal) {
+            contactModal.style.display = 'flex';
+        }
+    }
+
+    function setupFormHandlers() {
+        // Date change handler - load available slots
+        const dateInput = document.getElementById('appointment-date');
+        if (dateInput) {
+            dateInput.addEventListener('change', loadAvailableSlots);
+        }
+
+        // Existing vehicle selection handler
+        const existingVehicleSelect = document.getElementById('existing-vehicle');
+        if (existingVehicleSelect) {
+            existingVehicleSelect.addEventListener('change', function() {
+                const newVehicleSection = document.getElementById('new-vehicle-section');
+                if (this.value) {
+                    // Hide new vehicle form and clear its values
+                    if (newVehicleSection) {
+                        newVehicleSection.style.display = 'none';
+                    }
+                    clearNewVehicleForm();
+                } else {
+                    // Show new vehicle form
+                    if (newVehicleSection) {
+                        newVehicleSection.style.display = 'block';
+                    }
+                }
+            });
+        }
+
+        // Description character counter
+        const descriptionTextarea = document.getElementById('description');
+        const charCounter = document.querySelector('.char-counter');
+        if (descriptionTextarea && charCounter) {
+            descriptionTextarea.addEventListener('input', function() {
+                const length = this.value.length;
+                charCounter.textContent = `${length}/10 minimum characters`;
+
+                if (length >= 10) {
+                    charCounter.classList.add('valid');
+                    charCounter.classList.remove('invalid');
+                } else {
+                    charCounter.classList.add('invalid');
+                    charCounter.classList.remove('valid');
+                }
+            });
+        }
+
+        // Form submission
+        const appointmentForm = document.getElementById('appointment-form');
+        if (appointmentForm) {
+            appointmentForm.addEventListener('submit', handleFormSubmission);
+        }
+    }
+
+    async function loadAvailableSlots() {
+        const dateInput = document.getElementById('appointment-date');
+        const timeSelect = document.getElementById('appointment-time');
+
+        if (!dateInput || !timeSelect || !dateInput.value) return;
+
+        try {
+            timeSelect.innerHTML = '<option value="">Loading...</option>';
+
+            const response = await fetch(`/api/calendar/available-slots?date=${dateInput.value}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                timeSelect.innerHTML = '<option value="">Select time</option>';
+
+                if (data.availableSlots.length === 0) {
+                    timeSelect.innerHTML = '<option value="">No slots available</option>';
+                    if (data.message) {
+                        showMessage(data.message, 'warning');
+                    }
+                } else {
+                    data.availableSlots.forEach(slot => {
+                        const option = document.createElement('option');
+                        option.value = slot.startTime;
+                        option.textContent = `${slot.startTime} (${slot.availableSpots} slots available)`;
+                        timeSelect.appendChild(option);
+                    });
+                }
+            } else {
+                timeSelect.innerHTML = '<option value="">Error loading</option>';
+                showMessage(data.message || 'Error loading slots', 'error');
+            }
+
+        } catch (error) {
+            console.error('Error loading available slots:', error);
+            timeSelect.innerHTML = '<option value="">Error loading</option>';
+            showMessage('Error loading available slots', 'error');
+        }
+    }
+
+    function clearNewVehicleForm() {
+        const fields = ['vehicle-type', 'brand', 'model', 'year', 'vehicle-notes'];
+        fields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) field.value = '';
+        });
+
+        const isElectricCheckbox = document.getElementById('is-electric');
+        if (isElectricCheckbox) isElectricCheckbox.checked = false;
+    }
+
+    function resetForm() {
+        const form = document.getElementById('appointment-form');
+        if (form) {
+            form.reset();
+            clearNewVehicleForm();
+
+            const timeSelect = document.getElementById('appointment-time');
+            if (timeSelect) {
+                timeSelect.innerHTML = '<option value="">Select date first</option>';
+            }
+
+            const newVehicleSection = document.getElementById('new-vehicle-section');
+            if (newVehicleSection) {
+                newVehicleSection.style.display = 'block';
+            }
+
+            const charCounter = document.querySelector('.char-counter');
+            if (charCounter) {
+                charCounter.textContent = '0/10 minimum characters';
+                charCounter.classList.remove('valid', 'invalid');
+            }
+        }
+    }
+
+    async function handleFormSubmission(e) {
+        e.preventDefault();
+
+        try {
+            showLoading(true);
+
+            // Collect form data
+            const formData = new FormData(e.target);
+            const appointmentData = Object.fromEntries(formData);
+
+            // Validate required fields
+            if (!appointmentData.date || !appointmentData.time || !appointmentData.description) {
+                showMessage('Please fill in all required fields', 'error');
+                showLoading(false);
+                return;
+            }
+
+            if (appointmentData.description.length < 10) {
+                showMessage('Description must contain at least 10 characters', 'error');
+                showLoading(false);
+                return;
+            }
+
+            // Check if we need to create a new vehicle
+            let vehicleId = appointmentData.vehicleId;
+
+            if (!vehicleId && appointmentData.vehicle_type) {
+                // Create new vehicle first
+                const vehicleData = {
+                    vehicle_type: appointmentData.vehicle_type,
+                    brand: appointmentData.brand,
+                    model: appointmentData.model,
+                    year: parseInt(appointmentData.year),
+                    is_electric: appointmentData.is_electric === 'on',
+                    notes: appointmentData.notes || null
+                };
+
+                const vehicleResponse = await fetch('/api/vehicles', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(vehicleData)
+                });
+
+                const vehicleResult = await vehicleResponse.json();
+
+                if (vehicleResult.success) {
+                    vehicleId = vehicleResult.vehicle.id;
+                    // Refresh vehicles list
+                    await loadUserVehicles();
+                } else {
+                    showMessage(vehicleResult.message || 'Error creating vehicle', 'error');
+                    showLoading(false);
+                    return;
+                }
+            }
+
+            // Create appointment
+            const appointmentPayload = {
+                date: appointmentData.date,
+                time: appointmentData.time,
+                serviceType: appointmentData.serviceType,
+                description: appointmentData.description,
+                vehicleId: vehicleId || null
+            };
+
+            const response = await fetch('/api/appointments', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(appointmentPayload)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showMessage('Appointment created successfully!', 'success');
+                resetForm();
+                loadAppointments();
+                // Switch back to appointments tab
+                switchTab('appointments');
+            } else {
+                showMessage(data.message || 'Error creating appointment', 'error');
+            }
+
+            showLoading(false);
+
+        } catch (error) {
+            console.error('Error creating appointment:', error);
+            showMessage('Network error. Please try again.', 'error');
+            showLoading(false);
         }
     }
 
@@ -115,9 +521,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.appointments.length === 0) {
                     appointmentsContainer.innerHTML = `
                         <div class="empty-message">
-                            <p>Nu ai încă programări. Creează prima ta programare!</p>
-                            <button onclick="window.location.href='/schedule'" class="primary-btn">
-                                Programează acum
+                            <div class="empty-icon">Calendar</div>
+                            <h4>No Appointments Yet</h4>
+                            <p>You don't have any appointments scheduled. Create your first appointment to get started!</p>
+                            <button onclick="switchTabGlobal('new-appointment')" class="primary-btn">
+                                <span class="btn-icon">+</span>
+                                <span class="btn-text">Schedule Now</span>
                             </button>
                         </div>
                     `;
@@ -127,8 +536,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 appointmentsContainer.innerHTML = `
                     <div class="error-message">
-                        <p>Eroare la încărcarea programărilor: ${data.message}</p>
-                        <button onclick="loadAppointments()" class="secondary-btn">Încearcă din nou</button>
+                        <p>Error loading appointments: ${data.message}</p>
+                        <button onclick="loadAppointmentsGlobal()" class="secondary-btn">Try again</button>
                     </div>
                 `;
             }
@@ -141,8 +550,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (appointmentsContainer) {
                 appointmentsContainer.innerHTML = `
                     <div class="error-message">
-                        <p>Eroare de conexiune. Te rog verifică conexiunea la internet.</p>
-                        <button onclick="loadAppointments()" class="secondary-btn">Încearcă din nou</button>
+                        <p>Connection error. Please check your internet connection.</p>
+                        <button onclick="loadAppointmentsGlobal()" class="secondary-btn">Try again</button>
                     </div>
                 `;
             }
@@ -154,12 +563,14 @@ document.addEventListener('DOMContentLoaded', function() {
         window.currentAppointments = appointments;
 
         const appointmentsContainer = document.getElementById('appointments-container');
-        // Sortează programările după dată (cele mai recente primul)
         appointments.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
         appointmentsContainer.innerHTML = appointments.map(appointment => {
-            const appointmentDate = new Date(appointment.date);
-            const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+            // Parse date correctly without timezone issues
+            const [year, month, day] = appointment.date.split('-');
+            const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+            const formattedDate = appointmentDate.toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
@@ -169,8 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const statusText = getStatusText(appointment.status);
             const statusClass = getStatusClass(appointment.status);
 
-            // Calculează dacă programarea poate fi anulată (24h înainte)
-            const appointmentDateTime = new Date(appointment.date + 'T' + appointment.time);
+            const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
             const now = new Date();
             const timeDiff = appointmentDateTime.getTime() - now.getTime();
             const hoursDiff = timeDiff / (1000 * 3600);
@@ -190,39 +600,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="appointment-details">
                         ${appointment.serviceType ? `
                             <div class="service-type">
-                                <strong>Serviciu:</strong> ${getServiceTypeText(appointment.serviceType)}
+                                <strong>Service:</strong> ${getServiceTypeText(appointment.serviceType)}
                             </div>
                         ` : ''}
                         <div class="description">
-                            <strong>Descriere:</strong> ${appointment.description}
+                            <strong>Description:</strong> ${appointment.description}
                         </div>
                         ${appointment.adminResponse ? `
                             <div class="admin-response">
-                                <strong>Răspuns admin:</strong> ${appointment.adminResponse}
+                                <strong>Admin response:</strong> ${appointment.adminResponse}
                             </div>
                         ` : ''}
                         ${appointment.estimatedPrice ? `
                             <div class="estimated-price">
-                                <strong>Preț estimat:</strong> ${appointment.estimatedPrice} RON
+                                <strong>Estimated price:</strong> $${appointment.estimatedPrice}
                             </div>
                         ` : ''}
                         ${appointment.vehicle ? `
                             <div class="vehicle-info">
-                                <strong>Vehicul:</strong> ${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})
+                                <strong>Vehicle:</strong> ${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})${appointment.vehicle.is_electric ? ' Electric' : ''}
                             </div>
                         ` : ''}
                         <div class="created-at">
-                            <small>Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}</small>
+                            <small>Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}</small>
                         </div>
                     </div>
                     <div class="appointment-actions">
                         ${canCancel ? `
                             <button class="secondary-btn" onclick="cancelAppointment('${appointment.id}')">
-                                Anulează
+                                Cancel
                             </button>
                         ` : ''}
                        <button class="primary-btn" onclick="viewAppointmentDetails('${appointment.id}')">
-                            Detalii
+                            Details
                        </button>
                     </div>
                 </div>
@@ -232,11 +642,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getStatusText(status) {
         const statusMap = {
-            'pending': 'În așteptare',
-            'approved': 'Aprobată',
-            'rejected': 'Respinsă',
-            'completed': 'Finalizată',
-            'cancelled': 'Anulată'
+            'pending': 'Pending',
+            'approved': 'Approved',
+            'confirmed': 'Confirmed',
+            'rejected': 'Rejected',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled'
         };
         return statusMap[status] || status;
     }
@@ -247,18 +658,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getServiceTypeText(serviceType) {
         const serviceMap = {
-            'mentenanta': 'Mentenanță Generală',
-            'reparatii': 'Reparații',
-            'diagnoza': 'Diagnoză',
-            'piese': 'Înlocuire Piese',
-            'general': 'Serviciu General'
+            'mentenanta': 'General Maintenance',
+            'reparatii': 'Repairs',
+            'diagnoza': 'Diagnosis',
+            'piese': 'Parts Replacement',
+            'general': 'General Service'
         };
         return serviceMap[serviceType] || serviceType;
     }
 
-    // Funcții globale pentru butoanele din HTML
+    // Global functions for HTML buttons
     window.cancelAppointment = async function(appointmentId) {
-        if (!confirm('Ești sigur că vrei să anulezi această programare?')) {
+        if (!confirm('Are you sure you want to cancel this appointment?')) {
             return;
         }
 
@@ -277,78 +688,72 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                showMessage('Programarea a fost anulată cu succes', 'success');
-                loadAppointments(); // Reîncarcă lista
+                showMessage('Appointment cancelled successfully', 'success');
+                loadAppointments();
             } else {
-                showMessage(data.message || 'Eroare la anularea programării', 'error');
+                showMessage(data.message || 'Error cancelling appointment', 'error');
             }
 
             showLoading(false);
 
         } catch (error) {
             console.error('Error cancelling appointment:', error);
-            showMessage('Eroare de rețea. Te rog încearcă din nou.', 'error');
+            showMessage('Network error. Please try again.', 'error');
             showLoading(false);
         }
     };
 
-    // Înlocuiește funcția viewAppointmentDetails în dashboard.js cu:
-
     window.viewAppointmentDetails = function(appointmentId) {
-        // Găsește programarea în lista curentă de programări
-        const appointments = window.currentAppointments || []; // Păstrează referința la programări
+        const appointments = window.currentAppointments || [];
         const appointment = appointments.find(apt => apt.id == appointmentId);
 
         if (!appointment) {
-            alert('Programarea nu a fost găsită');
+            alert('Appointment not found');
             return;
         }
 
-        // Populează modal-ul cu detaliile programării
         const modal = document.getElementById('appointment-modal');
         const detailsContainer = document.getElementById('appointment-details');
 
         if (!modal || !detailsContainer) {
-            // Fallback la alert dacă modal-ul nu există
             const details = `
-Detalii Programare:
+Appointment Details:
 
-Data: ${appointment.date}
-Ora: ${appointment.time}
-Serviciu: ${getServiceTypeText(appointment.serviceType)}
+Date: ${appointment.date}
+Time: ${appointment.time}
+Service: ${getServiceTypeText(appointment.serviceType)}
 Status: ${getStatusText(appointment.status)}
-Descriere: ${appointment.description}
-${appointment.adminResponse ? '\nRăspuns admin: ' + appointment.adminResponse : ''}
-${appointment.estimatedPrice ? '\nPreț estimat: ' + appointment.estimatedPrice + ' RON' : ''}
-${appointment.vehicle ? '\nVehicul: ' + appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' (' + appointment.vehicle.year + ')' : ''}
-Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
+Description: ${appointment.description}
+${appointment.adminResponse ? '\nAdmin response: ' + appointment.adminResponse : ''}
+${appointment.estimatedPrice ? '\nEstimated price: $' + appointment.estimatedPrice : ''}
+${appointment.vehicle ? '\nVehicle: ' + appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' (' + appointment.vehicle.year + ')' : ''}
+Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
         `;
             alert(details);
             return;
         }
 
-        // Formatează data pentru afișare
-        const appointmentDate = new Date(appointment.date);
-        const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+        // Format date correctly for modal
+        const [year, month, day] = appointment.date.split('-');
+        const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
             day: 'numeric'
         });
 
-        // Calculează dacă programarea poate fi anulată
-        const appointmentDateTime = new Date(appointment.date + 'T' + appointment.time);
+        const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
         const now = new Date();
         const timeDiff = appointmentDateTime.getTime() - now.getTime();
         const hoursDiff = timeDiff / (1000 * 3600);
         const canCancel = appointment.status === 'pending' && hoursDiff >= 1;
 
-        // Creează conținutul modal-ului
         detailsContainer.innerHTML = `
         <div class="detail-item">
-            <div class="detail-label">Data și Ora:</div>
+            <div class="detail-label">Date and Time:</div>
             <div class="detail-value">
-                <strong>${formattedDate}</strong> la <strong>${appointment.time}</strong>
+                <strong>${formattedDate}</strong> at <strong>${appointment.time}</strong>
             </div>
         </div>
 
@@ -362,18 +767,18 @@ Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
         </div>
 
         <div class="detail-item">
-            <div class="detail-label">Tip Serviciu:</div>
+            <div class="detail-label">Service Type:</div>
             <div class="detail-value">${getServiceTypeText(appointment.serviceType)}</div>
         </div>
 
         <div class="detail-item">
-            <div class="detail-label">Descrierea Problemei:</div>
+            <div class="detail-label">Problem Description:</div>
             <div class="detail-value">${appointment.description}</div>
         </div>
 
         ${appointment.adminResponse ? `
             <div class="detail-item">
-                <div class="detail-label">Răspuns Administrator:</div>
+                <div class="detail-label">Administrator Response:</div>
                 <div class="detail-value" style="background-color: #e8f5e8; border-left: 4px solid var(--success);">
                     ${appointment.adminResponse}
                 </div>
@@ -382,10 +787,10 @@ Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
 
         ${appointment.estimatedPrice ? `
             <div class="detail-item">
-                <div class="detail-label">Preț Estimat:</div>
+                <div class="detail-label">Estimated Price:</div>
                 <div class="detail-value">
                     <strong style="color: var(--success); font-size: 1.2em;">
-                        ${appointment.estimatedPrice} RON
+                        $${appointment.estimatedPrice}
                     </strong>
                 </div>
             </div>
@@ -393,27 +798,29 @@ Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
 
         ${appointment.estimatedCompletionTime ? `
             <div class="detail-item">
-                <div class="detail-label">Data Estimată de Finalizare:</div>
+                <div class="detail-label">Estimated Completion Date:</div>
                 <div class="detail-value">
-                    ${new Date(appointment.estimatedCompletionTime).toLocaleDateString('ro-RO')}
+                    ${new Date(appointment.estimatedCompletionTime).toLocaleDateString('en-US')}
                 </div>
             </div>
         ` : ''}
 
         ${appointment.vehicle ? `
             <div class="detail-item">
-                <div class="detail-label">Vehicul:</div>
+                <div class="detail-label">Vehicle:</div>
                 <div class="detail-value">
                     <strong>${appointment.vehicle.brand} ${appointment.vehicle.model}</strong> 
-                    (${appointment.vehicle.year}) - ${appointment.vehicle.type}
+                    (${appointment.vehicle.year}) - ${appointment.vehicle.vehicle_type || appointment.vehicle.type}
+                    ${appointment.vehicle.is_electric ? ' Electric' : ''}
+                    ${appointment.vehicle.notes ? `<br><small>Notes: ${appointment.vehicle.notes}</small>` : ''}
                 </div>
             </div>
         ` : ''}
 
         <div class="detail-item">
-            <div class="detail-label">Data Creării:</div>
+            <div class="detail-label">Creation Date:</div>
             <div class="detail-value">
-                ${new Date(appointment.createdAt).toLocaleDateString('ro-RO', {
+                ${new Date(appointment.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -426,30 +833,29 @@ Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
         ${canCancel ? `
             <div class="form-actions" style="margin-top: 20px;">
                 <button class="secondary-btn" onclick="cancelAppointmentFromModal('${appointment.id}')">
-                    Anulează Programarea
+                    Cancel Appointment
                 </button>
             </div>
         ` : ''}
     `;
 
-        // Afișează modal-ul
         modal.style.display = 'flex';
     };
 
-// Funcție pentru anularea din modal
     window.cancelAppointmentFromModal = function(appointmentId) {
         const modal = document.getElementById('appointment-modal');
         modal.style.display = 'none';
-
-        // Apelează funcția de anulare existentă
         cancelAppointment(appointmentId);
     };
 
-    // Fă funcția loadAppointments globală pentru a putea fi apelată din HTML
+    // Make functions globally accessible
     window.loadAppointments = loadAppointments;
+    window.loadAppointmentsGlobal = loadAppointments;
+    window.loadUserVehicles = loadUserVehicles;
+    window.switchTabGlobal = switchTab;
 
     function logout() {
-        if (confirm('Ești sigur că vrei să te deconectezi?')) {
+        if (confirm('Are you sure you want to logout?')) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/homepage';
@@ -476,7 +882,6 @@ Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
                 toast.style.display = 'none';
             }, 4000);
         } else {
-            // Fallback la alert dacă toast-ul nu există
             alert(message);
         }
     }
@@ -487,5 +892,5 @@ Creat: ${new Date(appointment.createdAt).toLocaleDateString('ro-RO')}
         if (!currentToken) {
             window.location.href = 'login.html';
         }
-    }, 60000); // Check every minute
+    }, 60000);
 });

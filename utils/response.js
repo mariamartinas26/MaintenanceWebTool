@@ -1,55 +1,58 @@
-const sendJSON = (res, statusCode, data) => {
+/**
+ * Trimite un răspuns JSON cu status code și date
+ * @param {Object} res - Response object
+ * @param {number} statusCode - HTTP status code
+ * @param {Object} data - Date de trimis
+ */
+function sendJSON(res, statusCode, data) {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
-};
+}
 
-const sendSuccess = (res, data, message = 'Success') => {
+/**
+ * Trimite răspuns de succes
+ * @param {Object} res - Response object
+ * @param {Object} data - Date de trimis
+ * @param {string} message - Mesaj opțional
+ */
+function sendSuccess(res, data, message = 'Success') {
     sendJSON(res, 200, {
         success: true,
-        message: message,
+        message,
         ...data
     });
-};
+}
 
-const sendCreated = (res, data, message = 'Created') => {
+/**
+ * Trimite răspuns de eroare
+ * @param {Object} res - Response object
+ * @param {number} statusCode - HTTP status code
+ * @param {string} message - Mesajul de eroare
+ */
+function sendError(res, statusCode, message) {
+    sendJSON(res, statusCode, {
+        success: false,
+        message
+    });
+}
+
+/**
+ * Trimite răspuns pentru resurse create
+ * @param {Object} res - Response object
+ * @param {Object} data - Date de trimis
+ * @param {string} message - Mesaj opțional
+ */
+function sendCreated(res, data, message = 'Created successfully') {
     sendJSON(res, 201, {
         success: true,
-        message: message,
+        message,
         ...data
     });
-};
-
-const sendError = (res, statusCode, message, errors = null) => {
-    const response = {
-        success: false,
-        message: message
-    };
-
-    if (errors) {
-        response.errors = errors;
-    }
-
-    sendJSON(res, statusCode, response);
-};
-
-const sendBadRequest = (res, message, errors = null) => {
-    sendError(res, 400, message, errors);
-};
-
-const sendUnauthorized = (res, message = 'Unauthorized') => {
-    sendError(res, 401, message);
-};
-
-const sendServerError = (res, message = 'Internal server error') => {
-    sendError(res, 500, message);
-};
+}
 
 module.exports = {
     sendJSON,
     sendSuccess,
-    sendCreated,
     sendError,
-    sendBadRequest,
-    sendUnauthorized,
-    sendServerError
+    sendCreated
 };
