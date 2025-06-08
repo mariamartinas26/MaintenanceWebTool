@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Stock Alerts - Repair Queens</title>
+    <link rel="stylesheet" href="/css/inventory-low-stock.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<div class="low-stock-container">
+    <!-- Header -->
+    <header class="low-stock-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1><i class="fas fa-exclamation-triangle"></i> Low Stock Alerts</h1>
+                <span class="subtitle">Parts that need immediate attention</span>
+            </div>
+            <div class="header-right">
+                <button class="btn-primary" onclick="window.location.href='/inventory/parts/add'">
+                    <i class="fas fa-plus"></i> Add New Part
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="low-stock-nav">
+        <div class="nav-content">
+            <a href="/inventory/dashboard" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="/inventory/parts" class="nav-link">
+                <i class="fas fa-cogs"></i> Manage Parts
+            </a>
+            <a href="/inventory/low-stock" class="nav-link active">
+                <i class="fas fa-exclamation-triangle"></i> Low Stock
+            </a>
+        </div>
+    </nav>
+
+    <!-- Alert Summary -->
+    <section class="alert-summary">
+        <div class="summary-cards">
+            <div class="summary-card critical">
+                <div class="card-icon">
+                    <i class="fas fa-ban"></i>
+                </div>
+                <div class="card-content">
+                    <h3 id="criticalCount">-</h3>
+                    <p>Out of Stock</p>
+                </div>
+            </div>
+
+            <div class="summary-card warning">
+                <div class="card-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="card-content">
+                    <h3 id="lowStockCount">-</h3>
+                    <p>Low Stock</p>
+                </div>
+            </div>
+
+            <div class="summary-card info">
+                <div class="card-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="card-content">
+                    <h3 id="lostValue">-</h3>
+                    <p>Potential Lost Value</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="filters-section">
+        <div class="filters-container">
+            <div class="filter-group">
+                <label for="urgencyFilter">Urgency Level:</label>
+                <select id="urgencyFilter">
+                    <option value="all">All Levels</option>
+                    <option value="critical">Critical (Out of Stock)</option>
+                    <option value="high">High (&lt; 50% minimum)</option>
+                    <option value="medium">Medium (Below minimum)</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="categoryFilter">Category:</label>
+                <select id="categoryFilter">
+                    <option value="all">All Categories</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="sortBy">Sort By:</label>
+                <select id="sortBy">
+                    <option value="urgency">Urgency</option>
+                    <option value="name">Part Name</option>
+                    <option value="stockQuantity">Stock Level</option>
+                    <option value="price">Price</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- Low Stock Parts List -->
+    <section class="low-stock-section">
+        <div class="section-header">
+            <h2>Parts Requiring Attention</h2>
+            <div class="header-actions">
+                <button class="btn-secondary" onclick="exportLowStock()">
+                    <i class="fas fa-download"></i> Export List
+                </button>
+                <button class="btn-secondary" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <div id="lowStockContainer" class="low-stock-list">
+            <div class="loading">Loading low stock alerts...</div>
+        </div>
+    </section>
+</div>
+
+<!-- Stock Update Modal -->
+<div id="stockUpdateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-warehouse"></i> Update Stock</h3>
+            <span class="modal-close" onclick="hideStockUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="stockUpdateForm">
+                <input type="hidden" id="updatePartId" />
+
+                <div class="part-info" id="updatePartInfo">
+                    <!-- Part info will be populated -->
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="stockOperation">Operation:</label>
+                        <select id="stockOperation" required>
+                            <option value="add">Add Stock</option>
+                            <option value="set">Set Exact Amount</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stockQuantity">Quantity:</label>
+                        <input type="number" id="stockQuantity" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="stockReason">Reason:</label>
+                    <input type="text" id="stockReason" placeholder="e.g., Received shipment, Inventory adjustment..." required>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideStockUpdateModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Update Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading...</p>
+    </div>
+</div>
+
+<script src="/js/inventory-low-stock.js"></script>
+</body>
+</html>
