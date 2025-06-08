@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const scheduleBtn = document.querySelector('.schedule-now-btn');
+    if (scheduleBtn) {
+        scheduleBtn.addEventListener('click', function() {
+            document.querySelector('[data-tab="new-appointment"]').click();
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');

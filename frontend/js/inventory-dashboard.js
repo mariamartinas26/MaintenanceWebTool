@@ -1,4 +1,3 @@
-// Global variables
 let selectedPartId = null;
 let searchTimeout = null;
 
@@ -10,7 +9,6 @@ function getAuthHeaders() {
     };
 }
 
-// Verifică dacă utilizatorul este logat
 function checkAuthentication() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -20,7 +18,6 @@ function checkAuthentication() {
     return true;
 }
 
-// Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', function() {
     if (!checkAuthentication()) {
         return;
@@ -61,7 +58,6 @@ async function loadDashboardData() {
             loadAdminInfo()
         ]);
     } catch (error) {
-        console.error('Error loading dashboard data:', error);
         showNotification('Error loading dashboard data', 'error');
     } finally {
         showLoading(false);
@@ -82,7 +78,6 @@ async function loadStatistics() {
             throw new Error(data.message);
         }
     } catch (error) {
-        console.error('Error loading statistics:', error);
         showNotification('Error loading statistics', 'error');
     }
 }
@@ -112,7 +107,6 @@ async function loadRecentLowStock() {
             throw new Error(data.message);
         }
     } catch (error) {
-        console.error('Error loading low stock:', error);
         document.getElementById('recentLowStock').innerHTML =
             '<div class="loading">Error loading low stock alerts</div>';
     }
@@ -168,7 +162,6 @@ async function loadCategories() {
             throw new Error('Error loading categories data');
         }
     } catch (error) {
-        console.error('Error loading categories:', error);
         document.getElementById('categoriesGrid').innerHTML =
             '<div class="loading">Error loading categories</div>';
     }
@@ -206,12 +199,10 @@ async function loadAdminInfo() {
         const adminName = localStorage.getItem('adminName') || 'Admin';
         document.getElementById('adminName').textContent = adminName;
     } catch (error) {
-        console.error('Error loading admin info:', error);
         document.getElementById('adminName').textContent = 'Admin';
     }
 }
 
-// Stock update modal functions
 function showStockUpdateModal() {
     document.getElementById('stockUpdateModal').style.display = 'block';
     document.getElementById('partSearch').focus();
@@ -234,7 +225,6 @@ async function searchPartsForStock() {
     const searchTerm = document.getElementById('partSearch').value.trim();
     const resultsContainer = document.getElementById('partSearchResults');
 
-    // Clear previous timeout
     if (searchTimeout) {
         clearTimeout(searchTimeout);
     }
@@ -244,7 +234,6 @@ async function searchPartsForStock() {
         return;
     }
 
-    // Debounce search
     searchTimeout = setTimeout(async () => {
         try {
             const response = await fetch(`/inventory/api/parts/search?q=${encodeURIComponent(searchTerm)}`, {
@@ -259,7 +248,6 @@ async function searchPartsForStock() {
                 resultsContainer.style.display = 'block';
             }
         } catch (error) {
-            console.error('Error searching parts:', error);
             resultsContainer.innerHTML = '<div class="search-result-item">Error searching parts</div>';
             resultsContainer.style.display = 'block';
         }
@@ -289,18 +277,15 @@ function displaySearchResults(parts) {
 function selectPart(partId, partName, currentStock, minLevel) {
     selectedPartId = partId;
 
-    // Update selected part display
     document.getElementById('selectedPartName').textContent = partName;
     document.getElementById('currentStock').textContent = currentStock;
     document.getElementById('minLevel').textContent = minLevel;
     document.getElementById('selectedPartInfo').style.display = 'block';
 
-    // Hide search results
     document.getElementById('partSearchResults').style.display = 'none';
     document.getElementById('partSearch').value = partName;
 }
 
-// Handle stock update form submission
 async function handleStockUpdate(e) {
     e.preventDefault();
 
@@ -343,7 +328,6 @@ async function handleStockUpdate(e) {
             showNotification(data.message, 'error');
         }
     } catch (error) {
-        console.error('Error updating stock:', error);
         showNotification('Error updating stock', 'error');
     } finally {
         showLoading(false);
@@ -357,7 +341,6 @@ function showLoading(show) {
 }
 
 function showNotification(message, type = 'info') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
@@ -367,7 +350,6 @@ function showNotification(message, type = 'info') {
         </div>
     `;
 
-    // Add styles if not already added
     if (!document.getElementById('notificationStyles')) {
         const styles = document.createElement('style');
         styles.id = 'notificationStyles';
@@ -411,10 +393,8 @@ function showNotification(message, type = 'info') {
         document.head.appendChild(styles);
     }
 
-    // Add to page
     document.body.appendChild(notification);
 
-    // Remove after 5 seconds
     setTimeout(() => {
         notification.style.animation = 'slideInRight 0.3s ease reverse';
         setTimeout(() => {
@@ -449,17 +429,6 @@ function formatCurrency(amount) {
     }).format(amount);
 }
 
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('ro-RO', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// Logout function
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('token');        // CHANGE: Use 'token' not 'adminToken'
@@ -469,10 +438,8 @@ function logout() {
     }
 }
 
-// Refresh dashboard data
 function refreshDashboard() {
     loadDashboardData();
 }
 
-// Auto-refresh every 5 minutes
 setInterval(refreshDashboard, 5 * 60 * 1000);

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar Programări</title>
+    <title>Calendar Appointments</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/schedule.css">
 </head>
 <body>
 <header>
     <div class="container">
-        <a href="/client/dashboard" class="back-link">← Înapoi la panou</a>
-        <h1>Programare Nouă</h1>
+        <a href="/client/dashboard" class="back-link">← Back</a>
+        <h1>New Appointment</h1>
     </div>
 </header>
 
@@ -24,22 +24,21 @@
                 <button id="nextMonth">›</button>
             </div>
             <div class="weekdays">
-                <div>Luni</div>
-                <div>Marți</div>
-                <div>Miercuri</div>
-                <div>Joi</div>
-                <div>Vineri</div>
-                <div>Sâmbătă</div>
-                <div>Duminică</div>
+                <div>Monday</div>
+                <div>Tuesday</div>
+                <div>Wednesday</div>
+                <div>Thursday</div>
+                <div>Friday</div>
+                <div>Saturday</div>
+                <div>Sunday</div>
             </div>
             <div class="calendar-days" id="calendarDays"></div>
         </div>
     </div>
 
     <div class="time-slots-section" id="timeSlotSection">
-        <h2>Selectează ora pentru <span id="selectedDate"></span></h2>
+        <h2>Select a time for <span id="selectedDate"></span></h2>
         <div class="time-slots" id="timeSlots">
-            <!-- Intervalele orare vor fi adăugate aici dinamic -->
         </div>
     </div>
 </main>
@@ -47,61 +46,59 @@
 <div class="modal" id="appointmentModal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
-        <h2>Detalii Programare</h2>
+        <h2>Appointment Details</h2>
         <form id="appointmentForm">
             <div class="form-group">
-                <label for="service-type">Tip Serviciu</label>
+                <label for="service-type">Service Type</label>
                 <select id="service-type" name="serviceType" required>
-                    <option value="">Selectează un serviciu</option>
-                    <option value="mentenanta">Mentenanță Generală</option>
-                    <option value="reparatii">Reparații</option>
-                    <option value="diagnoza">Diagnoză</option>
-                    <option value="piese">Înlocuire Piese</option>
+                    <option value="">Select a service</option>
+                    <option value="mentenanta">General Maintenance</option>
+                    <option value="reparatii">Repairs</option>
+                    <option value="diagnoza">Diagnostics</option>
+                    <option value="piese">Parts Replacement</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="appointment-date">Data Programării</label>
+                <label for="appointment-date">Appointment Date</label>
                 <input type="text" id="appointment-date" name="appointmentDate" readonly>
             </div>
 
             <div class="form-group">
-                <label for="appointment-time">Ora Programării</label>
+                <label for="appointment-time">Appointment Time</label>
                 <input type="text" id="appointment-time" name="appointmentTime" readonly>
             </div>
 
             <input type="hidden" id="slot-id" name="slotId" value="">
 
             <div class="form-group">
-                <label for="description">Descriere Problemă</label>
-                <textarea id="description" name="description" rows="4" placeholder="Descrie problema sau serviciul dorit..." required></textarea>
+                <label for="description">Problem Description</label>
+                <textarea id="description" name="description" rows="4" placeholder="Describe the issue or desired service..." required></textarea>
             </div>
 
             <div class="form-group">
-                <label for="attachment">Atașamente (Opțional)</label>
+                <label for="attachment">Attachments (Optional)</label>
                 <div class="file-upload">
                     <input type="file" id="attachment" name="attachment" multiple>
                     <div class="upload-label">
-                        <span>Trage fișiere aici sau click pentru încărcare</span>
+                        <span>Drag files here or click to upload</span>
                     </div>
                 </div>
                 <div id="file-list" class="file-list"></div>
             </div>
 
             <div class="form-actions">
-                <button type="button" class="secondary-btn" id="cancel-btn">Anulează</button>
-                <button type="submit" class="primary-btn">Trimite Programarea</button>
+                <button type="button" class="secondary-btn" id="cancel-btn">Cancel</button>
+                <button type="submit" class="primary-btn">Submit Appointment</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Loading Overlay -->
 <div id="loading" class="loading-overlay" style="display: none;">
     <div class="loading-spinner"></div>
 </div>
 
-<!-- Message Toast -->
 <div id="message-toast" class="message-toast" style="display: none;">
     <span id="message-text"></span>
 </div>

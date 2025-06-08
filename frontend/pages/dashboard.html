@@ -125,8 +125,8 @@
                             <div class="empty-icon">Calendar</div>
                             <h4>No Appointments Yet</h4>
                             <p>You don't have any appointments scheduled. Create your first appointment to get started!</p>
-                            <button onclick="document.querySelector('[data-tab=\"new-appointment\"]').click()" class="primary-btn">
-                            <span class="btn-text">Schedule Now</span>
+                            <button class="primary-btn schedule-now-btn">
+                                <span class="btn-text">Schedule Now</span>
                             </button>
                         </div>
                     </div>
@@ -210,10 +210,9 @@
                             </div>
                         </div>
 
-                        <!-- AdminAppointment Section -->
                         <div class="form-section">
                             <div class="section-title">
-                                <h4>AdminAppointment Details</h4>
+                                <h4>Appointment Details</h4>
                                 <p>When and what type of service do you need?</p>
                             </div>
 
@@ -256,7 +255,7 @@
                                 <span class="btn-text">Cancel</span>
                             </button>
                             <button type="submit" class="primary-btn">
-                                <span class="btn-text">Book AdminAppointment</span>
+                                <span class="btn-text">Book Appointment</span>
                             </button>
                         </div>
                     </form>
@@ -308,15 +307,14 @@
     </div>
 </div>
 
-<!-- AdminAppointment Details Modal -->
+
 <div id="appointment-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>AdminAppointment Details</h3>
+            <h3>Appointment Details</h3>
             <span class="close-modal">&times;</span>
         </div>
         <div id="appointment-details">
-            <!-- AdminAppointment details will be loaded here -->
         </div>
     </div>
 </div>
