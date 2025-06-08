@@ -1,6 +1,6 @@
 const { pool } = require('../database/db');
 
-class Appointment {
+class AdminAppointment {
     // Get all appointments for admin dashboard
     static async getAllForAdmin(filters = {}) {
         let query = `
@@ -271,4 +271,4 @@ class Appointment {
     }
 }
 
-module.exports = Appointment;
+module.exports = AdminAppointment;
