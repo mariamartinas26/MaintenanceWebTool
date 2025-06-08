@@ -1,7 +1,5 @@
-// controllers/adminAppointmentsController.js
 const Appointment = require('../models/Appointment');
 
-// Helper function pentru response JSON (similar cu cea din client)
 function sendJSON(res, statusCode, data) {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
@@ -21,7 +19,6 @@ class AdminAppointmentsController {
                 filters.date_filter = date_filter;
             }
 
-            console.log('Loading appointments for admin with filters:', filters);
 
             const appointments = await Appointment.getAllForAdmin(filters);
 
@@ -40,7 +37,7 @@ class AdminAppointmentsController {
                 warrantyInfo: appointment.warranty_info,
                 serviceType: appointment.vehicle_type ?
                     `${appointment.vehicle_type} ${appointment.brand} ${appointment.model}${appointment.year ? ` (${appointment.year})` : ''}` :
-                    'Vehicul necunoscut',
+                    'Unknown vehicle type',
                 vehicleInfo: {
                     type: appointment.vehicle_type,
                     brand: appointment.brand,
@@ -52,7 +49,7 @@ class AdminAppointmentsController {
                 updatedAt: appointment.updated_at
             }));
 
-            // Apply search filter if provided
+            // Apply search filter
             if (search && search.trim()) {
                 const searchTerm = search.toLowerCase().trim();
                 formattedAppointments = formattedAppointments.filter(appointment =>
@@ -63,20 +60,17 @@ class AdminAppointmentsController {
                 );
             }
 
-            console.log(`Found ${formattedAppointments.length} appointments for admin`);
-
             sendJSON(res, 200, {
                 success: true,
-                message: 'Programări încărcate cu succes',
+                message: 'Appointments loaded successfully.',
                 appointments: formattedAppointments,
                 total: formattedAppointments.length
             });
 
         } catch (error) {
-            console.error('Error fetching appointments for admin:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Eroare la încărcarea programărilor'
+                message: 'Error at loading appointments for admin:',
             });
         }
     }
@@ -89,18 +83,16 @@ class AdminAppointmentsController {
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'ID programare invalid'
+                    message: 'Invalid appointment ID'
                 });
             }
-
-            console.log(`Loading appointment details for ID: ${appointmentId}`);
 
             const appointment = await Appointment.getByIdForAdmin(appointmentId);
 
             if (!appointment) {
                 return sendJSON(res, 404, {
                     success: false,
-                    message: 'Programarea nu a fost găsită'
+                    message: 'Appointment was not found'
                 });
             }
 
@@ -142,19 +134,16 @@ class AdminAppointmentsController {
                 updatedAt: appointment.updated_at
             };
 
-            console.log('Appointment details loaded successfully');
-
             sendJSON(res, 200, {
                 success: true,
-                message: 'Detalii programare încărcate',
+                message: 'Appointment details loaded successfully',
                 appointment: formattedAppointment
             });
 
         } catch (error) {
-            console.error('Error fetching appointment details:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Eroare la încărcarea detaliilor programării'
+                message: 'Error at loading appointment details'
             });
         }
     }
@@ -168,31 +157,29 @@ class AdminAppointmentsController {
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'ID programare invalid'
+                    message: 'Invalid appointment id',
                 });
             }
 
             if (!status || !['pending', 'approved', 'rejected'].includes(status)) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Status invalid'
+                    message: 'Invalid status'
                 });
             }
-
-            console.log(`Updating appointment ${appointmentId} to status: ${status}`);
 
             // Validate required fields based on status
             if (status === 'approved') {
                 if (!estimatedPrice || estimatedPrice <= 0) {
                     return sendJSON(res, 400, {
                         success: false,
-                        message: 'Prețul estimativ este obligatoriu pentru aprobare'
+                        message: 'Estimated price is mandatory for approval'
                     });
                 }
                 if (warranty === undefined || warranty === null || warranty < 0) {
                     return sendJSON(res, 400, {
                         success: false,
-                        message: 'Garanția este obligatorie pentru aprobare'
+                        message: 'Warranty is mandatory for approval'
                     });
                 }
             }
@@ -200,7 +187,7 @@ class AdminAppointmentsController {
             if (status === 'rejected' && !rejectionReason) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Motivul respingerii este obligatoriu'
+                    message: 'Reason for rejection is mandatory'
                 });
             }
 
@@ -209,22 +196,22 @@ class AdminAppointmentsController {
 
             if (status === 'rejected' && rejectionReason) {
                 const rejectionReasons = {
-                    'parts': 'Piese indisponibile',
-                    'schedule': 'Program complet',
-                    'expertise': 'În afara experienței noastre',
-                    'other': 'Alt motiv'
+                    'parts': 'Unavailable mechanic parts',
+                    'schedule': 'Full schedule',
+                    'expertise': 'Beyond our area of expertise',
+                    'other': 'Another reason'
                 };
 
                 const reasonText = rejectionReasons[rejectionReason] || rejectionReason;
-                adminResponse += adminResponse ? `\n\nMotiv respingere: ${reasonText}` : `Motiv respingere: ${reasonText}`;
+                adminResponse += adminResponse ? `\n\nReason for rejection: ${reasonText}` : `Reason for rejection: ${reasonText}`;
 
                 if (retryDays && retryDays > 0) {
-                    adminResponse += `\nReîncercați peste ${retryDays} zile.`;
+                    adminResponse += `\nTry again after ${retryDays} days.`;
                 }
             }
 
             if (status === 'approved') {
-                const approvalInfo = `Programarea a fost aprobată. Preț estimativ: ${estimatedPrice} RON. Garanție: ${warranty} luni.`;
+                const approvalInfo = `Appointment was approved. Estimated price: ${estimatedPrice} RON. Warranty: ${warranty} months.`;
                 adminResponse = adminResponse ? `${adminResponse}\n\n${approvalInfo}` : approvalInfo;
             }
 
@@ -232,7 +219,7 @@ class AdminAppointmentsController {
                 status,
                 adminResponse: adminResponse.trim(),
                 estimatedPrice: status === 'approved' ? estimatedPrice : null,
-                warrantyInfo: status === 'approved' ? `${warranty} luni garanție` : null
+                warrantyInfo: status === 'approved' ? `${warranty} warranty months` : null
             };
 
             const updatedAppointment = await Appointment.updateStatus(appointmentId, updateData);
@@ -240,17 +227,15 @@ class AdminAppointmentsController {
             if (!updatedAppointment) {
                 return sendJSON(res, 404, {
                     success: false,
-                    message: 'Programarea nu a fost găsită'
+                    message: 'Appointment was not found'
                 });
             }
 
             const statusMessages = {
-                'approved': 'Programarea a fost aprobată cu succes',
-                'rejected': 'Programarea a fost respinsă',
-                'pending': 'Programarea a fost setată în așteptare'
+                'approved': 'Appointment was approved successfully',
+                'rejected': 'Appointment was rejected',
+                'pending': 'Appointment was set to pending',
             };
-
-            console.log(`Appointment ${appointmentId} updated successfully to status: ${status}`);
 
             sendJSON(res, 200, {
                 success: true,
@@ -266,10 +251,9 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
-            console.error('Error updating appointment status:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Eroare la actualizarea statusului programării'
+                message: 'Error at updating appointment status:',
             });
         }
     }
@@ -285,10 +269,9 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
-            console.error('Error fetching appointment statistics:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Eroare la încărcarea statisticilor'
+                message: 'Error at loading statistics'
             });
         }
     }

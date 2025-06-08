@@ -1,4 +1,3 @@
-// models/Appointment.js
 const { pool } = require('../database/db');
 
 class Appointment {

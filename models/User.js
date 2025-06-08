@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const { pool } = require('../database/db');
 const bcrypt = require('bcryptjs');
 
 class User {
@@ -17,7 +17,7 @@ class User {
         const values = [email, password_hash, first_name, last_name, phone, role];
 
         try {
-            const result = await db.query(query, values);
+            const result = await pool.query(query, values);
             return result.rows[0];
         } catch (error) {
             if (error.code === '23505') {
@@ -29,13 +29,13 @@ class User {
 
     static async findByEmail(email) {
         const query = 'SELECT * FROM "Users" WHERE email = $1';
-        const result = await db.query(query, [email]);
+        const result = await pool.query(query, [email]);
         return result.rows[0];
     }
 
     static async findById(id) {
         const query = 'SELECT id, email, first_name, last_name, phone, role, created_at FROM "Users" WHERE id = $1';
-        const result = await db.query(query, [id]);
+        const result = await pool.query(query, [id]);
         return result.rows[0];
     }
 

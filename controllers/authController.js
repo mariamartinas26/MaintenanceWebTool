@@ -15,7 +15,6 @@ const register = async (req, res, body) => {
     try {
         const { email, password, first_name, last_name, phone } = body;
 
-        // Validation
         const validation = validateRegisterData({ email, password, first_name, last_name, phone });
 
         if (!validation.isValid) {
@@ -54,7 +53,6 @@ const register = async (req, res, body) => {
         }, 'User registered successfully');
 
     } catch (error) {
-        console.error('Registration error:', error);
         sendServerError(res, 'Server error during registration');
     }
 };

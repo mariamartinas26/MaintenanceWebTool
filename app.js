@@ -27,19 +27,15 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    console.log(`${method} ${pathname}`);
-
     try {
-        // Admin routes - IMPORTANT: Trebuie să fie înaintea API routes
         if (pathname.startsWith('/admin')) {
             return adminRoutes(req, res);
         }
 
-        // API Routes (client routes)
         if (pathname.startsWith('/api/')) {
             await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
         }
-        // Static file routes
+
         else if (pathname === '/' || pathname === '/homepage') {
             await serveFile(res, 'frontend/pages/homepage.html', 'text/html');
         }
@@ -49,7 +45,6 @@ const server = http.createServer(async (req, res) => {
         else if (pathname === '/login') {
             await serveFile(res, 'frontend/pages/login.html', 'text/html');
         }
-        // Static assets
         else if (pathname.startsWith('/css/')) {
             await serveFile(res, `frontend${pathname}`, 'text/css');
         }
@@ -70,7 +65,6 @@ const server = http.createServer(async (req, res) => {
             res.end('Not Found');
         }
     } catch (error) {
-        console.error('Server error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'Internal server error' }));
     }
@@ -144,7 +138,6 @@ async function serveFile(res, filePath, contentType) {
         res.writeHead(200, { 'Content-Type': contentType });
         res.end(data);
     } catch (error) {
-        console.error('Error serving file:', filePath, error);
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('File not found');
     }
@@ -166,6 +159,5 @@ function getImageMimeType(pathname) {
 
 server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Admin dashboard available at: http://localhost:${PORT}/admin`);
-    console.log(`Client dashboard available at: http://localhost:${PORT}/dashboard`);
+
 });

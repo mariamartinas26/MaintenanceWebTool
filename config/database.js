@@ -22,7 +22,7 @@ pool.on('error', (err) => {
 });
 
 const query = (text, params) => {
-    console.log('Executing query:', text);
+    //console.log('Executing query:', text);
     return pool.query(text, params);
 };
 

@@ -1,50 +1,40 @@
-// routes/adminRoute.js
 const url = require('url');
 const AdminAppointmentsController = require('../controllers/adminAppointmentsController');
-
-// Helper function pentru response JSON (similar cu cea din client)
+const { verifyToken, requireAdmin } = require('../middleware/auth');
 function sendJSON(res, statusCode, data) {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
 }
 
-// Simple middleware to check if user is admin (adaptat la stilul tau)
-const requireAdmin = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    const adminToken = req.headers['x-admin-token'];
-
-    console.log('Admin auth check - Authorization header:', authHeader);
-    console.log('Admin auth check - X-Admin-Token header:', adminToken);
-
-    // Verifică Bearer token din localStorage (compatibil cu login-ul tău)
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-
-        // Aici poți adăuga validarea reală a token-ului JWT
-        // Pentru acum, verifică dacă token-ul există
-        if (token) {
-            // Poți extrage user info din token dacă e JWT
-            try {
-                // Pentru testare, acceptă orice token Bearer
-                // În producție, validează JWT-ul aici
-                req.admin = { id: 1, role: 'admin', token: token };
-                return next();
-            } catch (error) {
-                console.error('Error validating admin token:', error);
+const runMiddleware = (req, res, fn) => {
+    return new Promise((resolve, reject) => {
+        fn(req, res, (result) => {
+            if (result instanceof Error) {
+                return reject(result);
             }
-        }
-    }
-
-    // Fallback pentru X-Admin-Token (pentru testare)
-    if (adminToken) {
-        req.admin = { id: 1, role: 'admin' };
-        return next();
-    }
-
-    return sendJSON(res, 401, {
-        success: false,
-        message: 'Acces interzis. Autentificare admin necesară.'
+            return resolve(result);
+        });
     });
+};
+
+const requireAdminAccess = async (req, res, next) => {
+    try {
+
+        await runMiddleware(req, res, verifyToken);
+
+        await runMiddleware(req, res, requireAdmin);
+
+        req.admin = {
+            id: req.user.id,
+            email: req.user.email,
+            name: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+            role: req.user.role
+        };
+
+        next();
+    } catch (error) {
+        console.error('Admin access denied:', error.message);
+    }
 };
 
 const adminRoutes = (req, res) => {
@@ -53,31 +43,25 @@ const adminRoutes = (req, res) => {
     const query = parsedUrl.query;
     const method = req.method;
 
-    // Add query parameters to req object
     req.query = query;
 
-    console.log(`Admin route: ${method} ${path}`);
 
-    // Admin API routes
     if (path.startsWith('/admin/api')) {
         return handleAdminApiRoutes(req, res, path, method);
     }
 
-    // Admin page routes (serving HTML)
     if (path.startsWith('/admin')) {
         return handleAdminPageRoutes(req, res, path, method);
     }
 
-    // If no admin route matches, return 404
     return sendJSON(res, 404, {
         success: false,
-        message: 'Ruta admin nu a fost găsită'
+        message: 'Admin route not found'
     });
 };
 
 const handleAdminApiRoutes = (req, res, path, method) => {
-    // Apply admin middleware to all admin API routes
-    requireAdmin(req, res, () => {
+    requireAdminAccess(req, res, () => {
         // GET /admin/api/appointments - Get all appointments
         if (path === '/admin/api/appointments' && method === 'GET') {
             return AdminAppointmentsController.getAppointmentsForAdmin(req, res);
@@ -100,7 +84,6 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             const matches = path.match(/^\/admin\/api\/appointments\/(\d+)\/status$/);
             req.params = { id: matches[1] };
 
-            // Parse request body for PUT requests
             let body = '';
             req.on('data', chunk => {
                 body += chunk.toString();
@@ -109,23 +92,20 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             req.on('end', () => {
                 try {
                     req.body = JSON.parse(body);
-                    console.log('Request body parsed:', req.body);
                     return AdminAppointmentsController.updateAppointmentStatus(req, res);
                 } catch (error) {
-                    console.error('Error parsing JSON body:', error);
                     return sendJSON(res, 400, {
                         success: false,
-                        message: 'JSON invalid în request body'
+                        message: 'JSON invalid in body'
                     });
                 }
             });
-            return; // Don't send response yet, wait for body parsing
+            return;
         }
 
-        // If no API route matches
         return sendJSON(res, 404, {
             success: false,
-            message: 'Endpoint admin API nu a fost găsit'
+            message: 'Endpoint admin API was not found'
         });
     });
 };
@@ -134,19 +114,15 @@ const handleAdminPageRoutes = (req, res, path, method) => {
     const fs = require('fs');
     const pathModule = require('path');
 
-    // Serve admin dashboard page
     if (path === '/admin' || path === '/admin/' || path === '/admin/dashboard') {
         if (method === 'GET') {
             try {
-                // Adaptează calea la structura ta de fișiere
                 const adminDashboardPath = pathModule.join(__dirname, '../frontend/pages/admin-dashboard.html');
 
-                // Verifică dacă fișierul există
                 if (!fs.existsSync(adminDashboardPath)) {
-                    console.error('Admin dashboard file not found at:', adminDashboardPath);
                     return sendJSON(res, 404, {
                         success: false,
-                        message: 'Pagina admin dashboard nu a fost găsită'
+                        message: 'Admin page dashboard was not found'
                     });
                 }
 
@@ -159,51 +135,72 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 res.end(html);
                 return;
             } catch (error) {
-                console.error('Error serving admin dashboard:', error);
                 return sendJSON(res, 500, {
                     success: false,
-                    message: 'Eroare la încărcarea admin dashboard'
+                    message: 'Error at loading admin dashboard'
                 });
             }
         }
     }
 
-    // Serve admin login page (if you have one)
     if (path === '/admin/login') {
         if (method === 'GET') {
             try {
                 const loginPath = pathModule.join(__dirname, '../frontend/pages/login.html');
 
                 if (!fs.existsSync(loginPath)) {
-                    // Return a simple login form if no file exists
-                    const simpleLoginHtml = `
+                    const redirectHtml = `
                         <!DOCTYPE html>
                         <html>
                         <head>
                             <title>Admin Login - Repair Queens</title>
                             <meta charset="UTF-8">
+                            <meta http-equiv="refresh" content="3;url=/login">
                             <style>
-                                body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-                                .login-form { padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
-                                input { display: block; margin: 10px 0; padding: 10px; width: 200px; }
-                                button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+                                body { 
+                                    font-family: Arial, sans-serif; 
+                                    display: flex; 
+                                    justify-content: center; 
+                                    align-items: center; 
+                                    height: 100vh; 
+                                    margin: 0; 
+                                    background-color: #f5f5f5;
+                                }
+                                .message-box { 
+                                    padding: 30px; 
+                                    border: 1px solid #ddd; 
+                                    border-radius: 8px; 
+                                    background: white;
+                                    text-align: center;
+                                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                                }
+                                .btn {
+                                    padding: 10px 20px; 
+                                    background: #ff6b6b; 
+                                    color: white; 
+                                    border: none; 
+                                    border-radius: 4px; 
+                                    cursor: pointer;
+                                    text-decoration: none;
+                                    display: inline-block;
+                                    margin-top: 15px;
+                                }
                             </style>
                         </head>
                         <body>
-                            <div class="login-form">
-                                <h2>Admin Login</h2>
-                                <form action="/admin/auth" method="post">
-                                    <input type="email" name="email" placeholder="Email" required>
-                                    <input type="password" name="password" placeholder="Password" required>
-                                    <button type="submit">Login</button>
-                                </form>
+                            <div class="message-box">
+                                <h2>🔐 Admin Login</h2>
+                                <p>To acces the admin dashboard, please login.</p>
+                                <p>If you are an admin you will be automatically redirected after login.</p>
+                                <a href="/login" class="btn">Go to Login Page</a>
+                                <p><small>Automatic redirecting in 3 seconds...</small></p>
                             </div>
                         </body>
                         </html>
                     `;
 
                     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                    res.end(simpleLoginHtml);
+                    res.end(redirectHtml);
                     return;
                 }
 
@@ -212,24 +209,23 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 res.end(html);
                 return;
             } catch (error) {
-                console.error('Error serving login page:', error);
                 return sendJSON(res, 500, {
                     success: false,
-                    message: 'Eroare la încărcarea paginii de login'
+                    message: 'Error at loading login page'
                 });
             }
         }
     }
 
-    // Serve static files for admin (CSS, JS, images) - adaptează la structura ta
-    if (path.startsWith('/css/') || path.startsWith('/js/') || path.startsWith('/assets/')) {
+    // Serve static files for admin (CSS, JS, images)
+    if (path.startsWith('/css/') || path.startsWith('/js/')) {
         return serveStaticFile(req, res, path);
     }
 
     // If no admin page route matches
     return sendJSON(res, 404, {
         success: false,
-        message: 'Pagina admin nu a fost găsită'
+        message: 'Admin page was not found'
     });
 };
 
@@ -238,30 +234,23 @@ const serveStaticFile = (req, res, path) => {
     const pathModule = require('path');
 
     try {
-        // Construct full file path based on your project structure
         const fullPath = pathModule.join(__dirname, '../frontend', path);
 
-        console.log('Trying to serve static file:', fullPath);
-
-        // Check if file exists
         if (!fs.existsSync(fullPath)) {
-            console.log('Static file not found:', fullPath);
             return sendJSON(res, 404, {
                 success: false,
-                message: 'Fișierul nu a fost găsit'
+                message: 'File was not found'
             });
         }
 
-        // Get file stats
         const stat = fs.statSync(fullPath);
         if (!stat.isFile()) {
             return sendJSON(res, 404, {
                 success: false,
-                message: 'Nu este un fișier'
+                message: 'Did not find any file'
             });
         }
 
-        // Determine content type based on file extension
         const ext = pathModule.extname(fullPath).toLowerCase();
         const contentTypes = {
             '.html': 'text/html; charset=utf-8',
@@ -294,10 +283,9 @@ const serveStaticFile = (req, res, path) => {
         res.end(fileContent);
 
     } catch (error) {
-        console.error('Error serving static file:', error);
         return sendJSON(res, 500, {
             success: false,
-            message: 'Eroare la servirea fișierului'
+            message: 'Error at the file'
         });
     }
 };
