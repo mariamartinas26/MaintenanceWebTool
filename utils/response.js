@@ -1,58 +1,145 @@
 /**
- * Trimite un răspuns JSON cu status code și date
- * @param {Object} res - Response object
- * @param {number} statusCode - HTTP status code
- * @param {Object} data - Date de trimis
+ * Response utility functions for consistent API responses
  */
-function sendJSON(res, statusCode, data) {
-    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(data));
-}
 
 /**
- * Trimite răspuns de succes
- * @param {Object} res - Response object
- * @param {Object} data - Date de trimis
- * @param {string} message - Mesaj opțional
+ * Send success response
  */
-function sendSuccess(res, data, message = 'Success') {
-    sendJSON(res, 200, {
+function sendSuccess(res, data = null, message = 'Success') {
+    const response = {
         success: true,
-        message,
-        ...data
-    });
+        message: message
+    };
+
+    if (data) {
+        response.data = data;
+        // If data has properties, spread them to root level for backwards compatibility
+        Object.assign(response, data);
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
 }
 
 /**
- * Trimite răspuns de eroare
- * @param {Object} res - Response object
- * @param {number} statusCode - HTTP status code
- * @param {string} message - Mesajul de eroare
+ * Send created response (201)
  */
-function sendError(res, statusCode, message) {
-    sendJSON(res, statusCode, {
+function sendCreated(res, data = null, message = 'Created successfully') {
+    const response = {
+        success: true,
+        message: message
+    };
+
+    if (data) {
+        response.data = data;
+        // If data has properties, spread them to root level for backwards compatibility
+        Object.assign(response, data);
+    }
+
+    res.writeHead(201, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
+}
+
+/**
+ * Send bad request response (400)
+ */
+function sendBadRequest(res, message = 'Bad Request', errors = null) {
+    const response = {
         success: false,
-        message
-    });
+        message: message
+    };
+
+    if (errors) {
+        response.errors = Array.isArray(errors) ? errors : [errors];
+    }
+
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
 }
 
 /**
- * Trimite răspuns pentru resurse create
- * @param {Object} res - Response object
- * @param {Object} data - Date de trimis
- * @param {string} message - Mesaj opțional
+ * Send unauthorized response (401)
  */
-function sendCreated(res, data, message = 'Created successfully') {
-    sendJSON(res, 201, {
-        success: true,
-        message,
-        ...data
-    });
+function sendUnauthorized(res, message = 'Unauthorized') {
+    const response = {
+        success: false,
+        message: message
+    };
+
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
+}
+
+/**
+ * Send forbidden response (403)
+ */
+function sendForbidden(res, message = 'Forbidden') {
+    const response = {
+        success: false,
+        message: message
+    };
+
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
+}
+
+/**
+ * Send not found response (404)
+ */
+function sendNotFound(res, message = 'Not Found') {
+    const response = {
+        success: false,
+        message: message
+    };
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
+}
+
+/**
+ * Send server error response (500)
+ */
+function sendServerError(res, message = 'Internal Server Error', error = null) {
+    const response = {
+        success: false,
+        message: message
+    };
+
+    // Only include error details in development
+    if (process.env.NODE_ENV === 'development' && error) {
+        response.error = error.message;
+        response.stack = error.stack;
+    }
+
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
+}
+
+/**
+ * Send custom status response
+ */
+function sendResponse(res, statusCode, success, message, data = null) {
+    const response = {
+        success: success,
+        message: message
+    };
+
+    if (data) {
+        response.data = data;
+        Object.assign(response, data);
+    }
+
+    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(response));
 }
 
 module.exports = {
-    sendJSON,
     sendSuccess,
-    sendError,
-    sendCreated
+    sendCreated,
+    sendBadRequest,
+    sendUnauthorized,
+    sendForbidden,
+    sendNotFound,
+    sendServerError,
+    sendResponse
 };

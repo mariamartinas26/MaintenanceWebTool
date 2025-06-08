@@ -1,7 +1,6 @@
+
 /**
- * Validează format email
- * @param {string} email - Email de validat
- * @returns {boolean} - True dacă email-ul este valid
+ * Validate email format
  */
 function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,157 +8,205 @@ function isValidEmail(email) {
 }
 
 /**
- * Validează format dată (YYYY-MM-DD)
- * @param {string} date - Data de validat
- * @returns {boolean} - True dacă data este validă
+ * Validate password strength
  */
-function isValidDate(date) {
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) return false;
-
-    const dateObj = new Date(date);
-    return dateObj instanceof Date && !isNaN(dateObj);
+function isValidPassword(password) {
+    return password && password.length >= 6;
 }
 
 /**
- * Validează format timp (HH:MM)
- * @param {string} time - Timpul de validat
- * @returns {boolean} - True dacă timpul este valid
+ * Validate phone number
  */
-function isValidTime(time) {
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timeRegex.test(time);
+function isValidPhone(phone) {
+    const romanianPhoneRegex = /^0\d{9}$/;
+    const internationalPhoneRegex = /^[\d\s\+\-\(\)]{10,15}$/;
+
+    return romanianPhoneRegex.test(phone) || internationalPhoneRegex.test(phone);
 }
 
 /**
- * Validează anul
- * @param {number} year - Anul de validat
- * @returns {boolean} - True dacă anul este valid
+ * Validate name
  */
-function isValidYear(year) {
-    const currentYear = new Date().getFullYear();
-    return year >= 1900 && year <= currentYear + 1;
+function isValidName(name) {
+    const nameRegex = /^[a-zA-ZÀ-ÿ\s\-']{2,50}$/;
+    return nameRegex.test(name);
 }
 
 /**
- * Validează lungimea string-ului
- * @param {string} str - String-ul de validat
- * @param {number} minLength - Lungimea minimă
- * @param {number} maxLength - Lungimea maximă
- * @returns {boolean} - True dacă lungimea este validă
+ * Validate registration data
  */
-function isValidStringLength(str, minLength = 0, maxLength = Infinity) {
-    if (typeof str !== 'string') return false;
-    return str.length >= minLength && str.length <= maxLength;
+function validateRegisterData(data) {
+    const { email, password, first_name, last_name, phone } = data;
+    const errors = [];
+
+    // Check required fields
+    if (!email) {
+        errors.push('Email is required');
+    } else if (!isValidEmail(email)) {
+        errors.push('Please enter a valid email address');
+    }
+
+    if (!password) {
+        errors.push('Password is required');
+    } else if (password.length < 6) {
+        errors.push('Password must be at least 6 characters long');
+    }
+
+    if (!first_name) {
+        errors.push('First name is required');
+    } else if (!isValidName(first_name)) {
+        errors.push('First name must be between 2-50 characters and contain only letters');
+    }
+
+    if (!last_name) {
+        errors.push('Last name is required');
+    } else if (!isValidName(last_name)) {
+        errors.push('Last name must be between 2-50 characters and contain only letters');
+    }
+
+    if (!phone) {
+        errors.push('Phone number is required');
+    } else if (!isValidPhone(phone)) {
+        errors.push('Please enter a valid phone number (format: 07xxxxxxxx)');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
 }
 
 /**
- * Validează tipul vehiculului
- * @param {string} vehicleType - Tipul vehiculului
- * @returns {boolean} - True dacă tipul este valid
+ * Validate login data
  */
-function isValidVehicleType(vehicleType) {
-    const validTypes = ['motocicleta', 'bicicleta', 'trotineta'];
-    return validTypes.includes(vehicleType);
+function validateLoginData(data) {
+    const { email, password } = data;
+    const errors = [];
+
+    if (!email) {
+        errors.push('Email is required');
+    } else if (!isValidEmail(email)) {
+        errors.push('Please enter a valid email address');
+    }
+
+    if (!password) {
+        errors.push('Password is required');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
 }
 
 /**
- * Validează statusul programării
- * @param {string} status - Statusul de validat
- * @returns {boolean} - True dacă statusul este valid
+ * Validate appointment data
  */
-function isValidAppointmentStatus(status) {
-    const validStatuses = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'rejected'];
-    return validStatuses.includes(status);
+function validateAppointmentData(data) {
+    const { date, time, description } = data;
+    const errors = [];
+
+    if (!date) {
+        errors.push('Appointment date is required');
+    } else {
+        const appointmentDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (appointmentDate < today) {
+            errors.push('Appointment date cannot be in the past');
+        }
+    }
+
+    if (!time) {
+        errors.push('Appointment time is required');
+    }
+
+    if (!description) {
+        errors.push('Problem description is required');
+    } else if (description.trim().length < 10) {
+        errors.push('Problem description must be at least 10 characters long');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
 }
 
 /**
- * Sanitizează input string (elimină caractere periculoase)
- * @param {string} input - Input-ul de sanitizat
- * @returns {string} - Input-ul sanitizat
+ * Validate vehicle data
  */
-function sanitizeString(input) {
-    if (typeof input !== 'string') return '';
-    return input.trim().replace(/[<>\"'&]/g, '');
+function validateVehicleData(data) {
+    const { vehicle_type, brand, model, year } = data;
+    const errors = [];
+
+    if (!vehicle_type) {
+        errors.push('Vehicle type is required');
+    } else {
+        const validTypes = ['motocicleta', 'bicicleta', 'trotineta'];
+        if (!validTypes.includes(vehicle_type)) {
+            errors.push('Vehicle type must be: motocicleta, bicicleta, or trotineta');
+        }
+    }
+
+    if (!brand) {
+        errors.push('Brand is required');
+    } else if (brand.length > 100) {
+        errors.push('Brand cannot be longer than 100 characters');
+    }
+
+    if (!model) {
+        errors.push('Model is required');
+    } else if (model.length > 100) {
+        errors.push('Model cannot be longer than 100 characters');
+    }
+
+    if (!year) {
+        errors.push('Year is required');
+    } else {
+        const currentYear = new Date().getFullYear();
+        if (year < 1900 || year > currentYear + 1) {
+            errors.push(`Year must be between 1900 and ${currentYear + 1}`);
+        }
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
 }
 
-/**
- * Validează că data nu este în trecut
- * @param {string} date - Data de validat
- * @returns {boolean} - True dacă data este în viitor
- */
-function isFutureDate(date) {
-    const inputDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return inputDate >= today;
+
+function sanitizeString(str) {
+    if (typeof str !== 'string') return '';
+    return str.trim().replace(/[<>]/g, '');
 }
 
-/**
- * Validează că datetime-ul nu este în trecut
- * @param {string} date - Data
- * @param {string} time - Timpul
- * @returns {boolean} - True dacă datetime-ul este în viitor
- */
-function isFutureDateTime(date, time) {
-    const dateTime = new Date(`${date}T${time}:00`);
-    const now = new Date();
-    return dateTime > now;
-}
 
-/**
- * Verifică dacă o zi este weekend
- * @param {string} date - Data de verificat
- * @returns {boolean} - True dacă este weekend
- */
-function isWeekend(date) {
-    const dayOfWeek = new Date(date).getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6; // 0 = Sunday, 6 = Saturday
-}
+function sanitizeUserInput(data) {
+    const sanitized = {};
 
-/**
- * Validează ID numeric
- * @param {any} id - ID-ul de validat
- * @returns {boolean} - True dacă ID-ul este valid
- */
-function isValidId(id) {
-    const numId = parseInt(id);
-    return !isNaN(numId) && numId > 0;
-}
+    for (const [key, value] of Object.entries(data)) {
+        if (typeof value === 'string') {
+            sanitized[key] = sanitizeString(value);
+        } else {
+            sanitized[key] = value;
+        }
+    }
 
-/**
- * Validează boolean
- * @param {any} value - Valoarea de validat
- * @returns {boolean} - True dacă valoarea este boolean valid
- */
-function isValidBoolean(value) {
-    return typeof value === 'boolean' || value === 'true' || value === 'false' || value === true || value === false;
-}
-
-/**
- * Convertește string la boolean
- * @param {any} value - Valoarea de convertit
- * @returns {boolean} - Valoarea convertită
- */
-function toBoolean(value) {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'string') return value.toLowerCase() === 'true';
-    return Boolean(value);
+    return sanitized;
 }
 
 module.exports = {
     isValidEmail,
-    isValidDate,
-    isValidTime,
-    isValidYear,
-    isValidStringLength,
-    isValidVehicleType,
-    isValidAppointmentStatus,
+    isValidPassword,
+    isValidPhone,
+    isValidName,
+    validateRegisterData,
+    validateLoginData,
+    validateAppointmentData,
+    validateVehicleData,
     sanitizeString,
-    isFutureDate,
-    isFutureDateTime,
-    isWeekend,
-    isValidId,
-    isValidBoolean,
-    toBoolean
+    sanitizeUserInput
 };

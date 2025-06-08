@@ -79,14 +79,36 @@ const server = http.createServer(async (req, res) => {
 
 async function handleApiRoutes(req, res, pathname, method, queryParams) {
     try {
+        console.log(`[DEBUG] API Route: ${method} ${pathname}`);
+
         // Auth routes (rămân aici pentru că sunt simple)
         if (pathname === '/api/auth/register' && method === 'POST') {
-            const body = await getRequestBody(req);
-            await authController.register(req, res, body);
+            try {
+                const body = await getRequestBody(req);
+                console.log('[DEBUG] Register request received with body:', body);
+                await authController.register(req, res, body);
+            } catch (error) {
+                console.error('[ERROR] Error parsing register request body:', error);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Invalid JSON in request body'
+                }));
+            }
         }
         else if (pathname === '/api/auth/login' && method === 'POST') {
-            const body = await getRequestBody(req);
-            await authController.login(req, res, body);
+            try {
+                const body = await getRequestBody(req);
+                console.log('[DEBUG] Login request received with body:', { email: body.email, password: '***' });
+                await authController.login(req, res, body);
+            } catch (error) {
+                console.error('[ERROR] Error parsing login request body:', error);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Invalid JSON in request body'
+                }));
+            }
         }
 
         // Appointments routes - folosește rutele dedicate
@@ -105,6 +127,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         }
 
         else {
+            console.log(`[DEBUG] API route not found: ${pathname}`);
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, message: 'API route not found' }));
         }
@@ -129,12 +152,27 @@ async function getRequestBody(req) {
         });
         req.on('end', () => {
             try {
-                resolve(JSON.parse(body));
+                // Check if body is empty
+                if (!body.trim()) {
+                    console.log('[DEBUG] Empty request body');
+                    resolve({});
+                    return;
+                }
+
+                console.log('[DEBUG] Raw request body:', body);
+                const parsed = JSON.parse(body);
+                console.log('[DEBUG] Parsed request body:', parsed);
+                resolve(parsed);
             } catch (error) {
-                resolve({});
+                console.error('[ERROR] JSON parse error:', error);
+                console.error('[ERROR] Raw body that failed:', body);
+                reject(new Error('Invalid JSON in request body'));
             }
         });
-        req.on('error', reject);
+        req.on('error', (error) => {
+            console.error('[ERROR] Request error:', error);
+            reject(error);
+        });
     });
 }
 
