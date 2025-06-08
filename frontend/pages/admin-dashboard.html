@@ -17,11 +17,10 @@
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="active"><a href="#"><span class="icon">📅</span>Programări</a></li>
-                <li><a href="#"><span class="icon">👥</span>Clienți</a></li>
-                <li><a href="#"><span class="icon">🔧</span>Servicii</a></li>
-                <li><a href="#"><span class="icon">📊</span>Rapoarte</a></li>
-                <li><a href="#"><span class="icon">⚙️</span>Setări</a></li>
+                <li class="active"><a href="#"><span class="icon">📅</span>Appointments</a></li>
+                <li><a href="#"><span class="icon">🔧</span>Inventory</a></li>
+                <li><a href="#"><span class="icon">👥</span>Providers</a></li>
+                <li><a href="#"><span class="icon">📊</span>Orders</a></li>
             </ul>
         </nav>
         <div class="user-info">
@@ -40,7 +39,7 @@
     <main class="main-content">
         <header class="top-bar">
             <div class="search-container">
-                <input type="text" placeholder="Caută programări..." id="search-input">
+                <input type="text" placeholder="Searching for appointments..." id="search-input">
                 <button class="search-btn">🔍</button>
             </div>
             <div class="notifications">
@@ -51,20 +50,20 @@
 
         <div class="content">
             <div class="page-header">
-                <h1>Gestionare Programări</h1>
+                <h1>Appointments</h1>
                 <div class="filters">
                     <select id="status-filter">
-                        <option value="all">Toate</option>
-                        <option value="pending">În așteptare</option>
-                        <option value="approved">Aprobate</option>
-                        <option value="rejected">Respinse</option>
+                        <option value="all">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
                     </select>
                     <select id="date-filter">
-                        <option value="all">Toate datele</option>
-                        <option value="today">Astăzi</option>
-                        <option value="tomorrow">Mâine</option>
-                        <option value="week">Această săptămână</option>
-                        <option value="month">Această lună</option>
+                        <option value="all">All dates</option>
+                        <option value="today">Today</option>
+                        <option value="tomorrow">Tommorow</option>
+                        <option value="week">This week</option>
+                        <option value="month">This month</option>
                     </select>
                 </div>
             </div>
@@ -82,7 +81,7 @@
 <div class="modal" id="view-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Detalii Programare</h2>
+            <h2>Appointment details</h2>
             <span class="close-modal">&times;</span>
         </div>
         <div class="modal-body" id="appointment-details">
@@ -95,7 +94,7 @@
 <div class="modal" id="edit-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Gestionează Programarea</h2>
+            <h2>Manage appointment</h2>
             <span class="close-modal">&times;</span>
         </div>
         <div class="modal-body">
@@ -103,16 +102,16 @@
                 <input type="hidden" id="appointment-id">
 
                 <div class="form-group">
-                    <label>Status Programare</label>
+                    <label>Appointment Status</label>
                     <div class="status-toggle">
                         <input type="radio" id="status-pending" name="status" value="pending">
-                        <label for="status-pending" class="status-label pending">În așteptare</label>
+                        <label for="status-pending" class="status-label pending">Pending</label>
 
                         <input type="radio" id="status-approved" name="status" value="approved">
-                        <label for="status-approved" class="status-label approved">Aprobă</label>
+                        <label for="status-approved" class="status-label approved">Approve</label>
 
                         <input type="radio" id="status-rejected" name="status" value="rejected">
-                        <label for="status-rejected" class="status-label rejected">Respinge</label>
+                        <label for="status-rejected" class="status-label rejected">Reject</label>
                     </div>
                 </div>
 
@@ -122,58 +121,58 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="service-type">Tip Serviciu</label>
+                    <label for="service-type">Type of Service</label>
                     <input type="text" id="service-type" readonly>
                 </div>
 
                 <div class="form-group">
-                    <label for="appointment-date">Data și Ora</label>
+                    <label for="appointment-date">Date and Hour</label>
                     <input type="text" id="appointment-date" readonly>
                 </div>
 
                 <div class="form-group">
-                    <label for="client-message">Descrierea Clientului</label>
+                    <label for="client-message">Client Description</label>
                     <textarea id="client-message" readonly rows="2"></textarea>
                 </div>
 
                 <div class="form-group" id="approval-fields">
-                    <h3>Detalii Aprobare</h3>
+                    <h3>Approvement Details</h3>
                     <div class="sub-form-group">
-                        <label for="estimated-price">Preț Estimativ (RON)</label>
+                        <label for="estimated-price">Estimated Price (RON)</label>
                         <input type="number" id="estimated-price" min="0" step="1">
                     </div>
                     <div class="sub-form-group">
-                        <label for="warranty">Garanție (luni)</label>
+                        <label for="warranty">Warranty (months)</label>
                         <input type="number" id="warranty" min="0" step="1">
                     </div>
                 </div>
 
                 <div class="form-group" id="rejection-fields">
-                    <h3>Detalii Respingere</h3>
+                    <h3>Rejection Details</h3>
                     <div class="sub-form-group">
-                        <label for="rejection-reason">Motiv Respingere</label>
+                        <label for="rejection-reason">Rejection Reason</label>
                         <select id="rejection-reason">
-                            <option value="">Selectează un motiv</option>
-                            <option value="parts">Piese indisponibile</option>
-                            <option value="schedule">Program complet</option>
-                            <option value="expertise">În afara experienței noastre</option>
-                            <option value="other">Alt motiv</option>
+                            <option value="">Select a reason</option>
+                            <option value="parts">Unavailable parts</option>
+                            <option value="schedule">Full schedule</option>
+                            <option value="expertise">Outside our expertise</option>
+                            <option value="other">Another reason</option>
                         </select>
                     </div>
                     <div class="sub-form-group">
-                        <label for="retry-days">Reîncercați peste (zile)</label>
+                        <label for="retry-days">Try again after (days)</label>
                         <input type="number" id="retry-days" min="0" step="1">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="admin-message">Mesaj pentru Client</label>
-                    <textarea id="admin-message" rows="4" placeholder="Introduceți mesajul pentru client..."></textarea>
+                    <label for="admin-message">Message for Client</label>
+                    <textarea id="admin-message" rows="4" placeholder="Write your message for the client..."></textarea>
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="btn secondary-btn" id="cancel-edit-btn">Anulează</button>
-                    <button type="submit" class="btn primary-btn">Salvează</button>
+                    <button type="button" class="btn secondary-btn" id="cancel-edit-btn">Cancel</button>
+                    <button type="submit" class="btn primary-btn">Save</button>
                 </div>
             </form>
         </div>

@@ -85,10 +85,10 @@ class AdminDashboard {
         try {
             this.showLoading();
 
-            // Get token from localStorage (compatibil cu login-ul tău)
+            // Get token from localStorage (compatible with your login)
             const token = localStorage.getItem('token');
             if (!token) {
-                this.showError('Nu ești autentificat. Te redirectez la login...');
+                this.showError('You are not authenticated. Redirecting to login...');
                 setTimeout(() => {
                     window.location.href = '/login';
                 }, 2000);
@@ -108,7 +108,7 @@ class AdminDashboard {
 
             const response = await fetch(`/admin/api/appointments?${params}`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`, // Folosește token-ul din localStorage
+                    'Authorization': `Bearer ${token}`, // Use token from localStorage
                     'Content-Type': 'application/json'
                 }
             });
@@ -116,7 +116,7 @@ class AdminDashboard {
             const data = await response.json();
 
             if (response.status === 401) {
-                this.showError('Sesiunea a expirat. Te redirectez la login...');
+                this.showError('Session expired. Redirecting to login...');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 setTimeout(() => {
@@ -129,11 +129,11 @@ class AdminDashboard {
                 this.appointments = data.appointments;
                 this.renderAppointments();
             } else {
-                this.showError('Eroare la încărcarea programărilor: ' + data.message);
+                this.showError('Error loading appointments: ' + data.message);
             }
         } catch (error) {
             console.error('Error loading appointments:', error);
-            this.showError('Eroare de conexiune. Vă rugăm să încercați din nou.');
+            this.showError('Connection error. Please try again.');
         } finally {
             this.hideLoading();
         }
@@ -145,7 +145,7 @@ class AdminDashboard {
         if (this.appointments.length === 0) {
             container.innerHTML = `
                 <div class="no-appointments">
-                    <p>Nu au fost găsite programări pentru filtrele selectate.</p>
+                    <p>No appointments found for the selected filters.</p>
                 </div>
             `;
             return;
@@ -161,7 +161,7 @@ class AdminDashboard {
 
     createAppointmentCard(appointment) {
         const appointmentDate = new Date(appointment.appointmentDate);
-        const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -184,10 +184,10 @@ class AdminDashboard {
                 </div>
                 <div class="appointment-actions">
                     <button class="view-btn" data-id="${appointment.id}">
-                        Vezi detalii
+                        View Details
                     </button>
                     <button class="manage-btn" data-id="${appointment.id}">
-                        Gestionează
+                        Manage
                     </button>
                 </div>
             </div>
@@ -234,11 +234,11 @@ class AdminDashboard {
                 this.displayAppointmentDetails(data.appointment);
                 this.openModal('view-appointment-modal');
             } else {
-                this.showError('Eroare la încărcarea detaliilor: ' + data.message);
+                this.showError('Error loading details: ' + data.message);
             }
         } catch (error) {
             console.error('Error fetching appointment details:', error);
-            this.showError('Eroare de conexiune.');
+            this.showError('Connection error.');
         }
     }
 
@@ -246,7 +246,7 @@ class AdminDashboard {
         const detailsContainer = document.getElementById('appointment-details');
 
         const appointmentDate = new Date(appointment.appointmentDate);
-        const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -256,9 +256,9 @@ class AdminDashboard {
 
         detailsContainer.innerHTML = `
             <div class="detail-section">
-                <h3>Informații Client</h3>
+                <h3>Client Information</h3>
                 <div class="detail-item">
-                    <div class="detail-label">Nume:</div>
+                    <div class="detail-label">Name:</div>
                     <div class="detail-value">${appointment.clientInfo.name}</div>
                 </div>
                 <div class="detail-item">
@@ -266,15 +266,15 @@ class AdminDashboard {
                     <div class="detail-value">${appointment.clientInfo.email}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Telefon:</div>
-                    <div class="detail-value">${appointment.clientInfo.phone || 'Nu a fost specificat'}</div>
+                    <div class="detail-label">Phone:</div>
+                    <div class="detail-value">${appointment.clientInfo.phone || 'Not specified'}</div>
                 </div>
             </div>
 
             <div class="detail-section">
-                <h3>Detalii Programare</h3>
+                <h3>Appointment Details</h3>
                 <div class="detail-item">
-                    <div class="detail-label">Data și Ora:</div>
+                    <div class="detail-label">Date and Time:</div>
                     <div class="detail-value">${formattedDate}</div>
                 </div>
                 <div class="detail-item">
@@ -288,27 +288,27 @@ class AdminDashboard {
             </div>
 
             <div class="detail-section">
-                <h3>Informații Vehicul</h3>
+                <h3>Vehicle Information</h3>
                 <div class="detail-item">
-                    <div class="detail-label">Tip:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.type || 'Nu a fost specificat'}</div>
+                    <div class="detail-label">Type:</div>
+                    <div class="detail-value">${appointment.vehicleInfo.type || 'Not specified'}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Marcă și Model:</div>
+                    <div class="detail-label">Brand and Model:</div>
                     <div class="detail-value">${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">An:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.year || 'Nu a fost specificat'}</div>
+                    <div class="detail-label">Year:</div>
+                    <div class="detail-value">${appointment.vehicleInfo.year || 'Not specified'}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Electric:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.isElectric ? 'Da' : 'Nu'}</div>
+                    <div class="detail-value">${appointment.vehicleInfo.isElectric ? 'Yes' : 'No'}</div>
                 </div>
             </div>
 
             <div class="detail-section">
-                <h3>Descrierea Problemei</h3>
+                <h3>Problem Description</h3>
                 <div class="detail-item">
                     <div class="detail-value">${appointment.problemDescription}</div>
                 </div>
@@ -316,7 +316,7 @@ class AdminDashboard {
 
             ${appointment.adminResponse ? `
                 <div class="detail-section">
-                    <h3>Răspuns Admin</h3>
+                    <h3>Admin Response</h3>
                     <div class="detail-item">
                         <div class="detail-value">${appointment.adminResponse}</div>
                     </div>
@@ -325,14 +325,14 @@ class AdminDashboard {
 
             ${appointment.estimatedPrice ? `
                 <div class="detail-section">
-                    <h3>Informații Aprobare</h3>
+                    <h3>Approval Information</h3>
                     <div class="detail-item">
-                        <div class="detail-label">Preț Estimativ:</div>
-                        <div class="detail-value">${appointment.estimatedPrice} RON</div>
+                        <div class="detail-label">Estimated Price:</div>
+                        <div class="detail-value">$${appointment.estimatedPrice}</div>
                     </div>
                     ${appointment.warrantyInfo ? `
                         <div class="detail-item">
-                            <div class="detail-label">Garanție:</div>
+                            <div class="detail-label">Warranty:</div>
                             <div class="detail-value">${appointment.warrantyInfo}</div>
                         </div>
                     ` : ''}
@@ -341,7 +341,7 @@ class AdminDashboard {
 
             ${appointment.mediaFiles && appointment.mediaFiles.length > 0 ? `
                 <div class="detail-section">
-                    <h3>Fișiere Atașate</h3>
+                    <h3>Attached Files</h3>
                     <div class="attachments-list">
                         ${appointment.mediaFiles.map(file => `
                             <div class="attachment-item">
@@ -375,11 +375,11 @@ class AdminDashboard {
                 this.populateManageForm(data.appointment);
                 this.openModal('edit-appointment-modal');
             } else {
-                this.showError('Eroare la încărcarea detaliilor: ' + data.message);
+                this.showError('Error loading details: ' + data.message);
             }
         } catch (error) {
             console.error('Error fetching appointment details:', error);
-            this.showError('Eroare de conexiune.');
+            this.showError('Connection error.');
         }
     }
 
@@ -389,7 +389,7 @@ class AdminDashboard {
         document.getElementById('service-type').value = `${appointment.vehicleInfo.type} ${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}`;
 
         const appointmentDate = new Date(appointment.appointmentDate);
-        const formattedDate = appointmentDate.toLocaleDateString('ro-RO', {
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -457,11 +457,11 @@ class AdminDashboard {
                 updateData.warranty = parseInt(document.getElementById('warranty').value);
 
                 if (!updateData.estimatedPrice || updateData.estimatedPrice <= 0) {
-                    this.showError('Prețul estimativ este obligatoriu pentru aprobare');
+                    this.showError('Estimated price is required for approval');
                     return;
                 }
                 if (!updateData.warranty || updateData.warranty < 0) {
-                    this.showError('Garanția este obligatorie pentru aprobare');
+                    this.showError('Warranty is required for approval');
                     return;
                 }
             }
@@ -471,7 +471,7 @@ class AdminDashboard {
                 updateData.retryDays = parseInt(document.getElementById('retry-days').value) || 0;
 
                 if (!updateData.rejectionReason) {
-                    this.showError('Motivul respingerii este obligatoriu');
+                    this.showError('Rejection reason is required');
                     return;
                 }
             }
@@ -497,12 +497,12 @@ class AdminDashboard {
                 this.closeModal();
                 this.loadAppointments(); // Reload appointments
             } else {
-                this.showError('Eroare la actualizare: ' + data.message);
+                this.showError('Update error: ' + data.message);
             }
 
         } catch (error) {
             console.error('Error updating appointment:', error);
-            this.showError('Eroare de conexiune.');
+            this.showError('Connection error.');
         }
     }
 
@@ -534,11 +534,11 @@ class AdminDashboard {
 
     getStatusText(status) {
         const statusTexts = {
-            'pending': 'În așteptare',
-            'approved': 'Aprobat',
-            'rejected': 'Respins',
-            'completed': 'Finalizat',
-            'cancelled': 'Anulat'
+            'pending': 'Pending',
+            'approved': 'Approved',
+            'rejected': 'Rejected',
+            'completed': 'Completed',
+            'cancelled': 'Cancelled'
         };
         return statusTexts[status] || status;
     }
@@ -548,7 +548,7 @@ class AdminDashboard {
         container.innerHTML = `
             <div class="loading-spinner">
                 <div class="spinner"></div>
-                <p>Se încarcă programările...</p>
+                <p>Loading appointments...</p>
             </div>
         `;
     }
@@ -604,8 +604,8 @@ class AdminDashboard {
     }
 
     handleLogout() {
-        if (confirm('Sunteți sigur că doriți să vă delogați?')) {
-            // Clear stored authentication data (compatibil cu login-ul tău)
+        if (confirm('Are you sure you want to log out?')) {
+            // Clear stored authentication data (compatible with your login)
             localStorage.removeItem('token');
             localStorage.removeItem('user');
 
@@ -615,7 +615,7 @@ class AdminDashboard {
     }
 
     handleAuthError() {
-        this.showError('Sesiunea a expirat. Te redirectez la login...');
+        this.showError('Session expired. Redirecting to login...');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setTimeout(() => {
