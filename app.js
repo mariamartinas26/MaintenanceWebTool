@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const authController = require('./controllers/authController');
 // Importă noile controllere
-const appointmentsController = require('./controllers/appointmentsController');
+const appointmentsController = require('./controllers/appointmentController');
 const calendarController = require('./controllers/calendarController');
 const vehicleController = require('./controllers/vehicleController');
 const adminRoutes = require('./routes/adminRoute');

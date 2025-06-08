@@ -13,6 +13,7 @@ class AdminDashboard {
         this.bindEvents();
         this.loadAppointments();
         this.setupModals();
+        this.setupNavigation();
     }
 
     bindEvents() {
@@ -78,6 +79,22 @@ class AdminDashboard {
         const statusRadios = document.querySelectorAll('input[name="status"]');
         statusRadios.forEach(radio => {
             radio.addEventListener('change', this.handleStatusChange.bind(this));
+        });
+    }
+
+    setupNavigation() {
+        // Find and setup inventory link navigation
+        const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+
+        sidebarLinks.forEach(link => {
+            const iconElement = link.querySelector('.icon');
+            if (iconElement && iconElement.textContent.includes('🔧')) {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('Inventory button clicked'); // Debug log
+                    window.location.href = '/admin-inventory'; // Changed from 'admin-inventory.html' to '/admin-inventory'
+                });
+            }
         });
     }
 
