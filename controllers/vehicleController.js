@@ -14,17 +14,11 @@ class VehicleController {
             if (!userId) {
                 return sendError(res, 401, 'Invalid or missing token');
             }
-
-            console.log(`Getting vehicles for user ID: ${userId}`);
-
             const vehicles = await VehicleModel.getUserVehicles(userId);
-
-            console.log(`Found ${vehicles.length} vehicles for user ${userId}`);
 
             sendSuccess(res, { vehicles }, 'Vehicles loaded successfully');
 
         } catch (error) {
-            console.error('Error getting vehicles:', error);
             sendError(res, 500, 'Error retrieving vehicles');
         }
     }
@@ -41,29 +35,14 @@ class VehicleController {
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
-            console.log('Creating vehicle with data:', body);
-            console.log('For user ID:', userId);
-
             // Validate data
             VehicleController.validateVehicleData(body);
 
             const vehicle = await VehicleModel.createVehicle(userId, body);
 
-            console.log('Vehicle created successfully:', vehicle);
-
             sendCreated(res, { vehicle }, 'Vehicle created successfully');
 
         } catch (error) {
-            console.error('Error creating vehicle:', error);
-
-            // Send specific error messages from validation
-            if (error.message.includes('required') ||
-                error.message.includes('Vehicle type must be') ||
-                error.message.includes('Year must be between') ||
-                error.message.includes('cannot be longer than')) {
-                return sendError(res, 400, error.message);
-            }
-
             sendError(res, 500, 'Error creating vehicle');
         }
     }
@@ -80,8 +59,6 @@ class VehicleController {
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
-            console.log(`Updating vehicle ${vehicleId} for user ${userId}`);
-
             // Check if vehicle belongs to user
             const vehicleExists = await VehicleModel.checkVehicleOwnership(userId, parseInt(vehicleId));
             if (!vehicleExists) {
@@ -97,22 +74,9 @@ class VehicleController {
                 return sendError(res, 500, 'Vehicle could not be updated');
             }
 
-            console.log('Vehicle updated successfully:', vehicle);
-
             sendSuccess(res, { vehicle }, 'Vehicle updated successfully');
 
         } catch (error) {
-            console.error('Error updating vehicle:', error);
-
-            if (error.message.includes('not found') ||
-                error.message.includes('does not belong') ||
-                error.message.includes('required') ||
-                error.message.includes('Vehicle type must be') ||
-                error.message.includes('Year must be between') ||
-                error.message.includes('cannot be longer than')) {
-                return sendError(res, 400, error.message);
-            }
-
             sendError(res, 500, 'Error updating vehicle');
         }
     }
@@ -128,8 +92,6 @@ class VehicleController {
             if (!userId) {
                 return sendError(res, 401, 'Invalid or missing token');
             }
-
-            console.log(`Deleting vehicle ${vehicleId} for user ${userId}`);
 
             // Check if vehicle belongs to user
             const vehicleExists = await VehicleModel.checkVehicleOwnership(userId, parseInt(vehicleId));
@@ -149,19 +111,9 @@ class VehicleController {
                 return sendError(res, 500, 'Vehicle could not be deleted');
             }
 
-            console.log('Vehicle deleted successfully');
-
             sendSuccess(res, {}, 'Vehicle deleted successfully');
 
         } catch (error) {
-            console.error('Error deleting vehicle:', error);
-
-            if (error.message.includes('not found') ||
-                error.message.includes('does not belong') ||
-                error.message.includes('Cannot delete vehicle')) {
-                return sendError(res, 400, error.message);
-            }
-
             sendError(res, 500, 'Error deleting vehicle');
         }
     }
@@ -178,8 +130,6 @@ class VehicleController {
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
-            console.log(`Getting vehicle ${vehicleId} for user ${userId}`);
-
             const vehicle = await VehicleModel.getVehicleById(userId, parseInt(vehicleId));
 
             if (!vehicle) {
@@ -189,7 +139,6 @@ class VehicleController {
             sendSuccess(res, { vehicle }, 'Vehicle found');
 
         } catch (error) {
-            console.error('Error getting vehicle:', error);
             sendError(res, 500, 'Error retrieving vehicle');
         }
     }
@@ -206,11 +155,8 @@ class VehicleController {
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
-            console.log(`Getting vehicle stats for user ${userId}`);
-
             const statsRows = await VehicleModel.getUserVehicleStats(userId);
 
-            // Process results to form stats object
             const stats = {
                 total: 0,
                 totalElectric: 0,
@@ -232,7 +178,6 @@ class VehicleController {
             sendSuccess(res, { stats }, 'Vehicle statistics loaded');
 
         } catch (error) {
-            console.error('Error getting vehicle stats:', error);
             sendError(res, 500, 'Error retrieving vehicle statistics');
         }
     }
@@ -247,7 +192,7 @@ class VehicleController {
             throw new Error('Vehicle type, brand, model and year are required');
         }
 
-        // Validate vehicle type (from enum)
+
         const validTypes = ['motocicleta', 'bicicleta', 'trotineta'];
         if (!validTypes.includes(vehicle_type)) {
             throw new Error('Vehicle type must be: motocicleta, bicicleta or trotineta');

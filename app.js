@@ -6,10 +6,10 @@ const querystring = require('querystring');
 require('dotenv').config();
 
 const authController = require('./controllers/authController');
-// Importă noile controllere
-const appointmentsController = require('./controllers/appointmentController');
-const calendarController = require('./controllers/calendarController');
-const vehicleController = require('./controllers/vehicleController');
+// Importă rutele în loc de controllere
+const { handleAppointmentRoutes } = require('./routes/appointmentRoutes');
+const { handleCalendarRoutes } = require('./routes/calendarRoutes');
+const { handleVehicleRoutes } = require('./routes/vehicleRoutes');
 const adminRoutes = require('./routes/adminRoute');
 
 const PORT = process.env.PORT || 3000;
@@ -31,14 +31,17 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
+        // Admin routes
         if (pathname.startsWith('/admin')) {
             return adminRoutes(req, res);
         }
 
+        // API routes - folosește rutele din folderul routes/
         if (pathname.startsWith('/api/')) {
             await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
         }
 
+        // Frontend routes
         else if (pathname === '/' || pathname === '/homepage') {
             await serveFile(res, 'frontend/pages/homepage.html', 'text/html');
         }
@@ -76,7 +79,7 @@ const server = http.createServer(async (req, res) => {
 
 async function handleApiRoutes(req, res, pathname, method, queryParams) {
     try {
-        // Auth routes
+        // Auth routes (rămân aici pentru că sunt simple)
         if (pathname === '/api/auth/register' && method === 'POST') {
             const body = await getRequestBody(req);
             await authController.register(req, res, body);
@@ -86,65 +89,19 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             await authController.login(req, res, body);
         }
 
-        // Appointments routes (client)
-        else if (pathname === '/api/appointments' && method === 'GET') {
-            await appointmentsController.getAppointments(req, res)
-        }
-        else if (pathname === '/api/appointments' && method === 'POST') {
-
-            const body = await getRequestBody(req);
-            await appointmentsController.createAppointment(req, res, body);
-        }
-        else if (pathname.startsWith('/api/appointments/') && method === 'PUT') {
-            const appointmentId = pathname.split('/')[3];
-            const body = await getRequestBody(req);
-            await appointmentsController.updateAppointment(req, res, appointmentId, body);
-        }
-        else if (pathname.startsWith('/api/appointments/') && method === 'DELETE') {
-            const appointmentId = pathname.split('/')[3];
-            await appointmentsController.updateAppointment(req, res, appointmentId, { status: 'cancelled' });
+        // Appointments routes - folosește rutele dedicate
+        else if (pathname.startsWith('/api/appointments')) {
+            await handleAppointmentRoutes(req, res);
         }
 
-        // Calendar routes
-        else if (pathname === '/api/calendar/available-slots' && method === 'GET') {
-            await calendarController.getAvailableSlots(req, res, queryParams);
-        }
-        else if (pathname.startsWith('/api/calendar/week/') && method === 'GET') {
-            const startDate = pathname.split('/')[4];
-            await calendarController.getWeeklySchedule(req, res, startDate);
-        }
-        else if (pathname === '/api/calendar/slot-availability' && method === 'GET') {
-            await calendarController.checkSlotAvailability(req, res, queryParams);
+        // Calendar routes - folosește rutele dedicate
+        else if (pathname.startsWith('/api/calendar')) {
+            await handleCalendarRoutes(req, res);
         }
 
-        // Vehicles routes
-        else if (pathname === '/api/vehicles' && method === 'GET') {
-            await vehicleController.getUserVehicles(req, res);
-        }
-        else if (pathname === '/api/vehicles' && method === 'POST') {
-            const body = await getRequestBody(req);
-            await vehicleController.createVehicle(req, res, body);
-        }
-        else if (pathname.startsWith('/api/vehicles/') && method === 'PUT') {
-            const vehicleId = pathname.split('/')[3];
-            if (vehicleId === 'stats') {
-                await vehicleController.getUserVehicleStats(req, res);
-            } else {
-                const body = await getRequestBody(req);
-                await vehicleController.updateVehicle(req, res, vehicleId, body);
-            }
-        }
-        else if (pathname.startsWith('/api/vehicles/') && method === 'DELETE') {
-            const vehicleId = pathname.split('/')[3];
-            await vehicleController.deleteVehicle(req, res, vehicleId);
-        }
-        else if (pathname.startsWith('/api/vehicles/') && method === 'GET') {
-            const vehicleId = pathname.split('/')[3];
-            if (vehicleId === 'stats') {
-                await vehicleController.getUserVehicleStats(req, res);
-            } else {
-                await vehicleController.getVehicleById(req, res, vehicleId);
-            }
+        // Vehicles routes - folosește rutele dedicate
+        else if (pathname.startsWith('/api/vehicles')) {
+            await handleVehicleRoutes(req, res);
         }
 
         else {
@@ -153,6 +110,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         }
 
     } catch (error) {
+        console.error('API Route error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,

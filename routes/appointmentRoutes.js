@@ -2,7 +2,7 @@ const url = require('url');
 const AppointmentController = require('../controllers/appointmentController');
 
 /**
- * Gestionează rutele pentru programări
+ * routs for appointments
  */
 async function handleAppointmentRoutes(req, res) {
     const parsedUrl = url.parse(req.url, true);
@@ -10,17 +10,17 @@ async function handleAppointmentRoutes(req, res) {
     const method = req.method;
     const queryParams = parsedUrl.query;
 
-    // Extrage ID-ul din path dacă există (ex: /api/appointments/123)
+    //extracts id from path
     const pathParts = path.split('/');
     const appointmentId = pathParts[3]; // /api/appointments/[id]
 
     try {
         if (method === 'GET' && path === '/api/appointments') {
-            // GET /api/appointments - Obține toate programările utilizatorului
+            //gets all user appointments
             await AppointmentController.getAppointments(req, res);
         }
         else if (method === 'POST' && path === '/api/appointments') {
-            // POST /api/appointments - Creează o programare nouă
+            //creates new appointment
             let body = '';
             req.on('data', chunk => {
                 body += chunk.toString();
@@ -40,7 +40,7 @@ async function handleAppointmentRoutes(req, res) {
             });
         }
         else if (method === 'PUT' && appointmentId && pathParts.length === 4) {
-            // PUT /api/appointments/:id - Actualizează o programare
+            //updates appointment
             let body = '';
             req.on('data', chunk => {
                 body += chunk.toString();
@@ -60,7 +60,6 @@ async function handleAppointmentRoutes(req, res) {
             });
         }
         else {
-            // Rută necunoscută
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
                 success: false,
@@ -68,7 +67,6 @@ async function handleAppointmentRoutes(req, res) {
             }));
         }
     } catch (error) {
-        console.error('Error in appointment routes:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,

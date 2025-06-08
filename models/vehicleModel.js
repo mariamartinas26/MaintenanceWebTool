@@ -2,7 +2,7 @@ const { pool } = require('../database/db');
 
 class VehicleModel {
     /**
-     * Obține toate vehiculele unui utilizator
+     * gets all user vehicles
      */
     static async getUserVehicles(userId) {
         const query = `
@@ -17,7 +17,7 @@ class VehicleModel {
     }
 
     /**
-     * Creează un vehicul nou
+     * creates new vehicle
      */
     static async createVehicle(userId, vehicleData) {
         const {
@@ -50,7 +50,7 @@ class VehicleModel {
     }
 
     /**
-     * Actualizează un vehicul existent
+     * updates existing vehicle
      */
     static async updateVehicle(userId, vehicleId, vehicleData) {
         const {
@@ -91,7 +91,7 @@ class VehicleModel {
     }
 
     /**
-     * Șterge un vehicul
+     * deletes vehicle
      */
     static async deleteVehicle(userId, vehicleId) {
         const query = `
@@ -104,9 +104,6 @@ class VehicleModel {
         return result.rows.length > 0 ? result.rows[0] : null;
     }
 
-    /**
-     * Obține un vehicul specific
-     */
     static async getVehicleById(userId, vehicleId) {
         const query = `
             SELECT id, vehicle_type, brand, model, year, is_electric, notes, created_at
@@ -118,9 +115,6 @@ class VehicleModel {
         return result.rows.length > 0 ? result.rows[0] : null;
     }
 
-    /**
-     * Verifică dacă vehiculul aparține utilizatorului
-     */
     static async checkVehicleOwnership(userId, vehicleId) {
         const query = `
             SELECT id FROM "Vehicles"
@@ -131,9 +125,6 @@ class VehicleModel {
         return result.rows.length > 0;
     }
 
-    /**
-     * Verifică dacă vehiculul este folosit în programări active
-     */
     static async checkVehicleInUse(vehicleId) {
         const query = `
             SELECT COUNT(*) as count
@@ -145,9 +136,6 @@ class VehicleModel {
         return parseInt(result.rows[0].count) > 0;
     }
 
-    /**
-     * Obține statistici despre vehiculele utilizatorului
-     */
     static async getUserVehicleStats(userId) {
         const query = `
             SELECT 

@@ -1,9 +1,7 @@
 const { pool } = require('../database/db');
 
 class CalendarModel {
-    /**
-     * Verifică dacă există sloturi pentru o anumită dată
-     */
+
     static async getSlotsCountForDate(date) {
         const query = `
             SELECT COUNT(*) as count 
@@ -16,7 +14,7 @@ class CalendarModel {
     }
 
     /**
-     * Creează sloturile pentru o dată
+     * creates slots for a date
      */
     static async createSlotsForDate(client, date, workingHours) {
         for (const slot of workingHours) {
@@ -35,9 +33,6 @@ class CalendarModel {
         }
     }
 
-    /**
-     * Obține sloturile disponibile pentru o dată
-     */
     static async getAvailableSlots(date) {
         const query = `
             SELECT
@@ -58,9 +53,6 @@ class CalendarModel {
         return result.rows;
     }
 
-    /**
-     * Verifică disponibilitatea unui slot specific
-     */
     static async getSlotByDateTime(date, time) {
         const query = `
             SELECT
@@ -80,9 +72,6 @@ class CalendarModel {
         return result.rows.length > 0 ? result.rows[0] : null;
     }
 
-    /**
-     * Actualizează numărul de programări pentru un slot
-     */
     static async updateSlotAppointments(date, time, increment) {
         const query = `
             UPDATE "Calendar"

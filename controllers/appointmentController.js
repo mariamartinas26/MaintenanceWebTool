@@ -6,7 +6,7 @@ const { sendSuccess, sendError, sendCreated } = require('../utils/response');
 
 class AppointmentController {
     /**
-     * GET /api/appointments - Obține programările utilizatorului
+     * GET /api/appointments - gets all appointments for a user
      */
     static async getAppointments(req, res) {
         try {
@@ -19,7 +19,7 @@ class AppointmentController {
 
             const appointments = await AppointmentModel.getUserAppointments(userId);
 
-            // Formatează datele pentru răspuns
+            //format data for response
             const formattedAppointments = appointments.map(row => ({
                 id: row.id,
                 date: row.appointment_date.toISOString().split('T')[0],
@@ -39,16 +39,15 @@ class AppointmentController {
                 } : null
             }));
 
-            sendSuccess(res, { appointments: formattedAppointments }, 'Programările au fost încărcate cu succes');
+            sendSuccess(res, { appointments: formattedAppointments }, 'Appointments loaded successfully');
 
         } catch (error) {
-            console.error('Error getting appointments:', error);
-            sendError(res, 500, 'Eroare la obținerea programărilor');
+            sendError(res, 500, 'Error getting appointments');
         }
     }
 
     /**
-     * POST /api/appointments - Creează o programare nouă
+     * POST /api/appointments - creates a new appointment
      */
     static async createAppointment(req, res, body) {
         try {
@@ -61,24 +60,19 @@ class AppointmentController {
 
             const { date, time, description, vehicleId } = body;
 
-            console.log('[DEBUG] Creating appointment with:', { userId, date, time, description, vehicleId });
-
-            // Validare date
+            //data validation
             AppointmentController.validateAppointmentData(date, time, description);
 
-            // Creează timestamp-ul corect
             const appointmentDateTime = AppointmentController.createValidDateTime(date, time);
 
-            // Verificări business logic
-            await AppointmentController.validateAppointmentBusinessRules(userId, appointmentDateTime, date, time);
+            await AppointmentController.validateAppointmentRules(userId, appointmentDateTime, date, time);
 
-            // Creează programarea în tranzacție
             const client = await pool.connect();
 
             try {
                 await client.query('BEGIN');
 
-                // Inserează programarea
+                //insert appointment
                 const newAppointment = await AppointmentModel.createAppointment(
                     userId,
                     vehicleId,
@@ -86,19 +80,17 @@ class AppointmentController {
                     description
                 );
 
-                console.log('[DEBUG] Appointment created:', newAppointment.id);
-
-                // Actualizează calendarul
+                //updates calendar
                 await CalendarModel.updateSlotAppointments(date, time, 1);
 
-                // Adaugă în istoric
+                //add to appointment history
                 await AppointmentModel.addAppointmentHistory(
                     client,
                     newAppointment.id,
                     userId,
                     'created',
                     'pending',
-                    'Programare creată de client'
+                    'Appointment created'
                 );
 
                 await client.query('COMMIT');
@@ -122,23 +114,12 @@ class AppointmentController {
             }
 
         } catch (error) {
-            console.error('Error creating appointment:', error);
-
-            // Trimite mesajul de eroare specific
-            if (error.message.includes('Data, ora și descrierea sunt obligatorii') ||
-                error.message.includes('Descrierea trebuie să conțină') ||
-                error.message.includes('Data și ora programării trebuie să fie în viitor') ||
-                error.message.includes('Ai deja o programare activă') ||
-                error.message.includes('Slot indisponibil')) {
-                return sendError(res, 400, error.message);
-            }
-
-            sendError(res, 500, 'Eroare la crearea programării');
+            sendError(res, 500, 'Error creating appointment');
         }
     }
 
     /**
-     * PUT /api/appointments/:id - Actualizează statusul unei programări
+     * PUT /api/appointments/:id - updates appointment status
      */
     static async updateAppointment(req, res, appointmentId, body) {
         try {
@@ -151,19 +132,18 @@ class AppointmentController {
 
             const { status } = body;
 
-            // Doar anularea este permisă pentru clienți
+            //only cancelling available for clients
             if (status !== 'cancelled') {
                 return sendError(res, 400, 'You can only cancel the appointment');
             }
 
-            // Verifică dacă programarea aparține utilizatorului
+            //checks if appointment belongs to client
             const appointment = await AppointmentModel.getAppointmentById(appointmentId, userId);
 
             if (!appointment) {
-                return sendError(res, 404, 'Programarea nu a fost găsită');
+                return sendError(res, 404, 'Appointment not found');
             }
 
-            // Validează posibilitatea anulării
             AppointmentController.validateCancellation(appointment);
 
             const client = await pool.connect();
@@ -171,30 +151,30 @@ class AppointmentController {
             try {
                 await client.query('BEGIN');
 
-                // Actualizează statusul programării
+                //updates appointment status
                 const updatedAppointment = await AppointmentModel.updateAppointmentStatus(appointmentId, 'cancelled');
 
-                // Actualizează calendarul
+                //updates calendar
                 const appointmentDateTime = updatedAppointment.appointment_date;
                 const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
                 const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 5);
 
                 await CalendarModel.updateSlotAppointments(appointmentDateStr, appointmentTimeStr, -1);
 
-                // Adaugă în istoric
+                //add to appointment history
                 await AppointmentModel.addAppointmentHistory(
                     client,
                     appointmentId,
                     userId,
                     'cancelled',
                     'cancelled',
-                    'Programare anulată de client',
+                    'Appointment cancelled',
                     appointment.status
                 );
 
                 await client.query('COMMIT');
 
-                sendSuccess(res, {}, 'Programarea a fost anulată cu succes');
+                sendSuccess(res, {}, 'Appointment cancelled successfully!');
 
             } catch (error) {
                 await client.query('ROLLBACK');
@@ -204,56 +184,44 @@ class AppointmentController {
             }
 
         } catch (error) {
-            console.error('Error updating appointment:', error);
-
-            if (error.message.includes('Programarea nu a fost găsită') ||
-                error.message.includes('Programarea este deja anulată') ||
-                error.message.includes('Nu poți anula o programare completată') ||
-                error.message.includes('Nu poți anula programarea cu mai puțin de')) {
-                return sendError(res, 400, error.message);
-            }
-
-            sendError(res, 500, 'Eroare la actualizarea programării');
+            sendError(res, 500, 'Error updating appointment');
         }
     }
 
     /**
-     * Validare date programare
+     * validating appointment dates
      */
     static validateAppointmentData(date, time, description) {
         if (!date || !time || !description) {
-            throw new Error('Data, ora și descrierea sunt obligatorii');
+            throw new Error('Date, hour and description are required');
         }
 
         if (description.trim().length < 10) {
-            throw new Error('Descrierea trebuie să conțină cel puțin 10 caractere');
+            throw new Error('Description should be at least 10 characters long');
         }
     }
 
-    /**
-     * Creează un DateTime valid din string-uri
-     */
+
     static createValidDateTime(date, time) {
         if (!date || !time) {
-            throw new Error('Data și ora sunt obligatorii');
+            throw new Error('Date and hour are required');
         }
 
         const dateStr = String(date).trim();
         const timeStr = String(time).trim();
 
-        // Validează formatul datei (YYYY-MM-DD)
+        //validates date format
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(dateStr)) {
-            throw new Error(`Format dată invalid: ${dateStr}. Folosește YYYY-MM-DD`);
+            throw new Error(`Invalid data format: ${dateStr}. Use YYYY-MM-DD`);
         }
 
-        // Validează formatul timpului (HH:MM sau HH:MM:SS)
+        //validates time format (HH:MM sau HH:MM:SS)
         const timeRegex = /^\d{2}:\d{2}(:\d{2})?$/;
         if (!timeRegex.test(timeStr)) {
-            throw new Error(`Format timp invalid: ${timeStr}. Folosește HH:MM sau HH:MM:SS`);
+            throw new Error(`Time format invalid: ${timeStr}. Use HH:MM sau HH:MM:SS`);
         }
 
-        // Adaugă secunde dacă lipsesc
         const fullTimeStr = timeStr.includes(':') && timeStr.split(':').length === 2
             ? `${timeStr}:00`
             : timeStr;
@@ -262,7 +230,7 @@ class AppointmentController {
         const appointmentDateTime = new Date(dateTimeString);
 
         if (isNaN(appointmentDateTime.getTime())) {
-            throw new Error(`Data și ora nu sunt valide: ${dateStr} ${timeStr}`);
+            throw new Error(`Date and hour not valid: ${dateStr} ${timeStr}`);
         }
 
         return appointmentDateTime;
@@ -271,62 +239,61 @@ class AppointmentController {
     /**
      * Validare reguli business pentru programare
      */
-    static async validateAppointmentBusinessRules(userId, appointmentDateTime, date, time) {
-        // Verifică dacă data nu e în trecut
+    static async validateAppointmentRules(userId, appointmentDateTime, date, time) {
+        //checks if date is not in the past
         const now = new Date();
         if (appointmentDateTime <= now) {
-            throw new Error('Data și ora programării trebuie să fie în viitor');
+            throw new Error('Date and hour of the appointment should be in the future');
         }
 
-        // Verifică dacă utilizatorul nu are deja o programare la același timp
+        //checks if user doesn't have another appointment at the same time
         const hasExistingAppointment = await AppointmentModel.checkExistingAppointment(userId, appointmentDateTime);
 
         if (hasExistingAppointment) {
-            throw new Error('Ai deja o programare activă la această dată și oră');
+            throw new Error('You already have an appointment at this hour!');
         }
 
-        // Verifică disponibilitatea în calendar
+        //checks availability in calendar
         await AppointmentController.ensureSlotsExistForDate(date);
         const slot = await CalendarModel.getSlotByDateTime(date, time);
 
         if (!slot) {
-            throw new Error('Slot indisponibil: Slot inexistent');
+            throw new Error('Occupied slot');
         }
 
         if (!slot.is_available) {
-            throw new Error('Slot indisponibil: Slot dezactivat');
+            throw new Error('Occupied slot');
         }
 
         if (slot.current_appointments >= slot.max_appointments) {
-            throw new Error('Slot indisponibil: Slot complet ocupat');
+            throw new Error('Occupied slot');
         }
     }
 
     /**
-     * Validează posibilitatea anulării
+     * checks possibility of cancellation
      */
     static validateCancellation(appointment) {
         if (appointment.status === 'cancelled') {
-            throw new Error('Programarea este deja anulată');
+            throw new Error('Appointment already cancelled');
         }
 
         if (appointment.status === 'completed') {
-            throw new Error('Nu poți anula o programare completată');
+            throw new Error('You can not cancel a completed appointment');
         }
 
-        // Verifică regula de 1h
         const appointmentDate = new Date(appointment.appointment_date);
         const now = new Date();
         const timeDiff = appointmentDate.getTime() - now.getTime();
         const hoursDiff = timeDiff / (1000 * 3600);
 
         if (hoursDiff < 1) {
-            throw new Error('Nu poți anula programarea cu mai puțin de 1 oră înainte');
+            throw new Error('You can not cancel the appointment at this hour!');
         }
     }
 
     /**
-     * Creează sloturile pentru o dată dacă nu există
+     * creates slots for a date if they don't exist
      */
     static async ensureSlotsExistForDate(date) {
         const existingCount = await CalendarModel.getSlotsCountForDate(date);
@@ -335,7 +302,7 @@ class AppointmentController {
             return;
         }
 
-        // Verifică dacă este weekend
+        //checks if it is weekend
         const requestedDate = new Date(date);
         const dayOfWeek = requestedDate.getDay();
 
@@ -343,7 +310,7 @@ class AppointmentController {
             return;
         }
 
-        // Creează sloturile
+        //creates slots
         const workingHours = [
             { start: '08:00:00', end: '09:00:00', maxAppointments: 2 },
             { start: '09:00:00', end: '10:00:00', maxAppointments: 2 },

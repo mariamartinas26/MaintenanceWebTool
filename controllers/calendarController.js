@@ -3,18 +3,16 @@ const { sendSuccess, sendError } = require('../utils/response');
 
 class CalendarController {
     /**
-     * GET /api/calendar/available-slots - Obține sloturile disponibile pentru o dată
+     * GET /api/calendar/available-slots - gets available slots for a date
      */
     static async getAvailableSlots(req, res, queryParams) {
         try {
             const { date } = queryParams;
 
-            console.log(`[DEBUG] Getting available slots for date: ${date}`);
-
-            // Validare date
+            // Validate date
             CalendarController.validateDate(date);
 
-            // Verifică dacă e weekend
+            // Check if it is weekend
             const requestedDate = new Date(date);
             const dayOfWeek = requestedDate.getDay();
 
@@ -23,13 +21,13 @@ class CalendarController {
                     date: date,
                     availableSlots: [],
                     message: 'We do not work on weekends'
-                }, 'Weekend - nu lucrăm');
+                }, 'We do not work on weekends');
             }
 
-            // Asigură-te că există sloturi pentru această dată
+            // Ensure slots exist for this date
             await CalendarController.ensureSlotsExistForDate(date);
 
-            // Obține sloturile disponibile
+            // Get available slots
             const slots = await CalendarModel.getAvailableSlots(date);
 
             const availableSlots = slots.map(row => ({
@@ -44,24 +42,20 @@ class CalendarController {
                 availableSlots: availableSlots
             };
 
-            console.log(`[DEBUG] Found ${availableSlots.length} available slots`);
-
-            sendSuccess(res, result, 'Sloturile disponibile au fost încărcate cu succes');
+            sendSuccess(res, result, 'Available slots loaded successfully');
 
         } catch (error) {
-            console.error('[ERROR] Error getting available slots:', error);
-
             if (error.message.includes('Date is necessary') ||
                 error.message.includes('You can not schedule an appointment in the past')) {
                 return sendError(res, 400, error.message);
             }
 
-            sendError(res, 500, 'Eroare la obținerea sloturilor disponibile');
+            sendError(res, 500, 'Error retrieving available slots');
         }
     }
 
     /**
-     * GET /api/calendar/slot-availability - Verifică disponibilitatea unui slot specific
+     * GET /api/calendar/slot-availability - checks availability for a specific slot
      */
     static async checkSlotAvailability(req, res, queryParams) {
         try {
@@ -71,7 +65,7 @@ class CalendarController {
                 return sendError(res, 400, 'Date and hour are necessary');
             }
 
-            // Asigură-te că există sloturi pentru această dată
+            // Ensure slots exist for this date
             await CalendarController.ensureSlotsExistForDate(date);
 
             const slot = await CalendarModel.getSlotByDateTime(date, time);
@@ -81,17 +75,17 @@ class CalendarController {
             if (!slot) {
                 availability = {
                     available: false,
-                    reason: 'Slot inexistent'
+                    reason: 'Slot does not exist'
                 };
             } else if (!slot.is_available) {
                 availability = {
                     available: false,
-                    reason: 'Slot indisponibil'
+                    reason: 'Slot not available'
                 };
             } else if (slot.current_appointments >= slot.max_appointments) {
                 availability = {
                     available: false,
-                    reason: 'Slot complet ocupat'
+                    reason: 'Slot fully booked'
                 };
             } else {
                 availability = {
@@ -101,23 +95,21 @@ class CalendarController {
                 };
             }
 
-            sendSuccess(res, availability, 'Disponibilitatea slot-ului a fost verificată');
+            sendSuccess(res, availability, 'Slot availability checked');
 
         } catch (error) {
-            console.error('[ERROR] Error checking slot availability:', error);
-            sendError(res, 500, 'Eroare la verificarea disponibilității slot-ului');
+            sendError(res, 500, 'Error checking slot availability');
         }
     }
 
     /**
-     * Validează data introdusă
+     * Validates date
      */
     static validateDate(date) {
         if (!date) {
             throw new Error('Date is necessary');
         }
 
-        // Verifică dacă data nu e în trecut
         const requestedDate = new Date(date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -128,7 +120,7 @@ class CalendarController {
     }
 
     /**
-     * Creează sloturile pentru o dată dacă nu există
+     * Creates slots for a date if they don't exist
      */
     static async ensureSlotsExistForDate(date) {
         const existingCount = await CalendarModel.getSlotsCountForDate(date);
@@ -137,7 +129,7 @@ class CalendarController {
             return;
         }
 
-        // Verifică dacă este weekend
+        // Check if it is weekend
         const requestedDate = new Date(date);
         const dayOfWeek = requestedDate.getDay();
 
@@ -145,7 +137,7 @@ class CalendarController {
             return;
         }
 
-        // Creează sloturile pentru ziua de lucru
+        // Create slots for working day
         const workingHours = [
             { start: '08:00:00', end: '09:00:00', maxAppointments: 2 },
             { start: '09:00:00', end: '10:00:00', maxAppointments: 2 },

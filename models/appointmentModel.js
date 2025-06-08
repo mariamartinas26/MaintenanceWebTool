@@ -2,7 +2,7 @@ const { pool } = require('../database/db');
 
 class AppointmentModel {
     /**
-     * Obține programările unui utilizator
+     * gets user appointments
      */
     static async getUserAppointments(userId) {
         const query = `
@@ -31,7 +31,7 @@ class AppointmentModel {
     }
 
     /**
-     * Creează o programare nouă
+     * creates new appointment
      */
     static async createAppointment(userId, vehicleId, appointmentDateTime, description) {
         const query = `
@@ -51,9 +51,6 @@ class AppointmentModel {
         return result.rows[0];
     }
 
-    /**
-     * Verifică dacă utilizatorul are o programare la același timp
-     */
     static async checkExistingAppointment(userId, appointmentDateTime) {
         const query = `
             SELECT id FROM "Appointments"
@@ -64,9 +61,6 @@ class AppointmentModel {
         return result.rows.length > 0;
     }
 
-    /**
-     * Obține programare după ID și userId
-     */
     static async getAppointmentById(appointmentId, userId) {
         const query = `
             SELECT id, status, appointment_date
@@ -79,7 +73,7 @@ class AppointmentModel {
     }
 
     /**
-     * Actualizează statusul unei programări
+     * updates appointment status
      */
     static async updateAppointmentStatus(appointmentId, status) {
         const query = `
@@ -93,9 +87,6 @@ class AppointmentModel {
         return result.rows[0];
     }
 
-    /**
-     * Adaugă intrare în istoricul programărilor
-     */
     static async addAppointmentHistory(client, appointmentId, userId, action, newStatus, comment, oldStatus = null) {
         const query = `
             INSERT INTO "AppointmentHistory"
