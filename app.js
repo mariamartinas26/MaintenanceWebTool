@@ -11,6 +11,7 @@ const { handleAppointmentRoutes } = require('./routes/appointmentRoutes');
 const { handleCalendarRoutes } = require('./routes/calendarRoutes');
 const { handleVehicleRoutes } = require('./routes/vehicleRoutes');
 const adminRoutes = require('./routes/adminRoute');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const PORT = process.env.PORT || 3000;
 
@@ -36,12 +37,14 @@ const server = http.createServer(async (req, res) => {
             return adminRoutes(req, res);
         }
 
-        // API routes - folosește rutele din folderul routes/
+        if (pathname.startsWith('/inventory')) {
+            return inventoryRoutes(req, res);
+        }
+
         if (pathname.startsWith('/api/')) {
             await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
         }
 
-        // Frontend routes
         else if (pathname === '/' || pathname === '/homepage') {
             await serveFile(res, 'frontend/pages/homepage.html', 'text/html');
         }

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Dashboard - Repair Queens</title>
+    <link rel="stylesheet" href="/css/inventory-dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1><i class="fas fa-boxes"></i> Inventory Dashboard</h1>
+                <span class="subtitle">Repair Queens Parts Management</span>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="adminName">Loading...</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <button class="btn-logout" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="dashboard-nav">
+        <div class="nav-content">
+            <a href="/admin/dashboard" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+            </a>
+            <a href="/inventory/dashboard" class="nav-link active">
+                <i class="fas fa-boxes"></i> Inventory
+            </a>
+            <a href="/inventory/parts" class="nav-link">
+                <i class="fas fa-cogs"></i> Manage Parts
+            </a>
+            <a href="/inventory/low-stock" class="nav-link">
+                <i class="fas fa-exclamation-triangle"></i> Low Stock
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Statistics Cards -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalParts">-</h3>
+                        <p>Total Parts</p>
+                    </div>
+                </div>
+
+                <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="lowStockCount">-</h3>
+                        <p>Low Stock Alerts</p>
+                    </div>
+                </div>
+
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="inventoryValue">-</h3>
+                        <p>Total Value (RON)</p>
+                    </div>
+                </div>
+
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalCategories">-</h3>
+                        <p>Categories</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="actions-section">
+            <div class="section-header">
+                <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+            </div>
+            <div class="actions-grid">
+                <a href="/inventory/parts/add" class="action-card">
+                    <i class="fas fa-plus-circle"></i>
+                    <h3>Add New Part</h3>
+                    <p>Add a new part to inventory</p>
+                </a>
+
+                <a href="/inventory/parts" class="action-card">
+                    <i class="fas fa-search"></i>
+                    <h3>Search Parts</h3>
+                    <p>Find and manage existing parts</p>
+                </a>
+
+                <a href="/inventory/low-stock" class="action-card warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Check Low Stock</h3>
+                    <p>View parts that need restocking</p>
+                </a>
+
+                <div class="action-card" onclick="showStockUpdateModal()">
+                    <i class="fas fa-warehouse"></i>
+                    <h3>Update Stock</h3>
+                    <p>Quick stock adjustments</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="activity-section">
+            <div class="section-header">
+                <h2><i class="fas fa-clock"></i> Recent Low Stock Alerts</h2>
+                <a href="/inventory/low-stock" class="btn-secondary">View All</a>
+            </div>
+            <div class="activity-list" id="recentLowStock">
+                <div class="loading">Loading recent alerts...</div>
+            </div>
+        </section>
+
+        <!-- Categories Overview -->
+        <section class="categories-section">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-pie"></i> Parts by Category</h2>
+            </div>
+            <div class="categories-grid" id="categoriesGrid">
+                <div class="loading">Loading categories...</div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Stock Update Modal -->
+<div id="stockUpdateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-warehouse"></i> Quick Stock Update</h3>
+            <span class="modal-close" onclick="hideStockUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="stockUpdateForm">
+                <div class="form-group">
+                    <label for="partSearch">Search Part:</label>
+                    <input type="text" id="partSearch" placeholder="Search by name or part number..." onkeyup="searchPartsForStock()">
+                    <div id="partSearchResults" class="search-results"></div>
+                </div>
+
+                <div id="selectedPartInfo" class="selected-part" style="display: none;">
+                    <h4 id="selectedPartName"></h4>
+                    <p>Current Stock: <span id="currentStock"></span></p>
+                    <p>Minimum Level: <span id="minLevel"></span></p>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="stockOperation">Operation:</label>
+                        <select id="stockOperation" required>
+                            <option value="add">Add Stock</option>
+                            <option value="subtract">Remove Stock</option>
+                            <option value="set">Set Exact Amount</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stockQuantity">Quantity:</label>
+                        <input type="number" id="stockQuantity" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="stockReason">Reason (optional):</label>
+                    <input type="text" id="stockReason" placeholder="e.g., Received shipment, Used for repair...">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideStockUpdateModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Update Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Loading...</p>
+    </div>
+</div>
+
+<script src="/js/inventory-dashboard.js"></script>
+</body>
+</html>

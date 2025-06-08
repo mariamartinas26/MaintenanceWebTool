@@ -91,7 +91,7 @@ class AdminDashboard {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     console.log('Inventory button clicked');
-                    window.location.href = '/admin-inventory';
+                    window.location.href = '/inventory/dashboard';
                 });
             }
         });
