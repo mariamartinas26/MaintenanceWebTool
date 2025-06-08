@@ -83,7 +83,6 @@ class AdminDashboard {
     }
 
     setupNavigation() {
-        // Find and setup inventory link navigation
         const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
 
         sidebarLinks.forEach(link => {
@@ -91,8 +90,8 @@ class AdminDashboard {
             if (iconElement && iconElement.textContent.includes('🔧')) {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    console.log('Inventory button clicked'); // Debug log
-                    window.location.href = '/admin-inventory'; // Changed from 'admin-inventory.html' to '/admin-inventory'
+                    console.log('Inventory button clicked');
+                    window.location.href = '/admin-inventory';
                 });
             }
         });
@@ -102,7 +101,6 @@ class AdminDashboard {
         try {
             this.showLoading();
 
-            // Get token from localStorage (compatible with your login)
             const token = localStorage.getItem('token');
             if (!token) {
                 this.showError('You are not authenticated. Redirecting to login...');
@@ -125,7 +123,7 @@ class AdminDashboard {
 
             const response = await fetch(`/admin/api/appointments?${params}`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`, // Use token from localStorage
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
