@@ -402,7 +402,6 @@ class SupplierModel {
 
             await client.query('COMMIT');
 
-            // Return order with items
             return {
                 ...newOrder,
                 items: orderData.items.map(item => ({
@@ -413,7 +412,6 @@ class SupplierModel {
 
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('Error creating order:', error);
             throw error;
         } finally {
             client.release();
@@ -421,88 +419,94 @@ class SupplierModel {
     }
 
     static async updateOrderStatus(orderId, status, actualDeliveryDate = null, notes = null) {
-        const query = `
-            UPDATE "Orders" SET
-                status = $1,
-                actual_delivery_date = $2,
-                notes = CASE 
-                    WHEN $3 IS NOT NULL THEN CONCAT(COALESCE(notes, ''), '\n', $3)
-                    ELSE notes 
-                END,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $4
-            RETURNING *
-        `;
+        try {
+            const allOrdersQuery = 'SELECT id, status FROM "Orders" ORDER BY id';
+            const allOrders = await pool.query(allOrdersQuery);
+            allOrders.rows.forEach(row => {
+                console.log(`  ID: ${row.id} (${typeof row.id}), Status: ${row.status}`);
+            });
 
-        const values = [status, actualDeliveryDate, notes, orderId];
-        const result = await pool.query(query, values);
+            let query, values;
 
-        if (result.rows.length === 0) {
-            throw new Error('Order not found');
+            if (notes && notes.trim() !== '') {
+                query = `
+                UPDATE "Orders" SET
+                    status = $1,
+                    actual_delivery_date = $2,
+                    notes = CONCAT(COALESCE(notes, ''), CASE WHEN COALESCE(notes, '') = '' THEN '' ELSE '\n' END, $3),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $4
+                RETURNING *
+            `;
+                values = [status, actualDeliveryDate, notes, orderId];
+            } else {
+                query = `
+                UPDATE "Orders" SET
+                    status = $1,
+                    actual_delivery_date = $2,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+                RETURNING *
+            `;
+                values = [status, actualDeliveryDate, orderId];
+            }
+
+            const result = await pool.query(query, values);
+
+
+            if (result.rows.length === 0) {
+                throw new Error(`Order with ID ${orderId} not found`);
+            }
+
+            // Update inventory if delivered
+            if (status === 'delivered') {
+                await this.updateInventoryFromOrder(result.rows[0]);
+            }
+
+            return result.rows[0];
+
+        } catch (error) {
+            throw error;
         }
-
-        // Update inventory if delivered
-        if (status === 'delivered') {
-            await this.updateInventoryFromOrder(result.rows[0]);
-        }
-
-        return result.rows[0];
     }
 
     static async updateInventoryFromOrder(order) {
-        // Get order items
-        const itemsQuery = `
-            SELECT oi.*, p.name 
+        try {
+            // Get order items
+            const itemsQuery = `
+            SELECT oi.*, p.name, p.id as part_id
             FROM "OrderItems" oi
             LEFT JOIN "Parts" p ON oi.part_id = p.id
             WHERE oi.order_id = $1
         `;
 
-        const itemsResult = await pool.query(itemsQuery, [order.id]);
+            const itemsResult = await pool.query(itemsQuery, [order.id]);
 
-        // Update stock for each item
-        for (const item of itemsResult.rows) {
-            if (item.part_id) {
-                await pool.query(
-                    'UPDATE "Parts" SET stock_quantity = stock_quantity + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-                    [item.quantity, item.part_id]
-                );
+            // Update stock for each item
+            for (const item of itemsResult.rows) {
+                if (item.part_id) {
+                    console.log(`Model - Updating stock for part ${item.part_id}: +${item.quantity}`);
+
+                    const updateStockQuery = `
+                    UPDATE "Parts" 
+                    SET stock_quantity = stock_quantity + $1, 
+                        updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = $2
+                    RETURNING name, stock_quantity
+                `;
+
+                    const result = await pool.query(updateStockQuery, [item.quantity, item.part_id]);
+
+                    if (result.rows.length > 0) {
+                        console.log(`Model - Updated ${result.rows[0].name}: new stock = ${result.rows[0].stock_quantity}`);
+                    }
+                } else {
+                    console.log(`Model - Skipping item without part_id: ${item.name}`);
+                }
             }
+        } catch (error) {
+            console.error('Model - Error updating inventory:', error);
         }
-    }
-
-    // Evaluation methods
-    static async calculateSupplierEvaluation(supplierId) {
-        const query = `
-            SELECT COUNT(*) as total_orders,
-                   COUNT(CASE WHEN actual_delivery_date <= expected_delivery_date THEN 1 END) as on_time_deliveries
-            FROM "Orders"
-            WHERE supplier_id = $1 AND status = 'delivered'
-              AND expected_delivery_date IS NOT NULL 
-              AND actual_delivery_date IS NOT NULL
-        `;
-
-        const result = await pool.query(query, [supplierId]);
-        const stats = result.rows[0];
-
-        if (parseInt(stats.total_orders) === 0) {
-            return { quality: 0, punctuality: 0, delivery: 0, overall: 0 };
-        }
-
-        // Calculate punctuality
-        const punctuality = Math.round((parseInt(stats.on_time_deliveries) / parseInt(stats.total_orders)) * 100);
-
-        // Simulate other metrics
-        const quality = Math.min(85 + Math.random() * 15, 100);
-        const delivery = Math.min(80 + Math.random() * 20, 100);
-        const overall = Math.round((quality + punctuality + delivery) / 3);
-
-        return {
-            quality: Math.round(quality),
-            punctuality,
-            delivery: Math.round(delivery),
-            overall
-        };
     }
 
     // Sample data initialization

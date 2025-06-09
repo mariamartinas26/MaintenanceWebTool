@@ -343,9 +343,19 @@ class SupplierController {
 
     async updateOrderStatus(req, res, data) {
         try {
+            console.log('=== BACKEND DEBUG ===');
+            console.log('Controller - Request data:', JSON.stringify(data, null, 2));
+
             const { orderId, status, actual_delivery_date, notes } = data;
 
+            console.log('Controller - Extracted values:');
+            console.log('  orderId:', orderId, 'Type:', typeof orderId);
+            console.log('  status:', status);
+            console.log('  actual_delivery_date:', actual_delivery_date);
+            console.log('  notes:', notes);
+
             if (!orderId || !status) {
+                console.log('Controller - Missing required fields');
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -357,6 +367,7 @@ class SupplierController {
             // Validate status
             const validStatuses = ['ordered', 'confirmed', 'in_transit', 'delivered', 'cancelled'];
             if (!validStatuses.includes(status)) {
+                console.log('Controller - Invalid status:', status);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -365,7 +376,18 @@ class SupplierController {
                 return;
             }
 
-            const order = await SupplierModel.updateOrderStatus(orderId, status, actual_delivery_date, notes);
+            console.log('Controller - Calling SupplierModel.updateOrderStatus...');
+
+            // POSIBILĂ PROBLEMĂ: Convertește orderId la număr pentru backend
+            const numericOrderId = parseInt(orderId);
+            if (isNaN(numericOrderId)) {
+                throw new Error(`Invalid order ID: ${orderId}`);
+            }
+            console.log('Controller - Using numeric order ID:', numericOrderId);
+
+            const order = await SupplierModel.updateOrderStatus(numericOrderId, status, actual_delivery_date, notes);
+
+            console.log('Controller - Model returned:', order);
 
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
@@ -375,38 +397,20 @@ class SupplierController {
             }));
 
         } catch (error) {
-            console.error('Error updating order status:', error);
+            console.error('Controller - Error updating order status:', error);
+            console.error('Controller - Error stack:', error.stack);
 
             if (error.message.includes('not found')) {
                 res.writeHead(404, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: false, message: error.message }));
             } else {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Error updating order status: ' + error.message }));
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Error updating order status: ' + error.message,
+                    error: error.stack
+                }));
             }
-        }
-    }
-
-    // Get supplier evaluation
-    async getSupplierEvaluation(req, res, params) {
-        try {
-            const { supplierId } = params;
-
-            if (!supplierId) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Supplier ID is required' }));
-                return;
-            }
-
-            const evaluation = await SupplierModel.calculateSupplierEvaluation(supplierId);
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: evaluation }));
-
-        } catch (error) {
-            console.error('Error getting supplier evaluation:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching evaluation: ' + error.message }));
         }
     }
 
@@ -422,24 +426,6 @@ class SupplierController {
             console.error('Error getting low stock parts:', error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, message: 'Error fetching low stock parts: ' + error.message }));
-        }
-    }
-
-    // Initialize sample data
-    async initializeSampleData(req, res) {
-        try {
-            await SupplierModel.initializeSampleData();
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                success: true,
-                message: 'Sample data initialized successfully'
-            }));
-
-        } catch (error) {
-            console.error('Error initializing sample data:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error initializing sample data: ' + error.message }));
         }
     }
 

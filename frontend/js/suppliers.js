@@ -139,7 +139,6 @@ async function loadSuppliersFromAPI() {
             throw new Error(result.message || 'Failed to load suppliers');
         }
     } catch (error) {
-        console.error('Error loading suppliers:', error);
         showNotification('Error loading suppliers from API: ' + error.message, 'error');
         hideLoading('suppliers-list');
 
@@ -172,7 +171,6 @@ async function saveSupplierToAPI(supplierData) {
             throw new Error(result.message || 'Failed to save supplier');
         }
     } catch (error) {
-        console.error('Error saving supplier:', error);
         showNotification('Error saving supplier: ' + error.message, 'error');
     }
 }
@@ -192,7 +190,6 @@ async function deleteSupplierFromAPI(id) {
             throw new Error(result.message || 'Failed to delete supplier');
         }
     } catch (error) {
-        console.error('Error deleting supplier:', error);
         showNotification('Error deleting supplier: ' + error.message, 'error');
     }
 }
@@ -209,14 +206,12 @@ async function loadPartsFromAPI() {
         const result = await response.json();
 
         if (result.success) {
-            // Curăță datele înainte de a le stoca
             parts = cleanPartData(result.data);
             loadParts();
         } else {
             throw new Error(result.message || 'Failed to load parts');
         }
     } catch (error) {
-        console.error('Error loading parts:', error);
         showNotification('Error loading parts from API: ' + error.message, 'error');
         hideLoading('parts-list');
     }
@@ -234,7 +229,15 @@ async function loadOrdersFromAPI() {
         const result = await response.json();
 
         if (result.success) {
+            console.log('Backend response - Raw orders data:', result.data);
+
             orders = result.data;
+
+            console.log('Backend response - Processed orders:');
+            orders.forEach((order, index) => {
+                console.log(`  ${index + 1}. ID: "${order.id}" (${typeof order.id}), Status: ${order.status}`);
+            });
+
             loadOrders();
         } else {
             throw new Error(result.message || 'Failed to load orders');
@@ -264,22 +267,24 @@ async function saveOrderToAPI(orderData) {
             throw new Error(result.message || 'Failed to save order');
         }
     } catch (error) {
-        console.error('Error saving order:', error);
         showNotification('Error saving order: ' + error.message, 'error');
     }
 }
 
-async function updateOrderStatusAPI(orderId, status) {
+async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
     try {
+        console.log('Frontend - Sending orderId:', orderId, 'Type:', typeof orderId);
+
         const response = await fetch(`/api/orders/${orderId}/status`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                orderId: orderId,
+                orderId: orderId, // Trimite exact ce este în lista de comenzi
                 status: status,
-                actual_delivery_date: status === 'delivered' ? new Date().toISOString().split('T')[0] : null
+                actual_delivery_date: actualDeliveryDate,
+                notes: notes
             })
         });
 
@@ -296,82 +301,11 @@ async function updateOrderStatusAPI(orderId, status) {
             throw new Error(result.message || 'Failed to update order status');
         }
     } catch (error) {
-        console.error('Error updating order status:', error);
         showNotification('Error updating order status: ' + error.message, 'error');
     }
 }
 
-// Load sample data (fallback only)
-function loadSampleData() {
-    suppliers = [
-        {
-            id: 1,
-            company_name: 'AutoParts Pro',
-            contact_person: 'John Smith',
-            phone: '+1-555-0123',
-            email: 'john@autopartspro.com',
-            address: '123 Industrial Ave, Detroit, MI',
-            specialization: 'Engine Parts',
-            delivery_time_days: 3,
-            rating: 4.8,
-            evaluation: {
-                quality: 95,
-                punctuality: 88,
-                delivery: 92,
-                overall: 92
-            }
-        },
-        {
-            id: 2,
-            company_name: 'BrakeMaster Supply',
-            contact_person: 'Sarah Johnson',
-            phone: '+1-555-0456',
-            email: 'sarah@brakemaster.com',
-            address: '456 Commerce St, Chicago, IL',
-            specialization: 'Brakes',
-            delivery_time_days: 2,
-            rating: 4.6,
-            evaluation: {
-                quality: 90,
-                punctuality: 95,
-                delivery: 89,
-                overall: 91
-            }
-        }
-    ];
 
-    parts = [
-        {
-            id: 1,
-            name: 'Engine Oil Filter',
-            supplier_id: 1,
-            supplier_name: 'AutoParts Pro',
-            category: 'Engine Parts',
-            price: 15.99,
-            stock_quantity: 150,
-            minimum_stock_level: 20
-        },
-        {
-            id: 2,
-            name: 'Brake Pads Set',
-            supplier_id: 2,
-            supplier_name: 'BrakeMaster Supply',
-            category: 'Brakes',
-            price: 89.99,
-            stock_quantity: 45,
-            minimum_stock_level: 10
-        }
-    ];
-
-    orders = [];
-    evaluations = suppliers.map(supplier => ({
-        supplierId: supplier.id,
-        supplierName: supplier.company_name,
-        ...supplier.evaluation
-    }));
-}
-
-// Display functions
 function loadSuppliers() {
     const suppliersList = document.getElementById('suppliers-list');
 
@@ -462,33 +396,44 @@ function loadOrders() {
     }
 
     if (orders.length === 0) {
+        console.log('Frontend - No orders to display');
         ordersList.innerHTML = '<div class="empty-state"><h3>No orders found</h3><p>No purchase orders have been placed yet</p></div>';
         return;
     }
 
-    ordersList.innerHTML = orders.map(order => `
+    // DEBUG: Log toate ID-urile care vor fi afișate
+    console.log('Frontend - Loading orders:');
+    orders.forEach((order, index) => {
+        const totalAmount = parseFloat(order.total_amount || order.total || 0);
+        console.log(`  ${index + 1}. ID: "${order.id}" (${typeof order.id}), Status: ${order.status}, Total: ${totalAmount}`);
+    });
+
+    ordersList.innerHTML = orders.map(order => {
+        // FIX: Conversie sigură pentru total în listă
+        const totalAmount = parseFloat(order.total_amount || order.total || 0);
+
+        return `
         <div class="order-card ${order.status}">
             <div class="order-header">
                 <h3 class="order-number">${order.id}</h3>
                 <span class="order-status status-${order.status}">${order.status}</span>
             </div>
-            <p class="order-supplier">Supplier: ${order.supplier_name || order.supplierName}</p>
+            <p class="order-supplier">Supplier: ${order.supplier_name || order.supplierName || 'N/A'}</p>
             <div class="order-items">
                 ${order.items ? order.items.map(item => {
-        // Asigură-te că toate prețurile sunt numere
-        const unitPrice = parseFloat(item.unit_price || item.unitPrice) || 0;
-        const quantity = parseInt(item.quantity) || 0;
-        const total = quantity * unitPrice;
+            const unitPrice = parseFloat(item.unit_price || item.unitPrice) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            const total = quantity * unitPrice;
 
-        return `
+            return `
                         <div class="order-item">
                             <span>${item.name || item.part_name} (${quantity}x)</span>
                             <span>$${total.toFixed(2)}</span>
                         </div>
                     `;
-    }).join('') : ''}
+        }).join('') : ''}
             </div>
-            <div class="order-total">Total: $${parseFloat(order.total_amount || order.total || 0).toFixed(2)}</div>
+            <div class="order-total">Total: $${totalAmount.toFixed(2)}</div>
             <div class="order-date">Ordered: ${formatDate(order.order_date || order.orderDate)}</div>
             ${order.expected_delivery_date || order.estimatedDelivery ? `<div class="order-date">Est. Delivery: ${formatDate(order.expected_delivery_date || order.estimatedDelivery)}</div>` : ''}
             <div class="order-actions">
@@ -496,8 +441,12 @@ function loadOrders() {
                 ${order.status !== 'delivered' ? `<button class="btn btn-sm primary-btn" onclick="updateOrderStatus('${order.id}')">Update Status</button>` : ''}
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
+
+    console.log('Frontend - Orders HTML generated successfully');
 }
+
 function cleanPartData(parts) {
     return parts.map(part => ({
         ...part,
@@ -809,35 +758,35 @@ function confirmDeleteSupplier(supplierId) {
     deleteSupplier(supplierId);
 }
 
-function updateOrderStatus(orderId) {
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-        const statuses = ['ordered', 'confirmed', 'in_transit', 'delivered'];
-        const currentIndex = statuses.indexOf(order.status);
-
-        if (currentIndex < statuses.length - 1) {
-            const nextStatus = statuses[currentIndex + 1];
-
-            if (confirm(`Update order ${orderId} status to "${nextStatus}"?`)) {
-                if (typeof updateOrderStatusAPI === 'function') {
-                    updateOrderStatusAPI(orderId, nextStatus);
-                } else {
-                    order.status = nextStatus;
-
-                    if (order.status === 'delivered') {
-                        order.actual_delivery_date = new Date().toISOString().split('T')[0];
-                        updateInventoryFromOrder(order);
-                    }
-
-                    loadOrders();
-                    showNotification(`Order ${orderId} status updated to ${nextStatus}`, 'success');
-                }
-            }
-        } else {
-            showNotification('Order is already delivered', 'info');
-        }
-    }
-}
+// function updateOrderStatus(orderId) {
+//     const order = orders.find(o => o.id === orderId);
+//     if (order) {
+//         const statuses = ['ordered', 'confirmed', 'in_transit', 'delivered'];
+//         const currentIndex = statuses.indexOf(order.status);
+//
+//         if (currentIndex < statuses.length - 1) {
+//             const nextStatus = statuses[currentIndex + 1];
+//
+//             if (confirm(`Update order ${orderId} status to "${nextStatus}"?`)) {
+//                 if (typeof updateOrderStatusAPI === 'function') {
+//                     updateOrderStatusAPI(orderId, nextStatus);
+//                 } else {
+//                     order.status = nextStatus;
+//
+//                     if (order.status === 'delivered') {
+//                         order.actual_delivery_date = new Date().toISOString().split('T')[0];
+//                         updateInventoryFromOrder(order);
+//                     }
+//
+//                     loadOrders();
+//                     showNotification(`Order ${orderId} status updated to ${nextStatus}`, 'success');
+//                 }
+//             }
+//         } else {
+//             showNotification('Order is already delivered', 'info');
+//         }
+//     }
+// }
 
 function viewOrderDetails(orderId) {
     const order = orders.find(o => o.id === orderId);
@@ -1125,38 +1074,6 @@ function generateAutoOrder(part) {
     }
 }
 
-function updateEvaluation(supplierId) {
-    const supplier = suppliers.find(s => s.id === supplierId);
-    if (supplier) {
-        const currentEval = supplier.evaluation || { quality: 0, punctuality: 0, delivery: 0, overall: 0 };
-        const newEvaluation = prompt(
-            `Update Evaluation for ${supplier.company_name || supplier.name}:\n\n` +
-            `Current scores:\n` +
-            `Quality: ${currentEval.quality}%\n` +
-            `Punctuality: ${currentEval.punctuality}%\n` +
-            `Delivery: ${currentEval.delivery}%\n` +
-            `Overall: ${currentEval.overall}%\n\n` +
-            `Enter new overall score (0-100):`
-        );
-
-        if (newEvaluation !== null && !isNaN(newEvaluation)) {
-            const score = Math.max(0, Math.min(100, parseInt(newEvaluation)));
-            supplier.evaluation = supplier.evaluation || {};
-            supplier.evaluation.overall = score;
-            supplier.rating = score / 20;
-
-            const evalIndex = evaluations.findIndex(e => e.supplierId === supplierId);
-            if (evalIndex !== -1) {
-                evaluations[evalIndex].overall = score;
-            }
-
-            loadEvaluations();
-            showNotification(`Evaluation updated for ${supplier.company_name || supplier.name}`, 'success');
-        }
-    }
-}
-
-// Search and filter functions
 function filterContent(searchTerm) {
     const activeTabBtn = document.querySelector('.tab-btn.active');
     if (!activeTabBtn) return;
@@ -1227,19 +1144,10 @@ function filterOrders(searchTerm) {
     displayFilteredOrders(filteredOrders);
 }
 
-function filterEvaluations(searchTerm) {
-    const filteredEvaluations = evaluations.filter(evaluation =>
-        (evaluation.supplierName || '').toLowerCase().includes(searchTerm)
-    );
-
-    displayFilteredEvaluations(filteredEvaluations);
-}
-
 function filterParts() {
     loadParts();
 }
 
-// Display filtered results functions
 function displayFilteredSuppliers(filteredSuppliers) {
     const suppliersList = document.getElementById('suppliers-list');
     if (!suppliersList) return;
@@ -1249,7 +1157,6 @@ function displayFilteredSuppliers(filteredSuppliers) {
         return;
     }
 
-    // Use the same logic as loadSuppliers but with filtered data
     const tempSuppliers = suppliers;
     suppliers = filteredSuppliers;
     loadSuppliers();
@@ -1265,7 +1172,6 @@ function displayFilteredParts(filteredParts) {
         return;
     }
 
-    // Use the same logic as loadParts but with filtered data
     const tempParts = parts;
     parts = filteredParts;
     loadParts();
@@ -1288,22 +1194,6 @@ function displayFilteredOrders(filteredOrders) {
     orders = tempOrders;
 }
 
-function displayFilteredEvaluations(filteredEvaluations) {
-    const evaluationsList = document.getElementById('evaluations-list');
-    if (!evaluationsList) return;
-
-    if (filteredEvaluations.length === 0) {
-        evaluationsList.innerHTML = '<div class="empty-state"><h3>No evaluations found</h3><p>Try adjusting your search criteria</p></div>';
-        return;
-    }
-
-    // Use the same logic as loadEvaluations but with filtered data
-    const tempEvaluations = evaluations;
-    evaluations = filteredEvaluations;
-    loadEvaluations();
-    evaluations = tempEvaluations;
-}
-
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         window.location.href = '/login';
@@ -1311,13 +1201,46 @@ function logout() {
 }
 
 function openOrderStatusModal(orderId) {
-    const order = orders.find(o => o.id === orderId);
+    console.log('Frontend - openOrderStatusModal called with:', orderId, 'Type:', typeof orderId);
+
+    // CĂUTARE FLEXIBILĂ - aceeași logică ca în updateOrderStatus
+    let order = null;
+
+    // Strategie 1: Căutare exactă
+    order = orders.find(o => o.id === orderId);
+    console.log('openOrderStatusModal - Exact match (===):', order ? 'FOUND' : 'NOT FOUND');
+
     if (!order) {
+        // Strategie 2: Căutare cu conversie la string
+        order = orders.find(o => String(o.id) === String(orderId));
+        console.log('openOrderStatusModal - String match:', order ? 'FOUND' : 'NOT FOUND');
+    }
+
+    if (!order) {
+        // Strategie 3: Căutare cu conversie la număr (dacă e posibil)
+        if (!isNaN(orderId)) {
+            order = orders.find(o => Number(o.id) === Number(orderId));
+            console.log('openOrderStatusModal - Number match:', order ? 'FOUND' : 'NOT FOUND');
+        }
+    }
+
+    if (!order) {
+        console.error('Frontend - Order not found in openOrderStatusModal with any strategy');
         showNotification('Order not found', 'error');
         return;
     }
 
-    // Creează modal-ul dinamic
+    console.log('Frontend - Opening modal for order:', order);
+
+    // FIX: Conversie sigură pentru total_amount
+    const totalAmount = parseFloat(order.total_amount || order.total || 0);
+    console.log('Total amount debug:', {
+        raw_total_amount: order.total_amount,
+        raw_total: order.total,
+        parsed_total: totalAmount,
+        type: typeof totalAmount
+    });
+
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'orderStatusModal';
@@ -1340,9 +1263,9 @@ function openOrderStatusModal(orderId) {
             <div class="modal-body">
                 <div class="order-info">
                     <h3>Order: ${order.id}</h3>
-                    <p><strong>Supplier:</strong> ${order.supplier_name || order.supplierName}</p>
+                    <p><strong>Supplier:</strong> ${order.supplier_name || order.supplierName || 'N/A'}</p>
                     <p><strong>Current Status:</strong> <span class="status-badge status-${order.status}">${order.status}</span></p>
-                    <p><strong>Total:</strong> $${(order.total_amount || order.total).toFixed(2)}</p>
+                    <p><strong>Total:</strong> $${totalAmount.toFixed(2)}</p>
                 </div>
 
                 <form id="orderStatusForm">
@@ -1386,13 +1309,11 @@ function openOrderStatusModal(orderId) {
 
     document.body.appendChild(modal);
 
-    // Adaugă event listener pentru form
     document.getElementById('orderStatusForm').addEventListener('submit', function(e) {
         e.preventDefault();
         updateOrderStatusFromModal();
     });
 
-    // Close modal on outside click
     modal.addEventListener('click', function(e) {
         if (e.target === modal) {
             closeOrderStatusModal();
@@ -1400,20 +1321,16 @@ function openOrderStatusModal(orderId) {
     });
 }
 
-// 2. Funcție pentru a selecta un status nou
+
 function selectOrderStatus(newStatus) {
-    // Remove previous selection
     document.querySelectorAll('.status-option').forEach(option => {
         option.classList.remove('selected');
     });
 
-    // Add selection to clicked option
     event.currentTarget.classList.add('selected');
 
-    // Enable update button
     document.getElementById('updateStatusBtn').disabled = false;
 
-    // Show delivery date field if status is delivered
     const deliveryDateGroup = document.getElementById('deliveryDateGroup');
     if (newStatus === 'delivered') {
         deliveryDateGroup.style.display = 'block';
@@ -1421,16 +1338,18 @@ function selectOrderStatus(newStatus) {
         deliveryDateGroup.style.display = 'none';
     }
 
-    // Store selected status
     document.getElementById('orderStatusForm').setAttribute('data-selected-status', newStatus);
 }
 
-// 3. Funcție pentru a actualiza status-ul din modal
 async function updateOrderStatusFromModal() {
     const orderId = document.getElementById('statusOrderId').value;
     const selectedStatus = document.getElementById('orderStatusForm').getAttribute('data-selected-status');
     const actualDeliveryDate = document.getElementById('actualDeliveryDate').value;
     const notes = document.getElementById('statusNotes').value;
+
+    console.log('Frontend - updateOrderStatusFromModal called with:');
+    console.log('  orderId:', orderId, 'Type:', typeof orderId);
+    console.log('  selectedStatus:', selectedStatus);
 
     if (!selectedStatus) {
         showNotification('Please select a new status', 'error');
@@ -1438,54 +1357,21 @@ async function updateOrderStatusFromModal() {
     }
 
     try {
-        // Disable button to prevent double submission
         document.getElementById('updateStatusBtn').disabled = true;
         document.getElementById('updateStatusBtn').textContent = 'Updating...';
-
-        if (typeof updateOrderStatusAPI === 'function') {
-            await updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate, notes);
-        } else {
-            // Fallback to local update
-            const order = orders.find(o => o.id === orderId);
-            if (order) {
-                order.status = selectedStatus;
-
-                if (selectedStatus === 'delivered' && actualDeliveryDate) {
-                    order.actual_delivery_date = actualDeliveryDate;
-                    updateInventoryFromOrder(order);
-                }
-
-                if (notes) {
-                    order.status_notes = notes;
-                }
-
-                loadOrders();
-                showNotification(`Order ${orderId} status updated to ${selectedStatus}`, 'success');
-            }
-        }
+        await updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate, notes);
 
         closeOrderStatusModal();
 
     } catch (error) {
-        console.error('Error updating order status:', error);
         showNotification('Error updating order status: ' + error.message, 'error');
 
-        // Re-enable button
         document.getElementById('updateStatusBtn').disabled = false;
         document.getElementById('updateStatusBtn').textContent = 'Update Status';
     }
 }
 
-// 4. Funcție pentru a închide modal-ul
-function closeOrderStatusModal() {
-    const modal = document.getElementById('orderStatusModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.removeChild(modal);
-    }
-}
 
-// 5. Funcție helper pentru descrieri status
 function getStatusDescription(status) {
     const descriptions = {
         'ordered': 'Order has been placed with supplier',
@@ -1497,28 +1383,62 @@ function getStatusDescription(status) {
     return descriptions[status] || '';
 }
 
-// 6. Actualizează funcția existentă updateOrderStatus
 function updateOrderStatus(orderId) {
-    openOrderStatusModal(orderId);
+    let order = orders.find(o => o.id === orderId);
+
+    if (!order) {
+        order = orders.find(o => String(o.id) === String(orderId));
+    }
+
+    if (!order) {
+        if (!isNaN(orderId)) {
+            order = orders.find(o => Number(o.id) === Number(orderId));
+        }
+    }
+
+    if (order) {
+        openOrderStatusModal(orderId);
+    } else {
+        showNotification('Order not found in local data', 'error');
+    }
 }
 
-// 7. Actualizează funcția updateOrderStatusAPI pentru a include notes
+
+function closeOrderStatusModal() {
+    const modal = document.getElementById('orderStatusModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.removeChild(modal);
+    }
+}
+
 async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
     try {
+        const requestBody = {
+            orderId: orderId,
+            status: status,
+            actual_delivery_date: actualDeliveryDate,
+            notes: notes
+        };
+
         const response = await fetch(`/api/orders/${orderId}/status`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                orderId: orderId,
-                status: status,
-                actual_delivery_date: actualDeliveryDate,
-                notes: notes
-            })
+            body: JSON.stringify(requestBody)
         });
 
-        const result = await response.json();
+        let result;
+        try {
+            const responseText = await response.text();
+            console.log('Frontend - Raw response text:', responseText);
+            result = JSON.parse(responseText);
+            console.log('Frontend - Parsed response:', result);
+        } catch (parseError) {
+            console.error('Frontend - Failed to parse response:', parseError);
+            throw new Error(`Server error (${response.status}): Unable to parse response`);
+        }
 
         if (result.success) {
             showNotification(result.message, 'success');
@@ -1531,8 +1451,9 @@ async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, 
             throw new Error(result.message || 'Failed to update order status');
         }
     } catch (error) {
-        console.error('Error updating order status:', error);
+        console.error('Frontend - Error in updateOrderStatusAPI:', error);
         showNotification('Error updating order status: ' + error.message, 'error');
+        throw error;
     }
 }
 
@@ -1544,9 +1465,6 @@ async function initializeData() {
 
         showNotification('Data loaded successfully from server', 'success');
     } catch (error) {
-        console.error('Error initializing data:', error);
-        // Load sample data as fallback
-        loadSampleData();
-        showNotification('Using sample data - server not available', 'warning');
+        showNotification('Server not available', 'warning');
     }
 }
