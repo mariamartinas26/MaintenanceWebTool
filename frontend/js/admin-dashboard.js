@@ -367,8 +367,8 @@ class AdminDashboard {
 
     // Helper method to render admin response section
     renderAdminResponseSection(appointment) {
-        // Don't show admin response section for rejected appointments
-        if (appointment.status === 'rejected' || !appointment.adminResponse) {
+        // Show admin response for all appointments that have one (including rejected)
+        if (!appointment.adminResponse) {
             return '';
         }
 
@@ -490,9 +490,9 @@ class AdminDashboard {
         approvalFields.style.display = 'none';
         rejectionFields.style.display = 'none';
 
-        // Admin message field is always visible except for rejection
+        // Admin message field is always visible for all statuses
         if (adminMessageField) {
-            adminMessageField.style.display = status === 'rejected' ? 'none' : 'block';
+            adminMessageField.style.display = 'block';
         }
 
         // Show relevant fields based on status
@@ -516,12 +516,10 @@ class AdminDashboard {
                 status: status
             };
 
-            // Add admin response for non-rejected statuses
-            if (status !== 'rejected') {
-                const adminMessage = document.getElementById('admin-message').value;
-                if (adminMessage.trim()) {
-                    updateData.adminResponse = adminMessage;
-                }
+            // Add admin response for ALL statuses (including rejected)
+            const adminMessage = document.getElementById('admin-message').value;
+            if (adminMessage.trim()) {
+                updateData.adminResponse = adminMessage;
             }
 
             if (status === 'approved') {
@@ -641,6 +639,12 @@ class AdminDashboard {
     }
 
     showNotification(message, type = 'info') {
+        // Remove any existing notifications first
+        const existingNotifications = document.querySelectorAll('.notification');
+        existingNotifications.forEach(notification => {
+            notification.remove();
+        });
+
         // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
@@ -715,109 +719,3 @@ class AdminDashboard {
 document.addEventListener('DOMContentLoaded', () => {
     new AdminDashboard();
 });
-
-// Add notification styles to the page
-const notificationStyles = `
-<style>
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    max-width: 400px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    color: white;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.notification.show {
-    transform: translateX(0);
-}
-
-.notification-error {
-    background-color: #dc3545;
-}
-
-.notification-success {
-    background-color: #28a745;
-}
-
-.notification-info {
-    background-color: #17a2b8;
-}
-
-.notification-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-    margin-left: 10px;
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.loading-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-    color: var(--text-light);
-}
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--light-gray);
-    border-top: 4px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.no-appointments {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-light);
-}
-
-.no-appointments p {
-    font-size: 16px;
-    margin: 0;
-}
-
-/* Additional responsive styles for notifications */
-@media (max-width: 576px) {
-    .notification {
-        right: 10px;
-        left: 10px;
-        max-width: none;
-        transform: translateY(-100%);
-    }
-    
-    .notification.show {
-        transform: translateY(0);
-    }
-}
-</style>
-`;
-
-// Inject styles into the page
-document.head.insertAdjacentHTML('beforeend', notificationStyles);
