@@ -4,12 +4,14 @@ class AdminAppointment {
     // Get all appointments for admin dashboard
     static async getAllForAdmin(filters = {}) {
         let query = `
-            SELECT 
+            SELECT
                 a.id,
                 a.appointment_date,
                 a.status,
                 a.problem_description,
                 a.admin_response,
+                a.rejection_reason,
+                a.retry_days,
                 a.estimated_price,
                 a.estimated_completion_time,
                 a.warranty_info,
@@ -25,8 +27,8 @@ class AdminAppointment {
                 v.year,
                 v.is_electric
             FROM "Appointments" a
-            JOIN "Users" u ON a.user_id = u.id
-            LEFT JOIN "Vehicles" v ON a.vehicle_id = v.id
+                     JOIN "Users" u ON a.user_id = u.id
+                     LEFT JOIN "Vehicles" v ON a.vehicle_id = v.id
         `;
 
         const conditions = [];
@@ -90,7 +92,7 @@ class AdminAppointment {
     // Get single appointment details for admin
     static async getByIdForAdmin(id) {
         const query = `
-            SELECT 
+            SELECT
                 a.*,
                 u.first_name,
                 u.last_name,
@@ -103,8 +105,8 @@ class AdminAppointment {
                 v.is_electric,
                 v.notes as vehicle_notes
             FROM "Appointments" a
-            JOIN "Users" u ON a.user_id = u.id
-            LEFT JOIN "Vehicles" v ON a.vehicle_id = v.id
+                     JOIN "Users" u ON a.user_id = u.id
+                     LEFT JOIN "Vehicles" v ON a.vehicle_id = v.id
             WHERE a.id = $1
         `;
 
@@ -119,7 +121,7 @@ class AdminAppointment {
     // Get appointment media files
     static async getAppointmentMedia(appointmentId) {
         const query = `
-            SELECT 
+            SELECT
                 id,
                 file_path,
                 file_type,
@@ -141,7 +143,14 @@ class AdminAppointment {
 
     // Update appointment status (approve/reject) with calendar integration
     static async updateStatus(id, updateData, adminId = null) {
-        const { status, adminResponse, estimatedPrice, warrantyInfo } = updateData;
+        const {
+            status,
+            adminResponse,
+            rejectionReason,
+            retryDays,
+            estimatedPrice,
+            warrantyInfo
+        } = updateData;
 
         const client = await pool.connect();
 
@@ -163,23 +172,27 @@ class AdminAppointment {
 
             const currentAppointment = currentResult.rows[0];
 
-            // Update appointment
+            // Update appointment with all new fields
             const updateQuery = `
-                UPDATE "Appointments" 
-                SET 
+                UPDATE "Appointments"
+                SET
                     status = $2,
                     admin_response = $3,
-                    estimated_price = $4,
-                    warranty_info = $5,
+                    rejection_reason = $4,
+                    retry_days = $5,
+                    estimated_price = $6,
+                    warranty_info = $7,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $1
-                RETURNING *
+                    RETURNING *
             `;
 
             const updateResult = await client.query(updateQuery, [
                 id,
                 status,
                 adminResponse,
+                rejectionReason,
+                retryDays,
                 estimatedPrice,
                 warrantyInfo
             ]);
@@ -195,10 +208,10 @@ class AdminAppointment {
                 const updateCalendarQuery = `
                     UPDATE "Calendar"
                     SET current_appointments = current_appointments - 1
-                    WHERE date = $1::date 
-                    AND start_time <= $2::time 
-                    AND end_time > $2::time
-                    AND current_appointments > 0
+                    WHERE date = $1::date
+                      AND start_time <= $2::time
+                      AND end_time > $2::time
+                      AND current_appointments > 0
                 `;
 
                 await client.query(updateCalendarQuery, [appointmentDateStr, appointmentTimeStr]);
@@ -213,7 +226,16 @@ class AdminAppointment {
 
             const action = status === 'approved' ? 'approved' :
                 status === 'rejected' ? 'rejected' : 'updated';
-            const comment = adminResponse || `Programare ${action} de către admin`;
+
+            // Use appropriate comment based on status
+            let comment;
+            if (status === 'rejected' && rejectionReason) {
+                comment = `Programare respinsă: ${rejectionReason}`;
+            } else if (adminResponse) {
+                comment = adminResponse;
+            } else {
+                comment = `Programare ${action} de către admin`;
+            }
 
             await client.query(historyQuery, [
                 id,
@@ -240,7 +262,7 @@ class AdminAppointment {
     static async getStatistics() {
         try {
             const query = `
-                SELECT 
+                SELECT
                     status,
                     COUNT(*) as count
                 FROM "Appointments"

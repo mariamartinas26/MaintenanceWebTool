@@ -19,7 +19,6 @@ class AdminAppointmentsController {
                 filters.date_filter = date_filter;
             }
 
-
             const appointments = await Appointment.getAllForAdmin(filters);
 
             // Format appointments for admin dashboard
@@ -32,6 +31,8 @@ class AdminAppointmentsController {
                 status: appointment.status,
                 problemDescription: appointment.problem_description,
                 adminResponse: appointment.admin_response,
+                rejectionReason: appointment.rejection_reason,
+                retryDays: appointment.retry_days,
                 estimatedPrice: appointment.estimated_price,
                 estimatedCompletionTime: appointment.estimated_completion_time,
                 warrantyInfo: appointment.warranty_info,
@@ -111,6 +112,8 @@ class AdminAppointmentsController {
                 status: appointment.status,
                 problemDescription: appointment.problem_description,
                 adminResponse: appointment.admin_response,
+                rejectionReason: appointment.rejection_reason,
+                retryDays: appointment.retry_days,
                 estimatedPrice: appointment.estimated_price,
                 estimatedCompletionTime: appointment.estimated_completion_time,
                 warrantyInfo: appointment.warranty_info,
@@ -152,7 +155,7 @@ class AdminAppointmentsController {
     static async updateAppointmentStatus(req, res) {
         try {
             const appointmentId = parseInt(req.params.id);
-            const { status, adminMessage, estimatedPrice, warranty, rejectionReason, retryDays } = req.body;
+            const { status, adminResponse, estimatedPrice, warranty, rejectionReason, retryDays } = req.body;
 
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
@@ -184,17 +187,30 @@ class AdminAppointmentsController {
                 }
             }
 
-            if (status === 'rejected' && !rejectionReason) {
+            if (status === 'rejected' && (!rejectionReason || !rejectionReason.trim())) {
                 return sendJSON(res, 400, {
                     success: false,
                     message: 'Reason for rejection is mandatory'
                 });
             }
 
-            // Build admin response message
-            let adminResponse = adminMessage || '';
+            // Build update data object with separate fields
+            const updateData = {
+                status
+            };
 
-            if (status === 'rejected' && rejectionReason) {
+            // Handle admin response (for non-rejected statuses)
+            // IMPORTANT: Store ONLY the admin's message, nothing else
+            if (status !== 'rejected') {
+                updateData.adminResponse = adminResponse && adminResponse.trim() ? adminResponse.trim() : null;
+                // Clear rejection fields when not rejecting
+                updateData.rejectionReason = null;
+                updateData.retryDays = null;
+            }
+
+            // Handle rejection-specific fields
+            if (status === 'rejected') {
+                // Handle predefined rejection reasons
                 const rejectionReasons = {
                     'parts': 'Unavailable mechanic parts',
                     'schedule': 'Full schedule',
@@ -203,24 +219,23 @@ class AdminAppointmentsController {
                 };
 
                 const reasonText = rejectionReasons[rejectionReason] || rejectionReason;
-                adminResponse += adminResponse ? `\n\nReason for rejection: ${reasonText}` : `Reason for rejection: ${reasonText}`;
+                updateData.rejectionReason = reasonText;
+                updateData.retryDays = retryDays && retryDays > 0 ? retryDays : null;
 
-                if (retryDays && retryDays > 0) {
-                    adminResponse += `\nTry again after ${retryDays} days.`;
-                }
+                // Clear admin response when rejecting
+                updateData.adminResponse = null;
             }
 
+            // Handle approval-specific fields
             if (status === 'approved') {
-                const approvalInfo = `Appointment was approved. Estimated price: ${estimatedPrice} RON. Warranty: ${warranty} months.`;
-                adminResponse = adminResponse ? `${adminResponse}\n\n${approvalInfo}` : approvalInfo;
+                updateData.estimatedPrice = estimatedPrice;
+                updateData.warrantyInfo = `${warranty} warranty months`;
+                // DO NOT modify adminResponse here - keep it clean
+            } else {
+                // Clear approval fields when not approving
+                updateData.estimatedPrice = null;
+                updateData.warrantyInfo = null;
             }
-
-            const updateData = {
-                status,
-                adminResponse: adminResponse.trim(),
-                estimatedPrice: status === 'approved' ? estimatedPrice : null,
-                warrantyInfo: status === 'approved' ? `${warranty} warranty months` : null
-            };
 
             const updatedAppointment = await Appointment.updateStatus(appointmentId, updateData);
 
@@ -244,6 +259,8 @@ class AdminAppointmentsController {
                     id: updatedAppointment.id,
                     status: updatedAppointment.status,
                     adminResponse: updatedAppointment.admin_response,
+                    rejectionReason: updatedAppointment.rejection_reason,
+                    retryDays: updatedAppointment.retry_days,
                     estimatedPrice: updatedAppointment.estimated_price,
                     warrantyInfo: updatedAppointment.warranty_info,
                     updatedAt: updatedAppointment.updated_at

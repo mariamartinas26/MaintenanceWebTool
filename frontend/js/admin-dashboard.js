@@ -329,14 +329,9 @@ class AdminDashboard {
                 </div>
             </div>
 
-            ${appointment.adminResponse ? `
-                <div class="detail-section">
-                    <h3>Admin Response</h3>
-                    <div class="detail-item">
-                        <div class="detail-value">${appointment.adminResponse}</div>
-                    </div>
-                </div>
-            ` : ''}
+            ${this.renderAdminResponseSection(appointment)}
+
+            ${this.renderRejectionSection(appointment)}
 
             ${appointment.estimatedPrice ? `
                 <div class="detail-section">
@@ -367,6 +362,47 @@ class AdminDashboard {
                     </div>
                 </div>
             ` : ''}
+        `;
+    }
+
+    // Helper method to render admin response section
+    renderAdminResponseSection(appointment) {
+        // Don't show admin response section for rejected appointments
+        if (appointment.status === 'rejected' || !appointment.adminResponse) {
+            return '';
+        }
+
+        return `
+            <div class="detail-section">
+                <h3>Admin Response</h3>
+                <div class="detail-item">
+                    <div class="detail-value">${appointment.adminResponse}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Helper method to render rejection section
+    renderRejectionSection(appointment) {
+        // Only show rejection section for rejected appointments
+        if (appointment.status !== 'rejected' || !appointment.rejectionReason) {
+            return '';
+        }
+
+        return `
+            <div class="detail-section">
+                <h3>Rejection Details</h3>
+                <div class="detail-item">
+                    <div class="detail-label">Reason:</div>
+                    <div class="detail-value">${appointment.rejectionReason}</div>
+                </div>
+                ${appointment.retryDays ? `
+                    <div class="detail-item">
+                        <div class="detail-label">Retry After:</div>
+                        <div class="detail-value">${appointment.retryDays} days</div>
+                    </div>
+                ` : ''}
+            </div>
         `;
     }
 
@@ -431,8 +467,16 @@ class AdminDashboard {
                 document.getElementById('warranty').value = warrantyMatch[1];
             }
         }
+
+        // Separate admin response and rejection reason
         if (appointment.adminResponse) {
             document.getElementById('admin-message').value = appointment.adminResponse;
+        }
+        if (appointment.rejectionReason) {
+            document.getElementById('rejection-reason').value = appointment.rejectionReason;
+        }
+        if (appointment.retryDays) {
+            document.getElementById('retry-days').value = appointment.retryDays;
         }
     }
 
@@ -440,10 +484,16 @@ class AdminDashboard {
         const status = e.target.value;
         const approvalFields = document.getElementById('approval-fields');
         const rejectionFields = document.getElementById('rejection-fields');
+        const adminMessageField = document.getElementById('admin-message-field');
 
         // Hide all conditional fields first
         approvalFields.style.display = 'none';
         rejectionFields.style.display = 'none';
+
+        // Admin message field is always visible except for rejection
+        if (adminMessageField) {
+            adminMessageField.style.display = status === 'rejected' ? 'none' : 'block';
+        }
 
         // Show relevant fields based on status
         if (status === 'approved') {
@@ -463,9 +513,16 @@ class AdminDashboard {
             const status = formData.get('status');
 
             const updateData = {
-                status: status,
-                adminMessage: document.getElementById('admin-message').value
+                status: status
             };
+
+            // Add admin response for non-rejected statuses
+            if (status !== 'rejected') {
+                const adminMessage = document.getElementById('admin-message').value;
+                if (adminMessage.trim()) {
+                    updateData.adminResponse = adminMessage;
+                }
+            }
 
             if (status === 'approved') {
                 updateData.estimatedPrice = parseFloat(document.getElementById('estimated-price').value);
@@ -485,7 +542,7 @@ class AdminDashboard {
                 updateData.rejectionReason = document.getElementById('rejection-reason').value;
                 updateData.retryDays = parseInt(document.getElementById('retry-days').value) || 0;
 
-                if (!updateData.rejectionReason) {
+                if (!updateData.rejectionReason || !updateData.rejectionReason.trim()) {
                     this.showError('Rejection reason is required');
                     return;
                 }
@@ -543,8 +600,11 @@ class AdminDashboard {
         // Hide conditional fields
         const approvalFields = document.getElementById('approval-fields');
         const rejectionFields = document.getElementById('rejection-fields');
+        const adminMessageField = document.getElementById('admin-message-field');
+
         if (approvalFields) approvalFields.style.display = 'none';
         if (rejectionFields) rejectionFields.style.display = 'none';
+        if (adminMessageField) adminMessageField.style.display = 'block';
     }
 
     getStatusText(status) {
