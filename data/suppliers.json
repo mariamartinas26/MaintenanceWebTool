@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "company_name": "rebecca",
+    "contact_person": "Ioana Maria Martinaș",
+    "email": "martinas.maria11@yahoo.com",
+    "phone": "0745138438",
+    "address": "Șoseaua Sărărie nr 66",
+    "specialization": "Electrical",
+    "delivery_time_days": 5,
+    "created_at": "2025-06-09T06:40:48.453Z",
+    "updated_at": "2025-06-09T06:40:48.453Z"
+  }
+]

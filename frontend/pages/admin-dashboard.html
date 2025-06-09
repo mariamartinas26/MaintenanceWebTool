@@ -13,15 +13,14 @@
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="logo">
-            <img src="../images/logo.png" alt="Repair Queens Logo">
             <h2>Repair Queens</h2>
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="active"><a href="/admin/dashboard"><span class="icon">📅</span>Appointments</a></li>
-                <li><a href="/inventory/dashboard"><span class="icon">🔧</span>Inventory</a></li>
-                <li><a href="#"><span class="icon">🏭</span>Providers</a></li>
-                <li><a href="#"><span class="icon">📦</span>Orders</a></li>
+                <li class="active"><a href="/admin/dashboard">Appointments</a></li>
+                <li><a href="/inventory/dashboard">Inventory</a></li>
+                <li><a href="/suppliers" id="providers-link">Suppliers</a></li>
+                <li><a href="/suppliers" id="orders-link">Orders</a></li>
             </ul>
         </nav>
         <div class="user-info">
@@ -176,5 +175,44 @@
 </div>
 
 <script src="../js/admin-dashboard.js"></script>
+
+<!-- Script adițional pentru navigarea către suppliers -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestionare click pe butonul Providers
+        const providersLink = document.getElementById('providers-link');
+        if (providersLink) {
+            providersLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Navigating to suppliers page...');
+                window.location.href = '/suppliers';
+            });
+        }
+
+        // Gestionare click pe butonul Orders (va duce la tab-ul orders din suppliers)
+        const ordersLink = document.getElementById('orders-link');
+        if (ordersLink) {
+            ordersLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Navigating to orders page...');
+                window.location.href = '/suppliers#orders';
+            });
+        }
+
+        // Adaugă highlight pentru pagina curentă
+        const currentPath = window.location.pathname;
+        const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+
+        sidebarLinks.forEach(link => {
+            const linkPath = new URL(link.href).pathname;
+            if (currentPath === linkPath || (currentPath === '/suppliers' && linkPath === '/suppliers')) {
+                link.parentElement.classList.add('active');
+            } else {
+                link.parentElement.classList.remove('active');
+            }
+        });
+    });
+</script>
+
 </body>
 </html>

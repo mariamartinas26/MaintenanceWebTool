@@ -63,12 +63,6 @@ body {
     margin-bottom: 30px;
 }
 
-.logo img {
-    width: 40px;
-    height: 40px;
-    margin-right: 10px;
-}
-
 .logo h2 {
     font-size: 18px;
     font-weight: 600;
@@ -95,11 +89,6 @@ body {
 
 .sidebar-nav li a:hover {
     background-color: var(--sidebar-hover);
-}
-
-.sidebar-nav li.active a {
-    background-color: var(--primary-color);
-    color: white;
 }
 
 .sidebar-nav .icon {

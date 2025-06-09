@@ -6,12 +6,12 @@ const querystring = require('querystring');
 require('dotenv').config();
 
 const authController = require('./controllers/authController');
-// Importă rutele în loc de controllere
 const { handleAppointmentRoutes } = require('./routes/appointmentRoutes');
 const { handleCalendarRoutes } = require('./routes/calendarRoutes');
 const { handleVehicleRoutes } = require('./routes/vehicleRoutes');
 const adminRoutes = require('./routes/adminRoute');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const { handleSupplierRoutes } = require('./routes/supplierRoutes');
 
 const PORT = process.env.PORT || 3000;
 
@@ -63,6 +63,9 @@ const server = http.createServer(async (req, res) => {
         else if (pathname.startsWith('/images/') || pathname.startsWith('/assets/')) {
             await serveFile(res, `frontend${pathname}`, getImageMimeType(pathname));
         }
+        else if (pathname === '/suppliers') {
+            await serveFile(res, 'frontend/pages/suppliers.html', 'text/html');
+        }
         else if (pathname === '/client/dashboard' || pathname === '/dashboard') {
             await serveFile(res, 'frontend/pages/dashboard.html', 'text/html');
         }
@@ -82,16 +85,12 @@ const server = http.createServer(async (req, res) => {
 
 async function handleApiRoutes(req, res, pathname, method, queryParams) {
     try {
-        console.log(`[DEBUG] API Route: ${method} ${pathname}`);
-
-        // Auth routes (rămân aici pentru că sunt simple)
+        // Auth routes
         if (pathname === '/api/auth/register' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
-                console.log('[DEBUG] Register request received with body:', body);
                 await authController.register(req, res, body);
-            } catch (error) {
-                console.error('[ERROR] Error parsing register request body:', error);
+            } catch (error) {;
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -102,10 +101,8 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         else if (pathname === '/api/auth/login' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
-                console.log('[DEBUG] Login request received with body:', { email: body.email, password: '***' });
                 await authController.login(req, res, body);
             } catch (error) {
-                console.error('[ERROR] Error parsing login request body:', error);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -128,12 +125,15 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         else if (pathname.startsWith('/api/vehicles')) {
             await handleVehicleRoutes(req, res);
         }
+        else if (pathname.startsWith('/api/suppliers') || pathname.startsWith('/api/orders') || pathname.startsWith('/api/parts')) {
+            await handleSupplierRoutes(req, res);
+        }
 
         else {
-            console.log(`[DEBUG] API route not found: ${pathname}`);
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, message: 'API route not found' }));
         }
+
 
     } catch (error) {
         console.error('API Route error:', error);

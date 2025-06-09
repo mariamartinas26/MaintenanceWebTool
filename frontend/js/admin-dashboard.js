@@ -82,17 +82,51 @@ class AdminDashboard {
         });
     }
 
+    // Adaugă această funcție în AdminDashboard class, înlocuind setupNavigation() existentă
+
     setupNavigation() {
         const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
 
         sidebarLinks.forEach(link => {
             const iconElement = link.querySelector('.icon');
-            if (iconElement && iconElement.textContent.includes('🔧')) {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log('Inventory button clicked');
-                    window.location.href = '/inventory/dashboard';
-                });
+            if (iconElement) {
+                // Inventory navigation (existent)
+                if (iconElement.textContent.includes('🔧')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('Inventory button clicked');
+                        window.location.href = '/inventory/dashboard';
+                    });
+                }
+
+                // Suppliers navigation (nou)
+                if (iconElement.textContent.includes('🏪') ||
+                    link.textContent.toLowerCase().includes('supplier') ||
+                    link.textContent.toLowerCase().includes('provider')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('Suppliers button clicked');
+                        window.location.href = '/suppliers';
+                    });
+                }
+
+                // Parts/Inventory navigation alternativ
+                if (iconElement.textContent.includes('📦')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('Parts/Inventory button clicked');
+                        window.location.href = '/suppliers';
+                    });
+                }
+
+                // Orders navigation
+                if (iconElement.textContent.includes('📋')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('Orders button clicked');
+                        window.location.href = '/suppliers#orders';
+                    });
+                }
             }
         });
     }
@@ -717,5 +751,6 @@ class AdminDashboard {
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    new AdminDashboard();
     new AdminDashboard();
 });
