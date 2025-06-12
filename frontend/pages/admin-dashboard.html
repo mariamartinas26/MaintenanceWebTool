@@ -6,7 +6,6 @@
     <title>Admin Dashboard - Repair Queens</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/admin-dashboard.css">
-    <link rel="stylesheet" href="../css/admin-notifications.css">
 </head>
 <body>
 <div class="dashboard-container">
@@ -17,10 +16,22 @@
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="active"><a href="/admin/dashboard">Appointments</a></li>
-                <li><a href="/inventory/dashboard">Inventory</a></li>
-                <li><a href="/suppliers" id="providers-link">Suppliers</a></li>
-                <li><a href="/suppliers" id="orders-link">Orders</a></li>
+                <li class="active"><a href="/admin/dashboard">
+                    <span class="icon"></span>
+                    <span>Appointments</span>
+                </a></li>
+                <li><a href="/inventory/dashboard" id="inventory-link">
+                    <span class="icon"></span>
+                    <span>Inventory</span>
+                </a></li>
+                <li><a href="/suppliers" id="providers-link">
+                    <span class="icon"></span>
+                    <span>Suppliers</span>
+                </a></li>
+                <li><a href="/suppliers" id="orders-link">
+                    <span class="icon"></span>
+                    <span>Orders</span>
+                </a></li>
             </ul>
         </nav>
         <div class="user-info">
@@ -40,7 +51,7 @@
         <header class="top-bar">
             <div class="search-container">
                 <input type="text" placeholder="Searching for appointments..." id="search-input">
-                <button class="search-btn">🔍</button>
+                <button class="search-btn"></button>
             </div>
         </header>
 
@@ -73,7 +84,6 @@
     </main>
 </div>
 
-<!-- View Appointment Modal -->
 <div class="modal" id="view-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -85,7 +95,6 @@
     </div>
 </div>
 
-<!-- Edit Appointment Modal -->
 <div class="modal" id="edit-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -176,10 +185,17 @@
 
 <script src="../js/admin-dashboard.js"></script>
 
-<!-- Script adițional pentru navigarea către suppliers -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Gestionare click pe butonul Providers
+        const inventoryLink = document.getElementById('inventory-link');
+        if (inventoryLink) {
+            inventoryLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Navigating to inventory dashboard...');
+                window.location.href = '/inventory/dashboard';
+            });
+        }
+
         const providersLink = document.getElementById('providers-link');
         if (providersLink) {
             providersLink.addEventListener('click', function(e) {
@@ -189,7 +205,6 @@
             });
         }
 
-        // Gestionare click pe butonul Orders (va duce la tab-ul orders din suppliers)
         const ordersLink = document.getElementById('orders-link');
         if (ordersLink) {
             ordersLink.addEventListener('click', function(e) {
@@ -199,13 +214,14 @@
             });
         }
 
-        // Adaugă highlight pentru pagina curentă
         const currentPath = window.location.pathname;
         const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
 
         sidebarLinks.forEach(link => {
             const linkPath = new URL(link.href).pathname;
-            if (currentPath === linkPath || (currentPath === '/suppliers' && linkPath === '/suppliers')) {
+            if (currentPath === linkPath ||
+                (currentPath === '/suppliers' && linkPath === '/suppliers') ||
+                (currentPath.startsWith('/inventory') && linkPath === '/inventory/dashboard')) {
                 link.parentElement.classList.add('active');
             } else {
                 link.parentElement.classList.remove('active');

@@ -44,6 +44,48 @@ function setupEventListeners() {
             hideStockUpdateModal();
         }
     });
+
+    // Navigation functionality
+    const providersLink = document.getElementById('providers-link');
+    if (providersLink) {
+        providersLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/suppliers';
+        });
+    }
+
+    const ordersLink = document.getElementById('orders-link');
+    if (ordersLink) {
+        ordersLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/suppliers#orders';
+        });
+    }
+
+    // Logout functionality
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            logout();
+        });
+    }
+
+    // Highlight current page
+    highlightCurrentPage();
+}
+
+function highlightCurrentPage() {
+    const currentPath = window.location.pathname;
+    const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+
+    sidebarLinks.forEach(link => {
+        const linkPath = new URL(link.href).pathname;
+        if (currentPath === linkPath) {
+            link.parentElement.classList.add('active');
+        } else {
+            link.parentElement.classList.remove('active');
+        }
+    });
 }
 
 // Load all dashboard data
@@ -53,7 +95,6 @@ async function loadDashboardData() {
     try {
         await Promise.all([
             loadStatistics(),
-            loadRecentLowStock(),
             loadCategories(),
             loadAdminInfo()
         ]);
@@ -82,63 +123,14 @@ async function loadStatistics() {
     }
 }
 
-// Update statistics display
+// Update statistics display (removed lowStockCount)
 function updateStatisticsDisplay(stats) {
     document.getElementById('totalParts').textContent = stats.totalParts.toLocaleString();
-    document.getElementById('lowStockCount').textContent = stats.lowStockCount.toLocaleString();
     document.getElementById('inventoryValue').textContent = stats.totalInventoryValue.toLocaleString('ro-RO', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
     document.getElementById('totalCategories').textContent = stats.totalCategories.toLocaleString();
-}
-
-// Load recent low stock items
-async function loadRecentLowStock() {
-    try {
-        const response = await fetch('/inventory/api/parts/low-stock', {
-            headers: getAuthHeaders()
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            displayRecentLowStock(data.parts.slice(0, 5)); // Show only first 5
-        } else {
-            throw new Error(data.message);
-        }
-    } catch (error) {
-        document.getElementById('recentLowStock').innerHTML =
-            '<div class="loading">Error loading low stock alerts</div>';
-    }
-}
-
-// Display recent low stock items
-function displayRecentLowStock(parts) {
-    const container = document.getElementById('recentLowStock');
-
-    if (parts.length === 0) {
-        container.innerHTML = '<div class="loading">No low stock alerts</div>';
-        return;
-    }
-
-    const html = parts.map(part => `
-        <div class="activity-item ${part.urgency === 'critical' ? 'critical' : ''}">
-            <div class="activity-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="activity-content">
-                <h4>${escapeHtml(part.name)}</h4>
-                <p>${escapeHtml(part.category)} - ${escapeHtml(part.partNumber || 'No part number')}</p>
-            </div>
-            <div class="activity-stock">
-                <span class="${part.stockQuantity === 0 ? 'stock-critical' : 'stock-low'}">
-                    ${part.stockQuantity}/${part.minimumStockLevel}
-                </span>
-            </div>
-        </div>
-    `).join('');
-
-    container.innerHTML = html;
 }
 
 // Load categories overview
@@ -198,13 +190,15 @@ async function loadAdminInfo() {
         // Get admin info from token or session
         const adminName = localStorage.getItem('adminName') || 'Admin';
         document.getElementById('adminName').textContent = adminName;
+        document.getElementById('admin-name').textContent = adminName;
     } catch (error) {
         document.getElementById('adminName').textContent = 'Admin';
+        document.getElementById('admin-name').textContent = 'Admin';
     }
 }
 
 function showStockUpdateModal() {
-    document.getElementById('stockUpdateModal').style.display = 'block';
+    document.getElementById('stockUpdateModal').style.display = 'flex';
     document.getElementById('partSearch').focus();
 }
 
@@ -308,7 +302,7 @@ async function handleStockUpdate(e) {
 
         const response = await fetch(`/inventory/api/parts/${selectedPartId}/stock`, {
             method: 'PUT',
-            headers: getAuthHeaders(), // CHANGE THIS LINE
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 quantity,
                 operation,
@@ -323,7 +317,6 @@ async function handleStockUpdate(e) {
             hideStockUpdateModal();
             // Reload statistics to reflect changes
             await loadStatistics();
-            await loadRecentLowStock();
         } else {
             showNotification(data.message, 'error');
         }
@@ -368,10 +361,10 @@ function showNotification(message, type = 'info') {
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             }
             
-            .notification-success { background: #10b981; }
-            .notification-error { background: #ef4444; }
-            .notification-warning { background: #f59e0b; }
-            .notification-info { background: #3b82f6; }
+            .notification-success { background: #28a745; }
+            .notification-error { background: #dc3545; }
+            .notification-warning { background: #ffc107; }
+            .notification-info { background: #17a2b8; }
             
             .notification-content {
                 display: flex;
@@ -431,8 +424,8 @@ function formatCurrency(amount) {
 
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('token');        // CHANGE: Use 'token' not 'adminToken'
-        localStorage.removeItem('user');         // ADD: Also remove user data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         localStorage.removeItem('adminName');
         window.location.href = '/admin/login';
     }
@@ -442,4 +435,5 @@ function refreshDashboard() {
     loadDashboardData();
 }
 
+// Auto-refresh every 5 minutes
 setInterval(refreshDashboard, 5 * 60 * 1000);

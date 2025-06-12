@@ -4,147 +4,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Dashboard - Repair Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/inventory-dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 <div class="dashboard-container">
-    <!-- Header -->
-    <header class="dashboard-header">
-        <div class="header-content">
-            <div class="header-left">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>Repair Queens</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="/admin/dashboard">
+                    <span class="icon"></span>
+                    <span>Appointments</span>
+                </a></li>
+                <li class="active"><a href="/inventory/dashboard">
+                    <span class="icon"></span>
+                    <span>Inventory</span>
+                </a></li>
+                <li><a href="/suppliers" id="providers-link">
+                    <span class="icon"></span>
+                    <span>Suppliers</span>
+                </a></li>
+                <li><a href="/suppliers" id="orders-link">
+                    <span class="icon"></span>
+                    <span>Orders</span>
+                </a></li>
+            </ul>
+        </nav>
+        <div class="user-info">
+            <div class="user-avatar">A</div>
+            <div class="user-details">
+                <h3 id="admin-name">Admin</h3>
+                <p>Administrator</p>
+            </div>
+            <button id="logout-btn" class="logout-btn">
+                <span class="icon">🚪</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="page-header">
                 <h1><i class="fas fa-boxes"></i> Inventory Dashboard</h1>
                 <span class="subtitle">Repair Queens Parts Management</span>
             </div>
-            <div class="header-right">
-                <div class="user-info">
+            <div class="header-actions">
+                <div class="user-info-header">
                     <span id="adminName">Loading...</span>
                     <i class="fas fa-user-circle"></i>
                 </div>
-                <button class="btn-logout" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
             </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="dashboard-nav">
+            <div class="nav-content">
+                <a href="/inventory/dashboard" class="nav-link active">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="/inventory/parts" class="nav-link">
+                    <i class="fas fa-cogs"></i> Manage Parts
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="content">
+            <!-- Statistics Cards -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalParts">-</h3>
+                            <p>Total Parts</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card success">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="inventoryValue">-</h3>
+                            <p>Total Value (RON)</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card info">
+                        <div class="stat-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalCategories">-</h3>
+                            <p>Categories</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="actions-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+                </div>
+                <div class="actions-grid">
+                    <a href="/inventory/parts" class="action-card">
+                        <i class="fas fa-search"></i>
+                        <h3>Search Parts</h3>
+                        <p>Find and manage existing parts</p>
+                    </a>
+
+                    <div class="action-card" onclick="showStockUpdateModal()">
+                        <i class="fas fa-warehouse"></i>
+                        <h3>Update Stock</h3>
+                        <p>Quick stock adjustments</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Categories Overview -->
+            <section class="categories-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-pie"></i> Parts by Category</h2>
+                </div>
+                <div class="categories-grid" id="categoriesGrid">
+                    <div class="loading">Loading categories...</div>
+                </div>
+            </section>
         </div>
-    </header>
-
-    <!-- Navigation -->
-    <nav class="dashboard-nav">
-        <div class="nav-content">
-            <a href="/admin/dashboard" class="nav-link">
-                <i class="fas fa-tachometer-alt"></i> Admin Dashboard
-            </a>
-            <a href="/inventory/dashboard" class="nav-link active">
-                <i class="fas fa-boxes"></i> Inventory
-            </a>
-            <a href="/inventory/parts" class="nav-link">
-                <i class="fas fa-cogs"></i> Manage Parts
-            </a>
-            <a href="/inventory/low-stock" class="nav-link">
-                <i class="fas fa-exclamation-triangle"></i> Low Stock
-            </a>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="dashboard-main">
-        <!-- Statistics Cards -->
-        <section class="stats-section">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-boxes"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="totalParts">-</h3>
-                        <p>Total Parts</p>
-                    </div>
-                </div>
-
-                <div class="stat-card warning">
-                    <div class="stat-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="lowStockCount">-</h3>
-                        <p>Low Stock Alerts</p>
-                    </div>
-                </div>
-
-                <div class="stat-card success">
-                    <div class="stat-icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="inventoryValue">-</h3>
-                        <p>Total Value (RON)</p>
-                    </div>
-                </div>
-
-                <div class="stat-card info">
-                    <div class="stat-icon">
-                        <i class="fas fa-tags"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 id="totalCategories">-</h3>
-                        <p>Categories</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Quick Actions -->
-        <section class="actions-section">
-            <div class="section-header">
-                <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
-            </div>
-            <div class="actions-grid">
-                <a href="/inventory/parts/add" class="action-card">
-                    <i class="fas fa-plus-circle"></i>
-                    <h3>Add New Part</h3>
-                    <p>Add a new part to inventory</p>
-                </a>
-
-                <a href="/inventory/parts" class="action-card">
-                    <i class="fas fa-search"></i>
-                    <h3>Search Parts</h3>
-                    <p>Find and manage existing parts</p>
-                </a>
-
-                <a href="/inventory/low-stock" class="action-card warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>Check Low Stock</h3>
-                    <p>View parts that need restocking</p>
-                </a>
-
-                <div class="action-card" onclick="showStockUpdateModal()">
-                    <i class="fas fa-warehouse"></i>
-                    <h3>Update Stock</h3>
-                    <p>Quick stock adjustments</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Recent Activity -->
-        <section class="activity-section">
-            <div class="section-header">
-                <h2><i class="fas fa-clock"></i> Recent Low Stock Alerts</h2>
-                <a href="/inventory/low-stock" class="btn-secondary">View All</a>
-            </div>
-            <div class="activity-list" id="recentLowStock">
-                <div class="loading">Loading recent alerts...</div>
-            </div>
-        </section>
-
-        <!-- Categories Overview -->
-        <section class="categories-section">
-            <div class="section-header">
-                <h2><i class="fas fa-chart-pie"></i> Parts by Category</h2>
-            </div>
-            <div class="categories-grid" id="categoriesGrid">
-                <div class="loading">Loading categories...</div>
-            </div>
-        </section>
     </main>
 </div>
 
@@ -207,5 +204,43 @@
 </div>
 
 <script src="/js/inventory-dashboard.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const providersLink = document.getElementById('providers-link');
+        if (providersLink) {
+            providersLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '/suppliers';
+            });
+        }
+
+        const ordersLink = document.getElementById('orders-link');
+        if (ordersLink) {
+            ordersLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '/suppliers#orders';
+            });
+        }
+
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                logout();
+            });
+        }
+
+        const currentPath = window.location.pathname;
+        const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+
+        sidebarLinks.forEach(link => {
+            const linkPath = new URL(link.href).pathname;
+            if (currentPath === linkPath) {
+                link.parentElement.classList.add('active');
+            } else {
+                link.parentElement.classList.remove('active');
+            }
+        });
+    });
+</script>
 </body>
 </html>

@@ -77,10 +77,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getCategories(req, res);
         }
 
-        // GET /inventory/api/parts/low-stock - Get low stock parts
-        if (path === '/inventory/api/parts/low-stock' && method === 'GET') {
-            return InventoryController.getLowStockParts(req, res);
-        }
 
         // GET /inventory/api/parts/statistics - Get inventory statistics
         if (path === '/inventory/api/parts/statistics' && method === 'GET') {
@@ -253,35 +249,6 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
         }
     }
 
-    // Low stock alerts page
-    if (path === '/inventory/low-stock') {
-        if (method === 'GET') {
-            try {
-                const lowStockPagePath = pathModule.join(__dirname, '../frontend/pages/inventory-low-stock.html');
-
-                if (!fs.existsSync(lowStockPagePath)) {
-                    return sendJSON(res, 404, {
-                        success: false,
-                        message: 'Low stock page not found'
-                    });
-                }
-
-                const html = fs.readFileSync(lowStockPagePath, 'utf8');
-
-                res.writeHead(200, {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-cache'
-                });
-                res.end(html);
-                return;
-            } catch (error) {
-                return sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error loading low stock page'
-                });
-            }
-        }
-    }
 
     // Add/Edit part page
     if (path === '/inventory/parts/add' || path.match(/^\/inventory\/parts\/edit\/(\d+)$/)) {

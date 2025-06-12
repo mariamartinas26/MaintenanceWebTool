@@ -28,7 +28,6 @@ function checkAuthentication() {
 
 // Initialize page when DOM loads
 document.addEventListener('DOMContentLoaded', function() {
-
     if (!checkAuthentication()) {
         return;
     }
@@ -37,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadParts();
     loadCategories();
+    loadAdminInfo();
 });
 
 // Setup event listeners
@@ -69,6 +69,56 @@ function setupEventListeners() {
             hideAllModals();
         }
     });
+
+    // Navigation functionality
+    setupNavigationListeners();
+}
+
+// Setup navigation listeners
+function setupNavigationListeners() {
+    const providersLink = document.getElementById('providers-link');
+    if (providersLink) {
+        providersLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/suppliers';
+        });
+    }
+
+    const ordersLink = document.getElementById('orders-link');
+    if (ordersLink) {
+        ordersLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/suppliers#orders';
+        });
+    }
+
+    // Logout functionality
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            logout();
+        });
+    }
+}
+
+// Load admin info
+async function loadAdminInfo() {
+    try {
+        const adminName = localStorage.getItem('adminName') || 'Admin';
+        document.getElementById('admin-name').textContent = adminName;
+    } catch (error) {
+        document.getElementById('admin-name').textContent = 'Admin';
+    }
+}
+
+// Logout function
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('adminName');
+        window.location.href = '/admin/login';
+    }
 }
 
 // Initialize page settings
@@ -82,6 +132,9 @@ function initializePage() {
     if (savedItemsPerPage) {
         itemsPerPage = parseInt(savedItemsPerPage);
     }
+
+    // Set default stock filter to "in-stock"
+    document.getElementById('stockFilter').value = 'in-stock';
 }
 
 // Load all parts
@@ -193,19 +246,17 @@ function applyFilters() {
         filteredParts = filteredParts.filter(part => part.category === categoryFilter);
     }
 
-    // Apply stock filter
-    if (stockFilter !== 'all') {
-        switch (stockFilter) {
-            case 'in-stock':
-                filteredParts = filteredParts.filter(part => part.stockQuantity > part.minimumStockLevel);
-                break;
-            case 'low-stock':
-                filteredParts = filteredParts.filter(part => part.stockQuantity <= part.minimumStockLevel && part.stockQuantity > 0);
-                break;
-            case 'out-of-stock':
-                filteredParts = filteredParts.filter(part => part.stockQuantity === 0);
-                break;
-        }
+    // Apply stock filter (always filter, no "all" option)
+    switch (stockFilter) {
+        case 'in-stock':
+            filteredParts = filteredParts.filter(part => part.stockQuantity > part.minimumStockLevel);
+            break;
+        case 'low-stock':
+            filteredParts = filteredParts.filter(part => part.stockQuantity <= part.minimumStockLevel && part.stockQuantity > 0);
+            break;
+        case 'out-of-stock':
+            filteredParts = filteredParts.filter(part => part.stockQuantity === 0);
+            break;
     }
 
     // Apply sorting
@@ -266,20 +317,17 @@ function displayParts() {
         return;
     }
 
-    // Calculate pagination
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageItems = filteredParts.slice(startIndex, endIndex);
 
-    // Generate HTML
     const html = pageItems.map(part => createPartCard(part)).join('');
     container.innerHTML = html;
 
-    // Update container class for view type
     container.className = `parts-${currentView === 'grid' ? 'grid' : 'grid list-view'}`;
 }
 
-// Create individual part card HTML
 function createPartCard(part) {
     const stockStatus = getStockStatus(part);
     const stockClass = stockStatus.toLowerCase().replace(' ', '-');
@@ -326,7 +374,7 @@ function createPartCard(part) {
     `;
 }
 
-// Get stock status text and class
+
 function getStockStatus(part) {
     if (part.stockQuantity === 0) {
         return 'Out of Stock';
@@ -337,39 +385,29 @@ function getStockStatus(part) {
     }
 }
 
-// Display empty state
+
 function displayEmptyState(message = null) {
     const container = document.getElementById('partsContainer');
-    const defaultMessage = filteredParts.length === 0 && allParts.length > 0
-        ? 'No parts match your current filters.'
-        : 'No parts found. Add your first part to get started.';
+    const defaultMessage = 'No parts match your current filters.';
 
     container.innerHTML = `
         <div class="empty-state">
             <i class="fas fa-boxes"></i>
             <h3>No Parts Found</h3>
             <p>${message || defaultMessage}</p>
-            ${allParts.length === 0 ? `
-                <button class="btn-primary" onclick="window.location.href='/inventory/parts/add'">
-                    <i class="fas fa-plus"></i> Add Your First Part
-                </button>
-            ` : `
-                <button class="btn-secondary" onclick="clearAllFilters()">
-                    <i class="fas fa-filter"></i> Clear All Filters
-                </button>
-            `}
+            <button class="btn-secondary" onclick="clearAllFilters()">
+                <i class="fas fa-filter"></i> Clear All Filters
+            </button>
         </div>
     `;
 
-    // Hide pagination
     document.getElementById('pagination').style.display = 'none';
 }
 
-// Clear all filters
 function clearAllFilters() {
     document.getElementById('searchInput').value = '';
     document.getElementById('categoryFilter').value = 'all';
-    document.getElementById('stockFilter').value = 'all';
+    document.getElementById('stockFilter').value = 'in-stock'; // Default to in-stock instead of 'all'
     document.getElementById('sortBy').value = 'name';
     document.getElementById('sortOrder').value = 'asc';
     document.getElementById('clearSearch').style.display = 'none';
@@ -377,7 +415,6 @@ function clearAllFilters() {
     applyFilters();
 }
 
-// Update pagination controls
 function updatePagination() {
     const totalPages = Math.ceil(filteredParts.length / itemsPerPage);
     const pagination = document.getElementById('pagination');
@@ -397,7 +434,6 @@ function updatePagination() {
     nextBtn.disabled = currentPage === totalPages;
 }
 
-// Change page
 function changePage(direction) {
     const totalPages = Math.ceil(filteredParts.length / itemsPerPage);
     const newPage = currentPage + direction;
@@ -407,7 +443,6 @@ function changePage(direction) {
         displayParts();
         updatePagination();
 
-        // Scroll to top of parts section
         document.querySelector('.parts-section').scrollIntoView({
             behavior: 'smooth',
             block: 'start'
@@ -415,20 +450,16 @@ function changePage(direction) {
     }
 }
 
-// Set view type (grid/list)
 function setView(view) {
     currentView = view;
     localStorage.setItem('partsView', view);
 
-    // Update button states
     document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
     document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
 
-    // Update display
     displayParts();
 }
 
-// Show part details modal
 async function showPartDetails(partId) {
     try {
         showLoading(true);
@@ -440,7 +471,7 @@ async function showPartDetails(partId) {
 
         if (data.success) {
             displayPartDetails(data.part);
-            document.getElementById('partDetailsModal').style.display = 'block';
+            document.getElementById('partDetailsModal').style.display = 'flex';
         } else {
             throw new Error(data.message);
         }
@@ -452,7 +483,6 @@ async function showPartDetails(partId) {
     }
 }
 
-// Display part details in modal
 function displayPartDetails(part) {
     const stockStatus = getStockStatus(part);
     const content = document.getElementById('partDetailsContent');
@@ -552,19 +582,16 @@ function displayPartDetails(part) {
     `;
 }
 
-// Edit part
 function editPart(partId) {
     window.location.href = `/inventory/parts/edit/${partId}`;
 }
 
-// Show stock update modal
 function showStockUpdateModal(partId) {
     const part = allParts.find(p => p.id === partId);
     if (!part) return;
 
     updatePartId = partId;
 
-    // Populate part info
     document.getElementById('updatePartId').value = partId;
     document.getElementById('updatePartInfo').innerHTML = `
         <h4>${escapeHtml(part.name)}</h4>
@@ -573,15 +600,12 @@ function showStockUpdateModal(partId) {
         <p>Minimum Level: ${part.minimumStockLevel}</p>
     `;
 
-    // Reset form
     document.getElementById('stockUpdateForm').reset();
     document.getElementById('updatePartId').value = partId;
 
-    // Show modal
-    document.getElementById('stockUpdateModal').style.display = 'block';
+    document.getElementById('stockUpdateModal').style.display = 'flex';
 }
 
-// Handle stock update form submission
 async function handleStockUpdate(e) {
     e.preventDefault();
 
@@ -626,14 +650,13 @@ async function handleStockUpdate(e) {
     }
 }
 
-// Show delete confirmation modal
+
 function showDeleteModal(partId) {
     const part = allParts.find(p => p.id === partId);
     if (!part) return;
 
     deletePartId = partId;
 
-    // Populate part info
     document.getElementById('deletePartInfo').innerHTML = `
         <h4>${escapeHtml(part.name)}</h4>
         <p><strong>Part Number:</strong> ${part.partNumber ? escapeHtml(part.partNumber) : 'N/A'}</p>
@@ -642,7 +665,7 @@ function showDeleteModal(partId) {
         <p><strong>Price:</strong> ${formatCurrency(part.price)}</p>
     `;
 
-    document.getElementById('deleteModal').style.display = 'block';
+    document.getElementById('deleteModal').style.display = 'flex';
 }
 
 // Confirm part deletion
@@ -837,14 +860,12 @@ function downloadCSV(content, filename) {
     }
 }
 
-// Utility functions
 function showLoading(show) {
     const overlay = document.getElementById('loadingOverlay');
     overlay.style.display = show ? 'flex' : 'none';
 }
 
 function showNotification(message, type = 'info') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
@@ -854,7 +875,6 @@ function showNotification(message, type = 'info') {
         </div>
     `;
 
-    // Add styles if not already added
     if (!document.getElementById('notificationStyles')) {
         const styles = document.createElement('style');
         styles.id = 'notificationStyles';
@@ -873,10 +893,10 @@ function showNotification(message, type = 'info') {
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             }
             
-            .notification-success { background: #10b981; }
-            .notification-error { background: #ef4444; }
-            .notification-warning { background: #f59e0b; }
-            .notification-info { background: #3b82f6; }
+            .notification-success { background: #28a745; }
+            .notification-error { background: #dc3545; }
+            .notification-warning { background: #ffc107; }
+            .notification-info { background: #17a2b8; }
             
             .notification-content {
                 display: flex;
@@ -894,86 +914,12 @@ function showNotification(message, type = 'info') {
                     transform: translateX(0);
                 }
             }
-            
-            .part-details-grid {
-                display: grid;
-                gap: 1.5rem;
-                margin-bottom: 1.5rem;
-            }
-            
-            .detail-section {
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 1rem;
-            }
-            
-            .detail-section h4 {
-                margin-bottom: 1rem;
-                color: #1f2937;
-                font-size: 1.1rem;
-                border-bottom: 1px solid #e5e7eb;
-                padding-bottom: 0.5rem;
-            }
-            
-            .detail-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 0.5rem 0;
-                border-bottom: 1px solid #f3f4f6;
-            }
-            
-            .detail-row:last-child {
-                border-bottom: none;
-            }
-            
-            .detail-row label {
-                font-weight: 500;
-                color: #374151;
-                min-width: 120px;
-            }
-            
-            .detail-row span {
-                color: #1f2937;
-                text-align: right;
-            }
-            
-            .price-value {
-                font-weight: 600;
-                color: #059669;
-            }
-            
-            .stock-value.in-stock {
-                color: #059669;
-                font-weight: 600;
-            }
-            
-            .stock-value.low-stock {
-                color: #d97706;
-                font-weight: 600;
-            }
-            
-            .stock-value.out-of-stock {
-                color: #dc2626;
-                font-weight: 600;
-            }
-            
-            .detail-actions {
-                display: flex;
-                gap: 1rem;
-                justify-content: flex-end;
-                margin-top: 1.5rem;
-                padding-top: 1.5rem;
-                border-top: 1px solid #e5e7eb;
-            }
         `;
         document.head.appendChild(styles);
     }
 
-    // Add to page
     document.body.appendChild(notification);
 
-    // Remove after 5 seconds
     setTimeout(() => {
         notification.style.animation = 'slideInRight 0.3s ease reverse';
         setTimeout(() => {
@@ -1018,32 +964,12 @@ function formatDate(dateString) {
     });
 }
 
-// Auto-refresh functionality
 function refreshParts() {
     loadParts();
 }
 
-// Auto-refresh every 5 minutes
 setInterval(refreshParts, 5 * 60 * 1000);
 
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Ctrl/Cmd + F to focus search
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault();
-        document.getElementById('searchInput').focus();
-    }
-
-    // Ctrl/Cmd + A to select all visible parts
-    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !e.target.matches('input, textarea')) {
-        e.preventDefault();
-        if (selectedParts.size > 0) {
-            deselectAllParts();
-        } else {
-            selectAllParts();
-        }
-    }
-});
 
 // Export current view to CSV
 function exportCurrentView() {
