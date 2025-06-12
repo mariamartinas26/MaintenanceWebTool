@@ -1,6 +1,8 @@
 class AdminDashboard {
     constructor() {
         this.appointments = [];
+        this.availableParts = [];
+        this.selectedParts = [];
         this.currentFilters = {
             status: 'all',
             date: 'all',
@@ -14,6 +16,8 @@ class AdminDashboard {
         this.loadAppointments();
         this.setupModals();
         this.setupNavigation();
+        this.loadParts();
+        this.setupPartsSelection();
     }
 
     bindEvents() {
@@ -82,15 +86,13 @@ class AdminDashboard {
         });
     }
 
-    // Adaugă această funcție în AdminDashboard class, înlocuind setupNavigation() existentă
-
     setupNavigation() {
         const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
 
         sidebarLinks.forEach(link => {
             const iconElement = link.querySelector('.icon');
             if (iconElement) {
-                // Inventory navigation (existent)
+                // Inventory navigation
                 if (iconElement.textContent.includes('🔧')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
@@ -99,10 +101,8 @@ class AdminDashboard {
                     });
                 }
 
-                // Suppliers navigation (nou)
-                if (iconElement.textContent.includes('🏪') ||
-                    link.textContent.toLowerCase().includes('supplier') ||
-                    link.textContent.toLowerCase().includes('provider')) {
+                // Suppliers navigation
+                if (iconElement.textContent.includes('🏪')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         console.log('Suppliers button clicked');
@@ -110,17 +110,8 @@ class AdminDashboard {
                     });
                 }
 
-                // Parts/Inventory navigation alternativ
-                if (iconElement.textContent.includes('📦')) {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        console.log('Parts/Inventory button clicked');
-                        window.location.href = '/suppliers';
-                    });
-                }
-
                 // Orders navigation
-                if (iconElement.textContent.includes('📋')) {
+                if (iconElement.textContent.includes('📦')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         console.log('Orders button clicked');
@@ -130,6 +121,273 @@ class AdminDashboard {
             }
         });
     }
+
+    // Parts Selection Setup
+    setupPartsSelection() {
+        const partsSearchInput = document.getElementById('parts-search-input');
+        const partsDropdown = document.getElementById('parts-dropdown');
+
+        partsSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            this.filterParts(query);
+        });
+
+        partsSearchInput.addEventListener('focus', () => {
+            partsDropdown.classList.add('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.parts-search')) {
+                partsDropdown.classList.remove('show');
+            }
+        });
+    }
+
+    async loadParts() {
+        try {
+            // Mock data pentru demonstrație - înlocuiește cu API real
+            this.availableParts = [
+                {
+                    id: 1,
+                    name: "Brake Pads Front",
+                    partNumber: "BP-001",
+                    category: "Braking",
+                    price: 45.99,
+                    stockQuantity: 25,
+                    description: "High-quality brake pads for front wheels"
+                },
+                {
+                    id: 2,
+                    name: "Chain KMC X11",
+                    partNumber: "CH-KMC-X11",
+                    category: "Drivetrain",
+                    price: 32.50,
+                    stockQuantity: 15,
+                    description: "11-speed bicycle chain"
+                },
+                {
+                    id: 3,
+                    name: "Tire Continental 700x25c",
+                    partNumber: "TR-CON-700",
+                    category: "Wheels",
+                    price: 28.99,
+                    stockQuantity: 8,
+                    description: "Road bike tire 700x25c"
+                },
+                {
+                    id: 4,
+                    name: "Shimano Brake Cable",
+                    partNumber: "BC-SH-001",
+                    category: "Braking",
+                    price: 12.99,
+                    stockQuantity: 30,
+                    description: "Brake cable for road bikes"
+                },
+                {
+                    id: 5,
+                    name: "Battery 36V 10Ah",
+                    partNumber: "BAT-36V-10",
+                    category: "Electric",
+                    price: 299.99,
+                    stockQuantity: 5,
+                    description: "Lithium battery for e-bikes"
+                }
+            ];
+
+            // Pentru implementarea reală, folosește acest cod:
+            /*
+            const token = localStorage.getItem('token');
+            const response = await fetch('/admin/api/parts', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                this.availableParts = data.parts;
+            }
+            */
+        } catch (error) {
+            console.error('Error loading parts:', error);
+            this.showError('Error loading parts data');
+        }
+    }
+
+    filterParts(query) {
+        const dropdown = document.getElementById('parts-dropdown');
+
+        if (query.length < 2) {
+            dropdown.classList.remove('show');
+            return;
+        }
+
+        const filteredParts = this.availableParts.filter(part =>
+            part.name.toLowerCase().includes(query) ||
+            part.partNumber.toLowerCase().includes(query) ||
+            part.category.toLowerCase().includes(query)
+        );
+
+        this.renderPartsDropdown(filteredParts);
+        dropdown.classList.add('show');
+    }
+
+    renderPartsDropdown(parts) {
+        const dropdown = document.getElementById('parts-dropdown');
+
+        if (parts.length === 0) {
+            dropdown.innerHTML = '<div class="part-option">No parts found</div>';
+            return;
+        }
+
+        dropdown.innerHTML = parts.map(part => `
+            <div class="part-option" data-part-id="${part.id}">
+                <div class="part-name">${part.name}</div>
+                <div class="part-details">
+                    ${part.partNumber} | Stock: ${part.stockQuantity} | ${part.price} RON
+                </div>
+            </div>
+        `).join('');
+
+        // Add click events for part selection
+        dropdown.querySelectorAll('.part-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                const partId = parseInt(e.currentTarget.dataset.partId);
+                this.addPartToSelection(partId);
+                dropdown.classList.remove('show');
+                document.getElementById('parts-search-input').value = '';
+            });
+        });
+    }
+
+    addPartToSelection(partId) {
+        const part = this.availableParts.find(p => p.id === partId);
+        if (!part) return;
+
+        // Check if part already selected
+        const existingPart = this.selectedParts.find(p => p.id === partId);
+        if (existingPart) {
+            existingPart.quantity += 1;
+        } else {
+            this.selectedParts.push({
+                ...part,
+                quantity: 1
+            });
+        }
+
+        this.renderSelectedParts();
+        this.updatePartsTotal();
+    }
+
+    renderSelectedParts() {
+        const container = document.getElementById('selected-parts');
+
+        if (this.selectedParts.length === 0) {
+            container.innerHTML = '<span>No parts selected</span>';
+            container.classList.add('empty');
+            return;
+        }
+
+        container.classList.remove('empty');
+        container.innerHTML = this.selectedParts.map(part => `
+            <div class="selected-part-item" data-part-id="${part.id}">
+                <div class="part-info">
+                    <div class="name">${part.name}</div>
+                    <div class="price">${part.partNumber} | ${part.price} RON each</div>
+                </div>
+                <div class="quantity-controls">
+                    <button type="button" class="quantity-btn decrease" data-part-id="${part.id}">-</button>
+                    <input type="number" class="quantity-input" value="${part.quantity}" 
+                           min="1" data-part-id="${part.id}">
+                    <button type="button" class="quantity-btn increase" data-part-id="${part.id}">+</button>
+                </div>
+                <button type="button" class="remove-part" data-part-id="${part.id}">Remove</button>
+            </div>
+        `).join('');
+
+        // Bind events for quantity controls
+        this.bindPartControlEvents();
+    }
+
+    bindPartControlEvents() {
+        // Quantity buttons
+        document.querySelectorAll('.quantity-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const partId = parseInt(e.target.dataset.partId);
+                const isIncrease = e.target.classList.contains('increase');
+                this.updatePartQuantity(partId, isIncrease ? 1 : -1);
+            });
+        });
+
+        // Quantity inputs
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const partId = parseInt(e.target.dataset.partId);
+                const newQuantity = parseInt(e.target.value);
+                this.setPartQuantity(partId, newQuantity);
+            });
+        });
+
+        // Remove buttons
+        document.querySelectorAll('.remove-part').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const partId = parseInt(e.target.dataset.partId);
+                this.removePartFromSelection(partId);
+            });
+        });
+    }
+
+    updatePartQuantity(partId, change) {
+        const part = this.selectedParts.find(p => p.id === partId);
+        if (!part) return;
+
+        part.quantity += change;
+        if (part.quantity <= 0) {
+            this.removePartFromSelection(partId);
+        } else {
+            this.renderSelectedParts();
+            this.updatePartsTotal();
+        }
+    }
+
+    setPartQuantity(partId, quantity) {
+        if (quantity <= 0) {
+            this.removePartFromSelection(partId);
+            return;
+        }
+
+        const part = this.selectedParts.find(p => p.id === partId);
+        if (part) {
+            part.quantity = quantity;
+            this.renderSelectedParts();
+            this.updatePartsTotal();
+        }
+    }
+
+    removePartFromSelection(partId) {
+        this.selectedParts = this.selectedParts.filter(p => p.id !== partId);
+        this.renderSelectedParts();
+        this.updatePartsTotal();
+    }
+
+    updatePartsTotal() {
+        const total = this.selectedParts.reduce((sum, part) => {
+            return sum + (part.price * part.quantity);
+        }, 0);
+
+        const totalElement = document.getElementById('parts-total');
+        const amountElement = document.getElementById('parts-total-amount');
+
+        if (total > 0) {
+            totalElement.style.display = 'block';
+            amountElement.textContent = total.toFixed(2);
+        } else {
+            totalElement.style.display = 'none';
+        }
+    }
+
+    // Existing methods continue here...
 
     async loadAppointments() {
         try {
@@ -399,9 +657,7 @@ class AdminDashboard {
         `;
     }
 
-    // Helper method to render admin response section
     renderAdminResponseSection(appointment) {
-        // Show admin response for all appointments that have one (including rejected)
         if (!appointment.adminResponse) {
             return '';
         }
@@ -416,9 +672,7 @@ class AdminDashboard {
         `;
     }
 
-    // Helper method to render rejection section
     renderRejectionSection(appointment) {
-        // Only show rejection section for rejected appointments
         if (appointment.status !== 'rejected' || !appointment.rejectionReason) {
             return '';
         }
@@ -512,6 +766,11 @@ class AdminDashboard {
         if (appointment.retryDays) {
             document.getElementById('retry-days').value = appointment.retryDays;
         }
+
+        // Reset selected parts
+        this.selectedParts = [];
+        this.renderSelectedParts();
+        this.updatePartsTotal();
     }
 
     handleStatusChange(e) {
@@ -550,7 +809,7 @@ class AdminDashboard {
                 status: status
             };
 
-            // Add admin response for ALL statuses (including rejected)
+            // Add admin response for ALL statuses
             const adminMessage = document.getElementById('admin-message').value;
             if (adminMessage.trim()) {
                 updateData.adminResponse = adminMessage;
@@ -567,6 +826,15 @@ class AdminDashboard {
                 if (!updateData.warranty || updateData.warranty < 0) {
                     this.showError('Warranty is required for approval');
                     return;
+                }
+
+                // Add selected parts to the update data
+                if (this.selectedParts.length > 0) {
+                    updateData.selectedParts = this.selectedParts.map(part => ({
+                        partId: part.id,
+                        quantity: part.quantity,
+                        unitPrice: part.price
+                    }));
                 }
             }
 
@@ -628,6 +896,11 @@ class AdminDashboard {
         if (appointmentForm) {
             appointmentForm.reset();
         }
+
+        // Reset selected parts
+        this.selectedParts = [];
+        this.renderSelectedParts();
+        this.updatePartsTotal();
 
         // Hide conditional fields
         const approvalFields = document.getElementById('approval-fields');
@@ -718,7 +991,7 @@ class AdminDashboard {
 
     handleLogout() {
         if (confirm('Are you sure you want to log out?')) {
-            // Clear stored authentication data (compatible with your login)
+            // Clear stored authentication data
             localStorage.removeItem('token');
             localStorage.removeItem('user');
 
@@ -751,6 +1024,5 @@ class AdminDashboard {
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new AdminDashboard();
     new AdminDashboard();
 });

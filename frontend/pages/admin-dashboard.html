@@ -84,6 +84,7 @@
     </main>
 </div>
 
+<!-- View Appointment Modal -->
 <div class="modal" id="view-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -95,6 +96,7 @@
     </div>
 </div>
 
+<!-- Edit Appointment Modal -->
 <div class="modal" id="edit-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -149,6 +151,23 @@
                         <label for="warranty">Warranty (months)</label>
                         <input type="number" id="warranty" min="0" step="1">
                     </div>
+
+                    <!-- Parts Selection Section -->
+                    <div class="parts-selection" id="parts-selection">
+                        <h4>Select Parts for This Service</h4>
+                        <div class="parts-search">
+                            <input type="text" id="parts-search-input" placeholder="Search for parts...">
+                            <div class="parts-dropdown" id="parts-dropdown">
+                                <!-- Parts options will be populated here -->
+                            </div>
+                        </div>
+                        <div class="selected-parts empty" id="selected-parts">
+                            <span>No parts selected</span>
+                        </div>
+                        <div class="parts-total" id="parts-total" style="display: none;">
+                            Total Parts Cost: <span id="parts-total-amount">0</span> RON
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group" id="rejection-fields">
@@ -184,51 +203,5 @@
 </div>
 
 <script src="../js/admin-dashboard.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const inventoryLink = document.getElementById('inventory-link');
-        if (inventoryLink) {
-            inventoryLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('Navigating to inventory dashboard...');
-                window.location.href = '/inventory/dashboard';
-            });
-        }
-
-        const providersLink = document.getElementById('providers-link');
-        if (providersLink) {
-            providersLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('Navigating to suppliers page...');
-                window.location.href = '/suppliers';
-            });
-        }
-
-        const ordersLink = document.getElementById('orders-link');
-        if (ordersLink) {
-            ordersLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('Navigating to orders page...');
-                window.location.href = '/suppliers#orders';
-            });
-        }
-
-        const currentPath = window.location.pathname;
-        const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
-
-        sidebarLinks.forEach(link => {
-            const linkPath = new URL(link.href).pathname;
-            if (currentPath === linkPath ||
-                (currentPath === '/suppliers' && linkPath === '/suppliers') ||
-                (currentPath.startsWith('/inventory') && linkPath === '/inventory/dashboard')) {
-                link.parentElement.classList.add('active');
-            } else {
-                link.parentElement.classList.remove('active');
-            }
-        });
-    });
-</script>
-
 </body>
 </html>

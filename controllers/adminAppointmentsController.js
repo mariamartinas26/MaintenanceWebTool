@@ -1,4 +1,6 @@
 const Appointment = require('../models/AdminAppointment');
+const AppointmentParts = require('../models/AppointmentParts');
+const Part = require('../models/Part');
 
 function sendJSON(res, statusCode, data) {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -69,9 +71,10 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error loading appointments:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error at loading appointments for admin:',
+                message: 'Error loading appointments for admin',
             });
         }
     }
@@ -99,6 +102,9 @@ class AdminAppointmentsController {
 
             // Get appointment media files
             const mediaFiles = await Appointment.getAppointmentMedia(appointmentId);
+
+            // Get appointment parts
+            const appointmentParts = await AppointmentParts.getAppointmentParts(appointmentId);
 
             // Format appointment details for admin
             const formattedAppointment = {
@@ -133,6 +139,17 @@ class AdminAppointmentsController {
                     mimeType: file.mime_type,
                     uploadedAt: file.uploaded_at
                 })),
+                selectedParts: appointmentParts.map(part => ({
+                    id: part.id,
+                    partId: part.part_id,
+                    partName: part.part_name,
+                    partNumber: part.part_number,
+                    category: part.category,
+                    description: part.description,
+                    quantity: part.quantity,
+                    unitPrice: part.unit_price,
+                    subtotal: part.subtotal
+                })),
                 createdAt: appointment.created_at,
                 updatedAt: appointment.updated_at
             };
@@ -144,9 +161,10 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error loading appointment details:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error at loading appointment details'
+                message: 'Error loading appointment details'
             });
         }
     }
@@ -155,7 +173,15 @@ class AdminAppointmentsController {
     static async updateAppointmentStatus(req, res) {
         try {
             const appointmentId = parseInt(req.params.id);
-            const { status, adminResponse, estimatedPrice, warranty, rejectionReason, retryDays } = req.body;
+            const {
+                status,
+                adminResponse,
+                estimatedPrice,
+                warranty,
+                rejectionReason,
+                retryDays,
+                selectedParts = [] // New field for selected parts
+            } = req.body;
 
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
@@ -185,6 +211,18 @@ class AdminAppointmentsController {
                         message: 'Warranty is mandatory for approval'
                     });
                 }
+
+                // Validate selected parts if any
+                if (selectedParts && selectedParts.length > 0) {
+                    const partValidation = await Part.checkAvailability(selectedParts);
+                    if (!partValidation.available) {
+                        return sendJSON(res, 400, {
+                            success: false,
+                            message: 'Some selected parts are not available',
+                            unavailableParts: partValidation.unavailableParts
+                        });
+                    }
+                }
             }
 
             if (status === 'rejected' && (!rejectionReason || !rejectionReason.trim())) {
@@ -194,23 +232,23 @@ class AdminAppointmentsController {
                 });
             }
 
-            // Build update data object with separate fields
+            // Build update data object
             const updateData = {
-                status
+                status,
+                adminResponse: null,
+                rejectionReason: null,
+                retryDays: null,
+                estimatedPrice: null,
+                warrantyInfo: null
             };
 
             // Handle admin response (for non-rejected statuses)
-            // IMPORTANT: Store ONLY the admin's message, nothing else
             if (status !== 'rejected') {
                 updateData.adminResponse = adminResponse && adminResponse.trim() ? adminResponse.trim() : null;
-                // Clear rejection fields when not rejecting
-                updateData.rejectionReason = null;
-                updateData.retryDays = null;
             }
 
             // Handle rejection-specific fields
             if (status === 'rejected') {
-                // Handle predefined rejection reasons
                 const rejectionReasons = {
                     'parts': 'Unavailable mechanic parts',
                     'schedule': 'Full schedule',
@@ -221,23 +259,20 @@ class AdminAppointmentsController {
                 const reasonText = rejectionReasons[rejectionReason] || rejectionReason;
                 updateData.rejectionReason = reasonText;
                 updateData.retryDays = retryDays && retryDays > 0 ? retryDays : null;
-
-                // Clear admin response when rejecting
-                updateData.adminResponse = null;
             }
 
             // Handle approval-specific fields
             if (status === 'approved') {
                 updateData.estimatedPrice = estimatedPrice;
                 updateData.warrantyInfo = `${warranty} warranty months`;
-                // DO NOT modify adminResponse here - keep it clean
-            } else {
-                // Clear approval fields when not approving
-                updateData.estimatedPrice = null;
-                updateData.warrantyInfo = null;
             }
 
-            const updatedAppointment = await Appointment.updateStatus(appointmentId, updateData);
+            // Update appointment status and parts in a transaction
+            const updatedAppointment = await Appointment.updateStatusWithParts(
+                appointmentId,
+                updateData,
+                selectedParts
+            );
 
             if (!updatedAppointment) {
                 return sendJSON(res, 404, {
@@ -252,6 +287,16 @@ class AdminAppointmentsController {
                 'pending': 'Appointment was set to pending',
             };
 
+            // Get the parts total if parts were selected
+            let partsInfo = null;
+            if (status === 'approved' && selectedParts && selectedParts.length > 0) {
+                const partsTotal = await AppointmentParts.getAppointmentPartsTotal(appointmentId);
+                partsInfo = {
+                    partsCount: partsTotal.partsCount,
+                    totalPartsCost: partsTotal.totalCost
+                };
+            }
+
             sendJSON(res, 200, {
                 success: true,
                 message: statusMessages[status],
@@ -263,14 +308,16 @@ class AdminAppointmentsController {
                     retryDays: updatedAppointment.retry_days,
                     estimatedPrice: updatedAppointment.estimated_price,
                     warrantyInfo: updatedAppointment.warranty_info,
-                    updatedAt: updatedAppointment.updated_at
+                    updatedAt: updatedAppointment.updated_at,
+                    partsInfo: partsInfo
                 }
             });
 
         } catch (error) {
+            console.error('Error updating appointment status:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error at updating appointment status:',
+                message: 'Error updating appointment status',
             });
         }
     }
@@ -286,9 +333,10 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error loading statistics:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error at loading statistics'
+                message: 'Error loading statistics'
             });
         }
     }

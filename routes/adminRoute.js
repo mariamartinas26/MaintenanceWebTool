@@ -1,6 +1,8 @@
 const url = require('url');
 const AdminAppointmentsController = require('../controllers/adminAppointmentsController');
+const PartsController = require('../controllers/partsController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
+
 function sendJSON(res, statusCode, data) {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
@@ -19,9 +21,7 @@ const runMiddleware = (req, res, fn) => {
 
 const requireAdminAccess = async (req, res, next) => {
     try {
-
         await runMiddleware(req, res, verifyToken);
-
         await runMiddleware(req, res, requireAdmin);
 
         req.admin = {
@@ -34,6 +34,10 @@ const requireAdminAccess = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Admin access denied:', error.message);
+        return sendJSON(res, 401, {
+            success: false,
+            message: 'Admin access required'
+        });
     }
 };
 
@@ -44,7 +48,6 @@ const adminRoutes = (req, res) => {
     const method = req.method;
 
     req.query = query;
-
 
     if (path.startsWith('/admin/api')) {
         return handleAdminApiRoutes(req, res, path, method);
@@ -62,6 +65,8 @@ const adminRoutes = (req, res) => {
 
 const handleAdminApiRoutes = (req, res, path, method) => {
     requireAdminAccess(req, res, () => {
+        // APPOINTMENTS ROUTES
+
         // GET /admin/api/appointments - Get all appointments
         if (path === '/admin/api/appointments' && method === 'GET') {
             return AdminAppointmentsController.getAppointmentsForAdmin(req, res);
@@ -96,16 +101,35 @@ const handleAdminApiRoutes = (req, res, path, method) => {
                 } catch (error) {
                     return sendJSON(res, 400, {
                         success: false,
-                        message: 'JSON invalid in body'
+                        message: 'Invalid JSON in request body'
                     });
                 }
             });
             return;
         }
 
+        // PARTS ROUTES
+
+        // GET /admin/api/parts - Get all parts
+        if (path === '/admin/api/parts' && method === 'GET') {
+            return PartsController.getAllParts(req, res);
+        }
+
+        // GET /admin/api/parts/categories - Get all categories
+        if (path === '/admin/api/parts/categories' && method === 'GET') {
+            return PartsController.getCategories(req, res);
+        }
+
+        // GET /admin/api/parts/:id - Get single part details
+        if (path.match(/^\/admin\/api\/parts\/(\d+)$/) && method === 'GET') {
+            const matches = path.match(/^\/admin\/api\/parts\/(\d+)$/);
+            req.params = { id: matches[1] };
+            return PartsController.getPartById(req, res);
+        }
+
         return sendJSON(res, 404, {
             success: false,
-            message: 'Endpoint admin API was not found'
+            message: 'Admin API endpoint not found'
         });
     });
 };
@@ -122,7 +146,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 if (!fs.existsSync(adminDashboardPath)) {
                     return sendJSON(res, 404, {
                         success: false,
-                        message: 'Admin page dashboard was not found'
+                        message: 'Admin dashboard page not found'
                     });
                 }
 
@@ -137,7 +161,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
             } catch (error) {
                 return sendJSON(res, 500, {
                     success: false,
-                    message: 'Error at loading admin dashboard'
+                    message: 'Error loading admin dashboard'
                 });
             }
         }
@@ -190,7 +214,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                         <body>
                             <div class="message-box">
                                 <h2>🔐 Admin Login</h2>
-                                <p>To acces the admin dashboard, please login.</p>
+                                <p>To access the admin dashboard, please login.</p>
                                 <p>If you are an admin you will be automatically redirected after login.</p>
                                 <a href="/login" class="btn">Go to Login Page</a>
                                 <p><small>Automatic redirecting in 3 seconds...</small></p>
@@ -211,7 +235,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
             } catch (error) {
                 return sendJSON(res, 500, {
                     success: false,
-                    message: 'Error at loading login page'
+                    message: 'Error loading login page'
                 });
             }
         }
@@ -225,7 +249,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
     // If no admin page route matches
     return sendJSON(res, 404, {
         success: false,
-        message: 'Admin page was not found'
+        message: 'Admin page not found'
     });
 };
 
@@ -239,7 +263,7 @@ const serveStaticFile = (req, res, path) => {
         if (!fs.existsSync(fullPath)) {
             return sendJSON(res, 404, {
                 success: false,
-                message: 'File was not found'
+                message: 'File not found'
             });
         }
 
@@ -247,7 +271,7 @@ const serveStaticFile = (req, res, path) => {
         if (!stat.isFile()) {
             return sendJSON(res, 404, {
                 success: false,
-                message: 'Did not find any file'
+                message: 'File not found'
             });
         }
 
@@ -285,7 +309,7 @@ const serveStaticFile = (req, res, path) => {
     } catch (error) {
         return sendJSON(res, 500, {
             success: false,
-            message: 'Error at the file'
+            message: 'Error serving file'
         });
     }
 };

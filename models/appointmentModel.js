@@ -1,101 +1,308 @@
 const { pool } = require('../database/db');
+const AppointmentParts = require('./AppointmentParts');
 
-class AppointmentModel {
-    /**
-     * gets user appointments
-     */
-    static async getUserAppointments(userId) {
-        const query = `
+class AdminAppointment {
+    // Get all appointments for admin dashboard (existing method - no changes)
+    static async getAllForAdmin(filters = {}) {
+        let query = `
             SELECT
                 a.id,
                 a.appointment_date,
                 a.status,
                 a.problem_description,
                 a.admin_response,
+                a.rejection_reason,
+                a.retry_days,
                 a.estimated_price,
                 a.estimated_completion_time,
+                a.warranty_info,
                 a.created_at,
                 a.updated_at,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.phone,
                 v.vehicle_type,
                 v.brand,
                 v.model,
-                v.year
+                v.year,
+                v.is_electric
             FROM "Appointments" a
+                     JOIN "Users" u ON a.user_id = u.id
                      LEFT JOIN "Vehicles" v ON a.vehicle_id = v.id
-            WHERE a.user_id = $1
-            ORDER BY a.appointment_date DESC
         `;
 
-        const result = await pool.query(query, [userId]);
-        return result.rows;
+        const conditions = [];
+        const params = [];
+
+        if (filters.status) {
+            conditions.push(`a.status = $${params.length + 1}`);
+            params.push(filters.status);
+        }
+
+        if (filters.date_filter) {
+            const now = new Date();
+            let dateCondition = '';
+
+            switch (filters.date_filter) {
+                case 'today':
+                    dateCondition = `DATE(a.appointment_date) = DATE($${params.length + 1})`;
+                    params.push(now.toISOString().split('T')[0]);
+                    break;
+                case 'tomorrow':
+                    const tomorrow = new Date(now);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    dateCondition = `DATE(a.appointment_date) = DATE($${params.length + 1})`;
+                    params.push(tomorrow.toISOString().split('T')[0]);
+                    break;
+                case 'week':
+                    const weekStart = new Date(now);
+                    weekStart.setDate(now.getDate() - now.getDay());
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 6);
+                    dateCondition = `a.appointment_date BETWEEN $${params.length + 1} AND $${params.length + 2}`;
+                    params.push(weekStart.toISOString(), weekEnd.toISOString());
+                    break;
+                case 'month':
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    dateCondition = `a.appointment_date BETWEEN $${params.length + 1} AND $${params.length + 2}`;
+                    params.push(monthStart.toISOString(), monthEnd.toISOString());
+                    break;
+            }
+
+            if (dateCondition) {
+                conditions.push(dateCondition);
+            }
+        }
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
+        }
+
+        query += ` ORDER BY a.created_at DESC`;
+
+        try {
+            const result = await pool.query(query, params);
+            return result.rows;
+        } catch (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
     }
 
-    /**
-     * creates new appointment
-     */
-    static async createAppointment(userId, vehicleId, appointmentDateTime, description) {
+    // Get single appointment details for admin (existing method - no changes)
+    static async getByIdForAdmin(id) {
         const query = `
-            INSERT INTO "Appointments" 
-            (user_id, vehicle_id, appointment_date, status, problem_description, created_at, updated_at)
-            VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            RETURNING *
+            SELECT
+                a.*,
+                u.first_name,
+                u.last_name,
+                u.email,
+                u.phone,
+                v.vehicle_type,
+                v.brand,
+                v.model,
+                v.year,
+                v.is_electric,
+                v.notes as vehicle_notes
+            FROM "Appointments" a
+                     JOIN "Users" u ON a.user_id = u.id
+                     LEFT JOIN "Vehicles" v ON a.vehicle_id = v.id
+            WHERE a.id = $1
         `;
 
-        const result = await pool.query(query, [
-            userId,
-            vehicleId || null,
-            appointmentDateTime,
-            description.trim()
-        ]);
-
-        return result.rows[0];
+        try {
+            const result = await pool.query(query, [id]);
+            return result.rows[0] || null;
+        } catch (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
     }
 
-    static async checkExistingAppointment(userId, appointmentDateTime) {
+    // Get appointment media files (existing method - no changes)
+    static async getAppointmentMedia(appointmentId) {
         const query = `
-            SELECT id FROM "Appointments"
-            WHERE user_id = $1 AND appointment_date = $2 AND status NOT IN ('cancelled', 'rejected')
+            SELECT
+                id,
+                file_path,
+                file_type,
+                original_filename,
+                mime_type,
+                uploaded_at
+            FROM "AppointmentMedia"
+            WHERE appointment_id = $1
+            ORDER BY uploaded_at ASC
         `;
 
-        const result = await pool.query(query, [userId, appointmentDateTime]);
-        return result.rows.length > 0;
+        try {
+            const result = await pool.query(query, [appointmentId]);
+            return result.rows;
+        } catch (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
     }
 
-    static async getAppointmentById(appointmentId, userId) {
-        const query = `
-            SELECT id, status, appointment_date
-            FROM "Appointments"
-            WHERE id = $1 AND user_id = $2
-        `;
+    // NEW METHOD: Update appointment status with parts support
+    static async updateStatusWithParts(id, updateData, selectedParts = [], adminId = null) {
+        const client = await pool.connect();
 
-        const result = await pool.query(query, [appointmentId, userId]);
-        return result.rows.length > 0 ? result.rows[0] : null;
+        try {
+            await client.query('BEGIN');
+
+            // Get current appointment data
+            const getCurrentQuery = `
+                SELECT user_id, status as old_status, appointment_date
+                FROM "Appointments"
+                WHERE id = $1
+            `;
+
+            const currentResult = await client.query(getCurrentQuery, [id]);
+
+            if (currentResult.rows.length === 0) {
+                throw new Error('Appointment not found');
+            }
+
+            const currentAppointment = currentResult.rows[0];
+
+            // Update appointment with all new fields
+            const updateQuery = `
+                UPDATE "Appointments"
+                SET
+                    status = $2,
+                    admin_response = $3,
+                    rejection_reason = $4,
+                    retry_days = $5,
+                    estimated_price = $6,
+                    warranty_info = $7,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $1
+                RETURNING *
+            `;
+
+            const updateResult = await client.query(updateQuery, [
+                id,
+                updateData.status,
+                updateData.adminResponse,
+                updateData.rejectionReason,
+                updateData.retryDays,
+                updateData.estimatedPrice,
+                updateData.warrantyInfo
+            ]);
+
+            const updatedAppointment = updateResult.rows[0];
+
+            // Save selected parts if appointment is approved and parts are provided
+            if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
+                await AppointmentParts.saveAppointmentParts(id, selectedParts, client);
+            } else {
+                // Clear any existing parts if not approved or no parts selected
+                await AppointmentParts.saveAppointmentParts(id, [], client);
+            }
+
+            // Update calendar if appointment is rejected or cancelled
+            if (updateData.status === 'rejected' && currentAppointment.old_status !== 'rejected') {
+                const appointmentDateTime = currentAppointment.appointment_date;
+                const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
+                const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 8);
+
+                const updateCalendarQuery = `
+                    UPDATE "Calendar"
+                    SET current_appointments = current_appointments - 1
+                    WHERE date = $1::date
+                      AND start_time <= $2::time
+                      AND end_time > $2::time
+                      AND current_appointments > 0
+                `;
+
+                await client.query(updateCalendarQuery, [appointmentDateStr, appointmentTimeStr]);
+            }
+
+            // Add to appointment history
+            const historyQuery = `
+                INSERT INTO "AppointmentHistory"
+                (appointment_id, user_id, action, old_status, new_status, comment, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+            `;
+
+            const action = updateData.status === 'approved' ? 'approved' :
+                updateData.status === 'rejected' ? 'rejected' : 'updated';
+
+            // Use appropriate comment based on status
+            let comment;
+            if (updateData.status === 'rejected' && updateData.rejectionReason) {
+                comment = `Appointment rejected: ${updateData.rejectionReason}`;
+            } else if (updateData.adminResponse) {
+                comment = updateData.adminResponse;
+            } else {
+                comment = `Appointment ${action} by admin`;
+            }
+
+            // Add parts info to comment if parts were selected
+            if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
+                const partsCount = selectedParts.length;
+                const totalPartsCost = selectedParts.reduce((sum, part) => sum + (part.quantity * part.unitPrice), 0);
+                comment += ` (${partsCount} parts selected, total cost: ${totalPartsCost.toFixed(2)} RON)`;
+            }
+
+            await client.query(historyQuery, [
+                id,
+                currentAppointment.user_id,
+                action,
+                currentAppointment.old_status,
+                updateData.status,
+                comment
+            ]);
+
+            await client.query('COMMIT');
+
+            return updatedAppointment;
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 
-    /**
-     * updates appointment status
-     */
-    static async updateAppointmentStatus(appointmentId, status) {
-        const query = `
-            UPDATE "Appointments"
-            SET status = $2, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
-            RETURNING *
-        `;
-
-        const result = await pool.query(query, [appointmentId, status]);
-        return result.rows[0];
+    // EXISTING METHOD: Update appointment status (keep for backward compatibility)
+    static async updateStatus(id, updateData, adminId = null) {
+        return this.updateStatusWithParts(id, updateData, [], adminId);
     }
 
-    static async addAppointmentHistory(client, appointmentId, userId, action, newStatus, comment, oldStatus = null) {
-        const query = `
-            INSERT INTO "AppointmentHistory"
-            (appointment_id, user_id, action, old_status, new_status, comment, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-        `;
+    // Get appointment statistics for admin dashboard (existing method - no changes)
+    static async getStatistics() {
+        try {
+            const query = `
+                SELECT
+                    status,
+                    COUNT(*) as count
+                FROM "Appointments"
+                WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY status
+            `;
 
-        await client.query(query, [appointmentId, userId, action, oldStatus, newStatus, comment]);
+            const result = await pool.query(query);
+
+            const stats = {
+                total: 0,
+                pending: 0,
+                approved: 0,
+                rejected: 0,
+                completed: 0,
+                cancelled: 0
+            };
+
+            result.rows.forEach(row => {
+                stats[row.status] = parseInt(row.count);
+                stats.total += parseInt(row.count);
+            });
+
+            return stats;
+        } catch (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
     }
 }
 
-module.exports = AppointmentModel;
+module.exports = AdminAppointment;
