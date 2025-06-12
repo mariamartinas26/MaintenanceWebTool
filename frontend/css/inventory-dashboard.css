@@ -43,7 +43,7 @@ body {
     min-height: 100vh;
 }
 
-/* Sidebar - Matching admin dashboard */
+/* Sidebar */
 .sidebar {
     width: 260px;
     background-color: var(--sidebar-bg);
@@ -54,7 +54,6 @@ body {
     position: fixed;
     height: 100vh;
     overflow-y: auto;
-    z-index: 1000;
 }
 
 .logo {
@@ -77,10 +76,6 @@ body {
     border-radius: var(--radius-sm);
 }
 
-.sidebar-nav li.active {
-    background-color: var(--sidebar-hover);
-}
-
 .sidebar-nav li a {
     display: flex;
     align-items: center;
@@ -101,53 +96,65 @@ body {
 }
 
 .user-info {
-    margin-top: auto;
     display: flex;
     align-items: center;
-    padding: 15px 0;
+    gap: 12px;
+    padding: 20px 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    margin-right: 10px;
+    margin-top: auto;
 }
 
 .user-details {
     flex: 1;
+    min-width: 0;
 }
 
 .user-details h3 {
+    margin: 0 0 2px 0;
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 2px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.user-details p {
-    font-size: 12px;
-    opacity: 0.7;
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: white;
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    flex-shrink: 0;
 }
 
 .logout-btn {
-    background: none;
-    border: none;
-    color: var(--sidebar-text);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    font-size: 18px;
-    transition: color 0.3s;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    backdrop-filter: blur(10px);
+    min-width: 70px;
 }
 
 .logout-btn:hover {
-    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
 }
+
 
 /* Main Content */
 .main-content {

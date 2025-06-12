@@ -27,14 +27,6 @@ function setupEventListeners() {
         });
     });
 
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            filterContent(searchTerm);
-        });
-    }
 
     // Supplier form submission
     const supplierForm = document.getElementById('supplierForm');
@@ -323,7 +315,7 @@ function loadSuppliers() {
         <div class="supplier-card">
             <div class="supplier-header">
                 <div>
-                    <h3 class="supplier-name">${supplier.company_name || supplier.name}</h3>
+                    <h3 class="supplier-name">${supplier.company_name || suppliFer.name}</h3>
                     <p class="supplier-specialization">${supplier.specialization || 'General'}</p>
                 </div>
             </div>
@@ -1074,124 +1066,8 @@ function generateAutoOrder(part) {
     }
 }
 
-function filterContent(searchTerm) {
-    const activeTabBtn = document.querySelector('.tab-btn.active');
-    if (!activeTabBtn) return;
-
-    const activeTab = activeTabBtn.getAttribute('data-tab');
-
-    switch(activeTab) {
-        case 'suppliers':
-            filterSuppliers(searchTerm);
-            break;
-        case 'catalog':
-            filterPartsContent(searchTerm);
-            break;
-        case 'orders':
-            filterOrders(searchTerm);
-            break;
-        case 'evaluations':
-            filterEvaluations(searchTerm);
-            break;
-    }
-}
-
-function filterSuppliers(searchTerm) {
-    const filteredSuppliers = suppliers.filter(supplier => {
-        const name = supplier.company_name || supplier.name || '';
-        const contact = supplier.contact_person || '';
-        const specialization = supplier.specialization || '';
-        const email = supplier.email || '';
-
-        return name.toLowerCase().includes(searchTerm) ||
-            contact.toLowerCase().includes(searchTerm) ||
-            specialization.toLowerCase().includes(searchTerm) ||
-            email.toLowerCase().includes(searchTerm);
-    });
-
-    displayFilteredSuppliers(filteredSuppliers);
-}
-
-function filterPartsContent(searchTerm) {
-    const filteredParts = parts.filter(part => {
-        const name = part.name || '';
-        const category = part.category || '';
-        const supplierName = part.supplier_name || part.supplierName || '';
-
-        return name.toLowerCase().includes(searchTerm) ||
-            category.toLowerCase().includes(searchTerm) ||
-            supplierName.toLowerCase().includes(searchTerm);
-    });
-
-    displayFilteredParts(filteredParts);
-}
-
-function filterOrders(searchTerm) {
-    const filteredOrders = orders.filter(order => {
-        const id = order.id || '';
-        const supplierName = order.supplier_name || order.supplierName || '';
-        const status = order.status || '';
-        const hasMatchingItem = order.items ? order.items.some(item =>
-            (item.name || item.part_name || '').toLowerCase().includes(searchTerm)
-        ) : false;
-
-        return id.toLowerCase().includes(searchTerm) ||
-            supplierName.toLowerCase().includes(searchTerm) ||
-            status.toLowerCase().includes(searchTerm) ||
-            hasMatchingItem;
-    });
-
-    displayFilteredOrders(filteredOrders);
-}
-
 function filterParts() {
     loadParts();
-}
-
-function displayFilteredSuppliers(filteredSuppliers) {
-    const suppliersList = document.getElementById('suppliers-list');
-    if (!suppliersList) return;
-
-    if (filteredSuppliers.length === 0) {
-        suppliersList.innerHTML = '<div class="empty-state"><h3>No suppliers found</h3><p>Try adjusting your search criteria</p></div>';
-        return;
-    }
-
-    const tempSuppliers = suppliers;
-    suppliers = filteredSuppliers;
-    loadSuppliers();
-    suppliers = tempSuppliers;
-}
-
-function displayFilteredParts(filteredParts) {
-    const partsList = document.getElementById('parts-list');
-    if (!partsList) return;
-
-    if (filteredParts.length === 0) {
-        partsList.innerHTML = '<div class="empty-state"><h3>No parts found</h3><p>Try adjusting your search criteria</p></div>';
-        return;
-    }
-
-    const tempParts = parts;
-    parts = filteredParts;
-    loadParts();
-    parts = tempParts;
-}
-
-function displayFilteredOrders(filteredOrders) {
-    const ordersList = document.getElementById('orders-list');
-    if (!ordersList) return;
-
-    if (filteredOrders.length === 0) {
-        ordersList.innerHTML = '<div class="empty-state"><h3>No orders found</h3><p>Try adjusting your search criteria</p></div>';
-        return;
-    }
-
-    // Use the same logic as loadOrders but with filtered data
-    const tempOrders = orders;
-    orders = filteredOrders;
-    loadOrders();
-    orders = tempOrders;
 }
 
 function logout() {
@@ -1201,38 +1077,24 @@ function logout() {
 }
 
 function openOrderStatusModal(orderId) {
-    console.log('Frontend - openOrderStatusModal called with:', orderId, 'Type:', typeof orderId);
-
-    // CĂUTARE FLEXIBILĂ - aceeași logică ca în updateOrderStatus
     let order = null;
 
-    // Strategie 1: Căutare exactă
     order = orders.find(o => o.id === orderId);
-    console.log('openOrderStatusModal - Exact match (===):', order ? 'FOUND' : 'NOT FOUND');
 
     if (!order) {
-        // Strategie 2: Căutare cu conversie la string
         order = orders.find(o => String(o.id) === String(orderId));
-        console.log('openOrderStatusModal - String match:', order ? 'FOUND' : 'NOT FOUND');
     }
 
     if (!order) {
-        // Strategie 3: Căutare cu conversie la număr (dacă e posibil)
         if (!isNaN(orderId)) {
             order = orders.find(o => Number(o.id) === Number(orderId));
-            console.log('openOrderStatusModal - Number match:', order ? 'FOUND' : 'NOT FOUND');
         }
     }
 
     if (!order) {
-        console.error('Frontend - Order not found in openOrderStatusModal with any strategy');
         showNotification('Order not found', 'error');
         return;
     }
-
-    console.log('Frontend - Opening modal for order:', order);
-
-    // FIX: Conversie sigură pentru total_amount
     const totalAmount = parseFloat(order.total_amount || order.total || 0);
     console.log('Total amount debug:', {
         raw_total_amount: order.total_amount,
@@ -1458,13 +1320,7 @@ async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, 
 }
 
 async function initializeData() {
-    try {
         await loadSuppliersFromAPI();
         await loadPartsFromAPI();
         await loadOrdersFromAPI();
-
-        showNotification('Data loaded successfully from server', 'success');
-    } catch (error) {
-        showNotification('Server not available', 'warning');
-    }
 }

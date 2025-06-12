@@ -36,6 +36,38 @@ body {
     line-height: 1.6;
 }
 
+
+/* Specific pentru tab-uri */
+.tabs-header .tab,
+.tab-button,
+.nav-tab {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
+
+/* Pentru butoane */
+.btn,
+button,
+.add-btn,
+.new-order-btn {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
+
+/* Pentru titluri și headere */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+/* Pentru textele din pagină */
+.page-title,
+.section-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+
 /* Dashboard Layout */
 .dashboard-container {
     display: flex;
@@ -60,7 +92,6 @@ body {
     align-items: center;
     margin-bottom: 30px;
 }
-
 
 .logo h2 {
     font-size: 18px;
@@ -90,103 +121,81 @@ body {
     background-color: var(--sidebar-hover);
 }
 
-
 .sidebar-nav .icon {
     margin-right: 10px;
     font-size: 18px;
 }
 
 .user-info {
-    margin-top: auto;
     display: flex;
     align-items: center;
-    padding: 15px 0;
+    gap: 12px;
+    padding: 20px 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    margin-right: 10px;
+    margin-top: auto;
 }
 
 .user-details {
     flex: 1;
+    min-width: 0;
 }
 
 .user-details h3 {
+    margin: 0 0 2px 0;
     font-size: 14px;
     font-weight: 600;
-    margin-bottom: 2px;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.user-details p {
-    font-size: 12px;
-    opacity: 0.7;
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: white;
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    flex-shrink: 0;
 }
 
 .logout-btn {
-    background: none;
-    border: none;
-    color: var(--sidebar-text);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    font-size: 18px;
-    transition: color 0.3s;
+    transition: all 0.3s ease;
+    font-family: 'Poppins', sans-serif;
+    backdrop-filter: blur(10px);
+    min-width: 70px;
 }
 
 .logout-btn:hover {
-    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
 }
+
+
 
 
 /* Main Content */
 .main-content {
     flex: 1;
     margin-left: 260px;
-    padding: 20px;
+    padding: 60px;
     min-height: 100vh;
 }
-
-/* Top Bar */
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--medium-gray);
-}
-
-.search-container {
-    display: flex;
-    align-items: center;
-    background: white;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    width: 400px;
-    max-width: 100%;
-}
-
-.search-container input {
-    flex: 1;
-    border: none;
-    padding: 12px 15px;
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
-    font-size: 14px;
-}
-
-.search-container input:focus {
-    outline: none;
-}
-
-
 /* Navigation Tabs */
 .nav-tabs {
     display: flex;
@@ -282,7 +291,7 @@ body {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     padding: 20px;
-    border-left: 4px solid var(--secondary-color);
+    border-left: 4px solid lightblue;
     transition: transform 0.3s, box-shadow 0.3s;
 }
 

@@ -16,31 +16,32 @@
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="active"><a href="/admin/dashboard">Appointments</a></li>
-                <li><a href="/inventory/dashboard">Inventory</a></li>
-                <li><a href="/suppliers" id="providers-link">Suppliers</a></li>
-                <li><a href="/suppliers" id="orders-link">Orders</a></li>
+                <li class="active"><a href="/admin/dashboard">
+                    <span class="icon"></span>
+                    <span>Appointments</span>
+                </a></li>
+                <li><a href="/inventory/dashboard" id="inventory-link">
+                    <span class="icon"></span>
+                    <span>Inventory</span>
+                </a></li>
+                <li><a href="/suppliers" id="providers-link">
+                    <span class="icon"></span>
+                    <span>Suppliers</span>
+                </a></li>
             </ul>
         </nav>
         <div class="user-info">
             <div class="user-avatar">A</div>
             <div class="user-details">
                 <h3 id="admin-name">Admin</h3>
-                <p>Administrator</p>
             </div>
             <button id="logout-btn" class="logout-btn">
-                <span class="icon">🚪</span>
+                Logout
             </button>
         </div>
     </aside>
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search suppliers, parts, orders...">
-            </div>
-        </div>
 
         <!-- Navigation Tabs -->
         <div class="nav-tabs">
