@@ -9,7 +9,35 @@ body {
     color: white;
     overflow-x: hidden;
 }
+/* Specific pentru tab-uri */
+.tabs-header .tab,
+.tab-button,
+.nav-tab {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
 
+/* Pentru butoane */
+.btn,
+button,
+.add-btn,
+.new-order-btn {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+}
+
+/* Pentru titluri și headere */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+/* Pentru textele din pagină */
+.page-title,
+.section-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
 
 .top-buttons {
     position: absolute;
@@ -23,13 +51,13 @@ body {
     font-size: 14px;
     border: none;
     border-radius: 5px;
-    background-color: rgba(0,123,255,0.8);
+    background-color: #0c1446;;
     color: white;
     cursor: pointer;
 }
 
 .top-buttons button:hover {
-    background-color: rgba(0,86,179,0.9);
+    background-color:#050a2e;
 }
 
 /* Conținut principal */
@@ -82,7 +110,7 @@ body {
 .appointment-btn button {
     padding: 15px 30px;
     font-size: 18px;
-    background-color: rgba(0,123,255,0.8);
+    background-color: #0c1446;
     color: white;
     border: none;
     border-radius: 5px;
@@ -91,5 +119,5 @@ body {
 }
 
 .appointment-btn button:hover {
-    background-color: rgba(0,86,179,0.9);
+    background-color: #050a2e;
 }

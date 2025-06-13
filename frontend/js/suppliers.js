@@ -1,21 +1,14 @@
 let suppliers = [];
 let parts = [];
 let orders = [];
-let evaluations = [];
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
     setupEventListeners();
     initializeData().then(() => {
         showTab('suppliers');
     });
 });
-
-// Initialize application
-function initializeApp() {
-    console.log('Supplier Management System initialized');
-}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -60,18 +53,6 @@ function setupEventListeners() {
     if (orderItems) {
         orderItems.addEventListener('input', calculateOrderTotal);
     }
-
-    // Filter changes
-    const supplierFilter = document.getElementById('supplierFilter');
-    const categoryFilter = document.getElementById('categoryFilter');
-
-    if (supplierFilter) {
-        supplierFilter.addEventListener('change', filterParts);
-    }
-
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', filterParts);
-    }
 }
 
 // Tab management
@@ -112,7 +93,7 @@ function showTab(tabName) {
     }
 }
 
-// API Integration functions
+// API Integration
 async function loadSuppliersFromAPI() {
     try {
         showLoading('suppliers-list');
@@ -133,10 +114,6 @@ async function loadSuppliersFromAPI() {
     } catch (error) {
         showNotification('Error loading suppliers from API: ' + error.message, 'error');
         hideLoading('suppliers-list');
-
-        // Fallback to sample data
-        loadSampleData();
-        showNotification('Loaded sample data as fallback', 'warning');
     }
 }
 
@@ -221,11 +198,8 @@ async function loadOrdersFromAPI() {
         const result = await response.json();
 
         if (result.success) {
-            console.log('Backend response - Raw orders data:', result.data);
-
             orders = result.data;
 
-            console.log('Backend response - Processed orders:');
             orders.forEach((order, index) => {
                 console.log(`  ${index + 1}. ID: "${order.id}" (${typeof order.id}), Status: ${order.status}`);
             });
@@ -265,15 +239,13 @@ async function saveOrderToAPI(orderData) {
 
 async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
     try {
-        console.log('Frontend - Sending orderId:', orderId, 'Type:', typeof orderId);
-
         const response = await fetch(`/api/orders/${orderId}/status`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                orderId: orderId, // Trimite exact ce este în lista de comenzi
+                orderId: orderId,
                 status: status,
                 actual_delivery_date: actualDeliveryDate,
                 notes: notes
@@ -359,7 +331,6 @@ function loadParts() {
     partsList.innerHTML = filteredParts.map(part => {
         const stockStatus = getStockStatus(part.stock_quantity || part.stock, part.minimum_stock_level || part.minStock);
 
-        // Asigură-te că price este un număr
         const price = parseFloat(part.price) || 0;
 
         return `
@@ -383,25 +354,15 @@ function loadOrders() {
     const ordersList = document.getElementById('orders-list');
 
     if (!ordersList) {
-        console.error('orders-list element not found');
         return;
     }
 
     if (orders.length === 0) {
-        console.log('Frontend - No orders to display');
         ordersList.innerHTML = '<div class="empty-state"><h3>No orders found</h3><p>No purchase orders have been placed yet</p></div>';
         return;
     }
 
-    // DEBUG: Log toate ID-urile care vor fi afișate
-    console.log('Frontend - Loading orders:');
-    orders.forEach((order, index) => {
-        const totalAmount = parseFloat(order.total_amount || order.total || 0);
-        console.log(`  ${index + 1}. ID: "${order.id}" (${typeof order.id}), Status: ${order.status}, Total: ${totalAmount}`);
-    });
-
     ordersList.innerHTML = orders.map(order => {
-        // FIX: Conversie sigură pentru total în listă
         const totalAmount = parseFloat(order.total_amount || order.total || 0);
 
         return `
@@ -435,8 +396,6 @@ function loadOrders() {
         </div>
     `;
     }).join('');
-
-    console.log('Frontend - Orders HTML generated successfully');
 }
 
 function cleanPartData(parts) {
@@ -447,6 +406,7 @@ function cleanPartData(parts) {
         minimum_stock_level: parseInt(part.minimum_stock_level) || 0
     }));
 }
+
 // Modal functions
 function openSupplierModal(supplierId = null) {
     const modal = document.getElementById('supplierModal');
@@ -454,7 +414,6 @@ function openSupplierModal(supplierId = null) {
     const form = document.getElementById('supplierForm');
 
     if (!modal || !title || !form) {
-        console.error('Modal elements not found');
         return;
     }
 
@@ -558,11 +517,11 @@ function saveSupplier() {
 // Utility functions
 function getStockStatus(stock, minStock) {
     if (stock === 0) {
-        return { class: 'stock-out', indicator: '❌' };
+        return { class: 'stock-out' };
     } else if (stock <= minStock) {
-        return { class: 'stock-low', indicator: '⚠️' };
+        return { class: 'stock-low' };
     } else {
-        return { class: 'stock-available', indicator: '✅' };
+        return { class: 'stock-available' };
     }
 }
 
@@ -644,142 +603,6 @@ function deleteSupplier(id) {
     }
 }
 
-function viewSupplierDetails(id) {
-    const supplier = suppliers.find(s => s.id === id);
-    if (supplier) {
-        showSupplierDetailsModal(supplier);
-    }
-}
-
-function showSupplierDetailsModal(supplier) {
-    // Creează modal-ul dinamic
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.id = 'supplierDetailsModal';
-    modal.style.display = 'flex';
-
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Supplier Details</h2>
-                <span class="close-modal" onclick="closeSupplierDetailsModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="detail-section">
-                    <h3>Basic Information</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Company Name:</div>
-                        <div class="detail-value">${supplier.company_name || supplier.name}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Contact Person:</div>
-                        <div class="detail-value">${supplier.contact_person}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Email:</div>
-                        <div class="detail-value">${supplier.email}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Phone:</div>
-                        <div class="detail-value">${supplier.phone || 'N/A'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Address:</div>
-                        <div class="detail-value">${supplier.address || 'N/A'}</div>
-                    </div>
-                </div>
-
-                <div class="detail-section">
-                    <h3>Service Information</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Specialization:</div>
-                        <div class="detail-value">${supplier.specialization || 'General'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Delivery Time:</div>
-                        <div class="detail-value">${supplier.delivery_time_days || supplier.deliveryTime || 7} days</div>
-                    </div>
-                </div>
-                <div class="detail-section">
-                    <h3>Actions</h3>
-                    <div class="supplier-actions">
-                        <button class="btn secondary-btn" onclick="editSupplier(${supplier.id}); closeSupplierDetailsModal();">Edit Supplier</button>
-                        <button class="btn primary-btn" onclick="viewSupplierOrders(${supplier.id})">View Orders</button>
-                        <button class="btn danger-btn" onclick="confirmDeleteSupplier(${supplier.id})">Delete Supplier</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Close modal on outside click
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeSupplierDetailsModal();
-        }
-    });
-}
-
-function closeSupplierDetailsModal() {
-    const modal = document.getElementById('supplierDetailsModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.removeChild(modal);
-    }
-}
-
-function viewSupplierOrders(supplierId) {
-    // Switch to orders tab and filter by supplier
-    showTab('orders');
-
-    // Filter orders by supplier if filter exists
-    const supplierFilter = document.getElementById('supplierFilter');
-    if (supplierFilter) {
-        supplierFilter.value = supplierId;
-        filterParts();
-    }
-
-    closeSupplierDetailsModal();
-    showNotification('Showing orders for selected supplier', 'info');
-}
-
-function confirmDeleteSupplier(supplierId) {
-    closeSupplierDetailsModal();
-    deleteSupplier(supplierId);
-}
-
-// function updateOrderStatus(orderId) {
-//     const order = orders.find(o => o.id === orderId);
-//     if (order) {
-//         const statuses = ['ordered', 'confirmed', 'in_transit', 'delivered'];
-//         const currentIndex = statuses.indexOf(order.status);
-//
-//         if (currentIndex < statuses.length - 1) {
-//             const nextStatus = statuses[currentIndex + 1];
-//
-//             if (confirm(`Update order ${orderId} status to "${nextStatus}"?`)) {
-//                 if (typeof updateOrderStatusAPI === 'function') {
-//                     updateOrderStatusAPI(orderId, nextStatus);
-//                 } else {
-//                     order.status = nextStatus;
-//
-//                     if (order.status === 'delivered') {
-//                         order.actual_delivery_date = new Date().toISOString().split('T')[0];
-//                         updateInventoryFromOrder(order);
-//                     }
-//
-//                     loadOrders();
-//                     showNotification(`Order ${orderId} status updated to ${nextStatus}`, 'success');
-//                 }
-//             }
-//         } else {
-//             showNotification('Order is already delivered', 'info');
-//         }
-//     }
-// }
-
 function viewOrderDetails(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (order) {
@@ -826,7 +649,6 @@ function orderPart(id) {
         if (firstPartName && firstUnitPrice) {
             firstPartName.value = part.name;
 
-            // Asigură-te că price este un număr
             const price = parseFloat(part.price) || 0;
             firstUnitPrice.value = price.toFixed(2);
 
@@ -849,11 +671,10 @@ function openOrderModal() {
     const supplierSelect = document.getElementById('orderSupplier');
 
     if (!modal || !supplierSelect) {
-        console.error('Order modal elements not found');
         return;
     }
 
-    // Populate supplier dropdown
+    //supplier dropdown
     supplierSelect.innerHTML = '<option value="">Select Supplier</option>' +
         suppliers.map(supplier => `<option value="${supplier.id}">${supplier.company_name || supplier.name}</option>`).join('');
 
@@ -986,60 +807,6 @@ function saveOrder() {
     }
 
     closeOrderModal();
-    checkAutoReorder();
-}
-
-function updateInventoryFromOrder(order) {
-    order.items.forEach(orderItem => {
-        const part = parts.find(p => p.name === orderItem.name);
-        if (part) {
-            if (part.stock_quantity !== undefined) {
-                part.stock_quantity += orderItem.quantity;
-            } else if (part.stock !== undefined) {
-                part.stock += orderItem.quantity;
-            }
-        }
-    });
-
-    const catalogTab = document.getElementById('catalog-tab');
-    if (catalogTab && catalogTab.classList.contains('active')) {
-        loadParts();
-    }
-}
-
-function checkAutoReorder() {
-    const lowStockParts = parts.filter(part => {
-        const stock = part.stock_quantity || part.stock || 0;
-        const minStock = part.minimum_stock_level || part.minStock || 0;
-        return stock <= minStock;
-    });
-
-    if (lowStockParts.length > 0) {
-        showNotification(`${lowStockParts.length} parts are running low on stock!`, 'warning');
-
-        const criticalStockParts = parts.filter(part => {
-            const stock = part.stock_quantity || part.stock || 0;
-            return stock === 0;
-        });
-
-        if (criticalStockParts.length > 0) {
-            const autoOrder = confirm(
-                `${criticalStockParts.length} parts are out of stock!\n\n` +
-                `Would you like to automatically create orders for these items?`
-            );
-
-            if (autoOrder) {
-                if (typeof createAutoOrdersAPI === 'function') {
-                    createAutoOrdersAPI();
-                } else {
-                    criticalStockParts.forEach(part => {
-                        generateAutoOrder(part);
-                    });
-                    showNotification(`${criticalStockParts.length} auto orders generated`, 'success');
-                }
-            }
-        }
-    }
 }
 
 function generateAutoOrder(part) {
@@ -1064,10 +831,6 @@ function generateAutoOrder(part) {
         orders.unshift(autoOrder);
         showNotification(`Auto-order generated for ${part.name}`, 'info');
     }
-}
-
-function filterParts() {
-    loadParts();
 }
 
 function logout() {
@@ -1184,25 +947,6 @@ function openOrderStatusModal(orderId) {
 }
 
 
-function selectOrderStatus(newStatus) {
-    document.querySelectorAll('.status-option').forEach(option => {
-        option.classList.remove('selected');
-    });
-
-    event.currentTarget.classList.add('selected');
-
-    document.getElementById('updateStatusBtn').disabled = false;
-
-    const deliveryDateGroup = document.getElementById('deliveryDateGroup');
-    if (newStatus === 'delivered') {
-        deliveryDateGroup.style.display = 'block';
-    } else {
-        deliveryDateGroup.style.display = 'none';
-    }
-
-    document.getElementById('orderStatusForm').setAttribute('data-selected-status', newStatus);
-}
-
 async function updateOrderStatusFromModal() {
     const orderId = document.getElementById('statusOrderId').value;
     const selectedStatus = document.getElementById('orderStatusForm').getAttribute('data-selected-status');
@@ -1273,52 +1017,6 @@ function closeOrderStatusModal() {
         document.body.removeChild(modal);
     }
 }
-
-async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
-    try {
-        const requestBody = {
-            orderId: orderId,
-            status: status,
-            actual_delivery_date: actualDeliveryDate,
-            notes: notes
-        };
-
-        const response = await fetch(`/api/orders/${orderId}/status`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-
-        let result;
-        try {
-            const responseText = await response.text();
-            console.log('Frontend - Raw response text:', responseText);
-            result = JSON.parse(responseText);
-            console.log('Frontend - Parsed response:', result);
-        } catch (parseError) {
-            console.error('Frontend - Failed to parse response:', parseError);
-            throw new Error(`Server error (${response.status}): Unable to parse response`);
-        }
-
-        if (result.success) {
-            showNotification(result.message, 'success');
-            await loadOrdersFromAPI();
-
-            if (status === 'delivered') {
-                await loadPartsFromAPI();
-            }
-        } else {
-            throw new Error(result.message || 'Failed to update order status');
-        }
-    } catch (error) {
-        console.error('Frontend - Error in updateOrderStatusAPI:', error);
-        showNotification('Error updating order status: ' + error.message, 'error');
-        throw error;
-    }
-}
-
 async function initializeData() {
         await loadSuppliersFromAPI();
         await loadPartsFromAPI();

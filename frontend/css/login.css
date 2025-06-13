@@ -104,20 +104,6 @@ input:focus {
 }
 
 /* Link-uri */
-.forgot-password {
-    text-align: right;
-    margin: -10px 0 20px;
-}
-
-.forgot-password a {
-    color: #0c1446;
-    text-decoration: none;
-    font-size: 14px;
-}
-
-.forgot-password a:hover {
-    text-decoration: underline;
-}
 
 .register-link {
     margin-top: 15px;

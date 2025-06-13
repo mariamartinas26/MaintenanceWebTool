@@ -13,7 +13,6 @@ function sendSuccess(res, data = null, message = 'Success') {
 
     if (data) {
         response.data = data;
-        // If data has properties, spread them to root level for backwards compatibility
         Object.assign(response, data);
     }
 
@@ -32,7 +31,6 @@ function sendCreated(res, data = null, message = 'Created successfully') {
 
     if (data) {
         response.data = data;
-        // If data has properties, spread them to root level for backwards compatibility
         Object.assign(response, data);
     }
 
