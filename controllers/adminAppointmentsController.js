@@ -1,4 +1,4 @@
-const Appointment = require('../models/AdminAppointment');
+const AdminAppointment = require('../models/AdminAppointment');
 const AppointmentParts = require('../models/AppointmentParts');
 const Part = require('../models/Part');
 
@@ -11,7 +11,9 @@ class AdminAppointmentsController {
     // GET /admin/api/appointments - Get all appointments for admin dashboard
     static async getAppointmentsForAdmin(req, res) {
         try {
+            console.log('Getting appointments for admin...');
             const { status, date_filter, search } = req.query;
+            console.log('Query params:', { status, date_filter, search });
 
             const filters = {};
             if (status && status !== 'all') {
@@ -21,7 +23,9 @@ class AdminAppointmentsController {
                 filters.date_filter = date_filter;
             }
 
-            const appointments = await Appointment.getAllForAdmin(filters);
+            console.log('Filters:', filters);
+            const appointments = await AdminAppointment.getAllForAdmin(filters); // ✅ Using AdminAppointment
+            console.log('Appointments retrieved:', appointments.length);
 
             // Format appointments for admin dashboard
             let formattedAppointments = appointments.map(appointment => ({
@@ -71,9 +75,12 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error in getAppointmentsForAdmin:', error);
+            console.error('Stack trace:', error.stack);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading appointments for admin',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
@@ -90,7 +97,7 @@ class AdminAppointmentsController {
                 });
             }
 
-            const appointment = await Appointment.getByIdForAdmin(appointmentId);
+            const appointment = await AdminAppointment.getByIdForAdmin(appointmentId); // ✅ Using AdminAppointment
 
             if (!appointment) {
                 return sendJSON(res, 404, {
@@ -100,7 +107,7 @@ class AdminAppointmentsController {
             }
 
             // Get appointment media files
-            const mediaFiles = await Appointment.getAppointmentMedia(appointmentId);
+            const mediaFiles = await AdminAppointment.getAppointmentMedia(appointmentId); // ✅ Using AdminAppointment
 
             // Get appointment parts
             const appointmentParts = await AppointmentParts.getAppointmentParts(appointmentId);
@@ -160,9 +167,11 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error in getAppointmentDetails:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error loading appointment details'
+                message: 'Error loading appointment details',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
@@ -180,7 +189,6 @@ class AdminAppointmentsController {
                 retryDays,
                 selectedParts = []
             } = req.body;
-
 
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
@@ -213,10 +221,8 @@ class AdminAppointmentsController {
 
                 // Validate selected parts
                 if (selectedParts && selectedParts.length > 0) {
-
                     const partValidation = await Part.checkAvailability(selectedParts);
                     if (!partValidation.available) {
-
                         const errorDetails = partValidation.unavailableParts.map(part => {
                             if (part.reason === 'Part not found') {
                                 return `Part ID ${part.partId}: Not found`;
@@ -277,8 +283,7 @@ class AdminAppointmentsController {
                 updateData.warrantyInfo = `${warranty} warranty months`;
             }
 
-
-            const updatedAppointment = await Appointment.updateStatusWithParts(
+            const updatedAppointment = await AdminAppointment.updateStatusWithParts( // ✅ Using AdminAppointment
                 appointmentId,
                 updateData,
                 selectedParts
@@ -364,10 +369,10 @@ class AdminAppointmentsController {
                 responseData.message += ` (Warning: Low stock detected on ${lowStockWarnings.length} parts)`;
             }
 
-
             sendJSON(res, 200, responseData);
 
         } catch (error) {
+            console.error('Error in updateAppointmentStatus:', error);
 
             if (error.message.includes('Insufficient stock') || error.message.includes('Stock validation failed')) {
                 return sendJSON(res, 400, {
@@ -388,7 +393,7 @@ class AdminAppointmentsController {
     // GET /admin/api/appointments/statistics - Get appointment statistics
     static async getAppointmentStatistics(req, res) {
         try {
-            const statistics = await Appointment.getStatistics();
+            const statistics = await AdminAppointment.getStatistics(); // ✅ Using AdminAppointment
 
             sendJSON(res, 200, {
                 success: true,
@@ -396,9 +401,11 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error in getAppointmentStatistics:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error loading statistics'
+                message: 'Error loading statistics',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
@@ -416,9 +423,11 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
+            console.error('Error in getLowStockParts:', error);
             sendJSON(res, 500, {
                 success: false,
-                message: 'Error loading low stock parts'
+                message: 'Error loading low stock parts',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
