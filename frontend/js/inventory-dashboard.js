@@ -415,13 +415,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('ro-RO', {
-        style: 'currency',
-        currency: 'RON'
-    }).format(amount);
-}
-
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('token');

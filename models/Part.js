@@ -100,7 +100,7 @@ class Part {
         }
     }
 
-    // Update stock quantity (for when parts are used) - IMPROVED VERSION
+    // Update stock quantity (for when parts are used)
     static async updateStock(partId, quantityUsed, client = null) {
         const dbClient = client || pool;
 
@@ -135,7 +135,7 @@ class Part {
         }
     }
 
-    // Bulk update stock for multiple parts (TRANSACTION SAFE)
+    // Bulk update stock for multiple parts
     static async updateMultipleStock(partsList, client = null) {
         const dbClient = client || pool;
         const updatedParts = [];

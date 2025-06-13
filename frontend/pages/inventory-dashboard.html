@@ -156,7 +156,7 @@
                 </div>
 
                 <div id="selectedPartInfo" class="selected-part" style="display: none;">
-                    <h4 id="selectedPartName"></h4>
+                    <h4 id="selectedPartName">Part Name</h4>
                     <p>Current Stock: <span id="currentStock"></span></p>
                     <p>Minimum Level: <span id="minLevel"></span></p>
                 </div>
@@ -165,6 +165,7 @@
                     <div class="form-group">
                         <label for="stockOperation">Operation:</label>
                         <select id="stockOperation" required>
+                            <option value="">Select operation</option>
                             <option value="add">Add Stock</option>
                             <option value="subtract">Remove Stock</option>
                             <option value="set">Set Exact Amount</option>

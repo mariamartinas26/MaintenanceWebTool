@@ -3,7 +3,7 @@ const AppointmentParts = require('./AppointmentParts');
 const Part = require('./Part');
 
 class AdminAppointment {
-    // Get all appointments for admin dashboard (existing method - no changes)
+    // Get all appointments for admin dashboard
     static async getAllForAdmin(filters = {}) {
         let query = `
             SELECT
@@ -91,7 +91,7 @@ class AdminAppointment {
         }
     }
 
-    // Get single appointment details for admin (existing method - no changes)
+    // Get single appointment details for admin
     static async getByIdForAdmin(id) {
         const query = `
             SELECT
@@ -120,7 +120,7 @@ class AdminAppointment {
         }
     }
 
-    // Get appointment media files (existing method - no changes)
+    // Get appointment media files
     static async getAppointmentMedia(appointmentId) {
         const query = `
             SELECT
@@ -143,14 +143,12 @@ class AdminAppointment {
         }
     }
 
-    // UPDATED METHOD: Update appointment status with parts support AND stock reduction
     static async updateStatusWithParts(id, updateData, selectedParts = [], adminId = null) {
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN');
 
-            // Get current appointment data
             const getCurrentQuery = `
                 SELECT user_id, status as old_status, appointment_date
                 FROM "Appointments"
@@ -165,7 +163,6 @@ class AdminAppointment {
 
             const currentAppointment = currentResult.rows[0];
 
-            // If appointment is being approved with parts, validate and reduce stock
             let stockUpdateResult = null;
             if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
                 console.log('Attempting to reduce stock for parts:', selectedParts);
@@ -185,7 +182,6 @@ class AdminAppointment {
             }
 
             // If appointment was previously approved with parts and now being changed to another status,
-            // we should restore the stock (optional - depends on business logic)
             if (currentAppointment.old_status === 'approved' && updateData.status !== 'approved') {
                 const existingParts = await AppointmentParts.getAppointmentParts(id);
                 if (existingParts.length > 0) {
@@ -306,12 +302,11 @@ class AdminAppointment {
         }
     }
 
-    // EXISTING METHOD: Update appointment status (keep for backward compatibility)
     static async updateStatus(id, updateData, adminId = null) {
         return this.updateStatusWithParts(id, updateData, [], adminId);
     }
 
-    // Get appointment statistics for admin dashboard (existing method - no changes)
+    // Get appointment statistics for admin dashboard
     static async getStatistics() {
         try {
             const query = `

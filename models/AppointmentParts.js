@@ -6,7 +6,7 @@ class AppointmentParts {
         const dbClient = client || pool;
 
         try {
-            // First, delete existing parts for this appointment
+            // Delete existing parts for this appointment
             await dbClient.query(
                 'DELETE FROM "AppointmentParts" WHERE appointment_id = $1',
                 [appointmentId]

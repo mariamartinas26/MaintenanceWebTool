@@ -154,7 +154,6 @@ async function loadParts() {
             throw new Error(data.message);
         }
     } catch (error) {
-        console.error('Error loading parts:', error);
         showNotification('Error loading parts', 'error');
         displayEmptyState('Error loading parts. Please try again.');
     } finally {
@@ -343,9 +342,6 @@ function createPartCard(part) {
                     <button class="action-btn" onclick="showPartDetails(${part.id})" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="action-btn edit" onclick="editPart(${part.id})" title="Edit Part">
-                        <i class="fas fa-edit"></i>
-                    </button>
                     <button class="action-btn stock" onclick="showStockUpdateModal(${part.id})" title="Update Stock">
                         <i class="fas fa-warehouse"></i>
                     </button>
@@ -476,7 +472,6 @@ async function showPartDetails(partId) {
             throw new Error(data.message);
         }
     } catch (error) {
-        console.error('Error loading part details:', error);
         showNotification('Error loading part details', 'error');
     } finally {
         showLoading(false);
@@ -572,18 +567,11 @@ function displayPartDetails(part) {
         
         <div class="detail-actions">
             <button class="btn-secondary" onclick="hidePartDetailsModal()">Close</button>
-            <button class="btn-primary" onclick="editPart(${part.id})">
-                <i class="fas fa-edit"></i> Edit Part
-            </button>
             <button class="btn-primary" onclick="showStockUpdateModal(${part.id})">
                 <i class="fas fa-warehouse"></i> Update Stock
             </button>
         </div>
     `;
-}
-
-function editPart(partId) {
-    window.location.href = `/inventory/parts/edit/${partId}`;
 }
 
 function showStockUpdateModal(partId) {
@@ -643,7 +631,6 @@ async function handleStockUpdate(e) {
             showNotification(data.message, 'error');
         }
     } catch (error) {
-        console.error('Error updating stock:', error);
         showNotification('Error updating stock', 'error');
     } finally {
         showLoading(false);
@@ -691,7 +678,6 @@ async function confirmDelete() {
             showNotification(data.message, 'error');
         }
     } catch (error) {
-        console.error('Error deleting part:', error);
         showNotification('Error deleting part', 'error');
     } finally {
         showLoading(false);

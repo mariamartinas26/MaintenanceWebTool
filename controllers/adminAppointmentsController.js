@@ -178,14 +178,9 @@ class AdminAppointmentsController {
                 warranty,
                 rejectionReason,
                 retryDays,
-                selectedParts = [] // Parts to be allocated
+                selectedParts = []
             } = req.body;
 
-            console.log('Updating appointment status:', {
-                appointmentId,
-                status,
-                selectedPartsCount: selectedParts.length
-            });
 
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
@@ -216,13 +211,11 @@ class AdminAppointmentsController {
                     });
                 }
 
-                // Validate selected parts if any - CHECK STOCK AVAILABILITY
+                // Validate selected parts
                 if (selectedParts && selectedParts.length > 0) {
-                    console.log('Validating stock for parts:', selectedParts);
 
                     const partValidation = await Part.checkAvailability(selectedParts);
                     if (!partValidation.available) {
-                        console.log('Stock validation failed:', partValidation.unavailableParts);
 
                         const errorDetails = partValidation.unavailableParts.map(part => {
                             if (part.reason === 'Part not found') {
@@ -284,12 +277,6 @@ class AdminAppointmentsController {
                 updateData.warrantyInfo = `${warranty} warranty months`;
             }
 
-            // Update appointment status, parts, and REDUCE STOCK in a transaction
-            console.log('Calling updateStatusWithParts with:', {
-                appointmentId,
-                status: updateData.status,
-                partsCount: selectedParts.length
-            });
 
             const updatedAppointment = await Appointment.updateStatusWithParts(
                 appointmentId,
@@ -377,19 +364,11 @@ class AdminAppointmentsController {
                 responseData.message += ` (Warning: Low stock detected on ${lowStockWarnings.length} parts)`;
             }
 
-            console.log('Appointment update successful:', {
-                appointmentId,
-                status,
-                partsAllocated: partsInfo?.partsCount || 0,
-                stockUpdated: stockInfo?.partsUpdated || 0
-            });
 
             sendJSON(res, 200, responseData);
 
         } catch (error) {
-            console.error('Error updating appointment status:', error);
 
-            // Handle specific stock-related errors
             if (error.message.includes('Insufficient stock') || error.message.includes('Stock validation failed')) {
                 return sendJSON(res, 400, {
                     success: false,
@@ -417,7 +396,6 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
-            console.error('Error loading statistics:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading statistics'
@@ -425,7 +403,7 @@ class AdminAppointmentsController {
         }
     }
 
-    // NEW ENDPOINT: GET /admin/api/parts/low-stock - Get parts with low stock levels
+    // GET /admin/api/parts/low-stock - Get parts with low stock levels
     static async getLowStockParts(req, res) {
         try {
             const lowStockParts = await Part.getLowStockParts();
@@ -438,7 +416,6 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
-            console.error('Error loading low stock parts:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading low stock parts'

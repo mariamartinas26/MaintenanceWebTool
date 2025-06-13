@@ -31,7 +31,6 @@ class PartsController {
             });
 
         } catch (error) {
-            console.error('Error loading parts:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading parts'
@@ -66,7 +65,6 @@ class PartsController {
             });
 
         } catch (error) {
-            console.error('Error loading part details:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading part details'
@@ -85,7 +83,6 @@ class PartsController {
             });
 
         } catch (error) {
-            console.error('Error loading categories:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading categories'

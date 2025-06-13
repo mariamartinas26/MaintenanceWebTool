@@ -96,7 +96,6 @@ class AdminDashboard {
                 if (iconElement.textContent.includes('Tool') || link.textContent.toLowerCase().includes('inventory')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
-                        console.log('Inventory button clicked');
                         window.location.href = '/inventory/dashboard';
                     });
                 }
@@ -105,7 +104,6 @@ class AdminDashboard {
                 if (iconElement.textContent.includes('Store') || link.textContent.toLowerCase().includes('supplier')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
-                        console.log('Suppliers button clicked');
                         window.location.href = '/suppliers';
                     });
                 }
@@ -119,7 +117,6 @@ class AdminDashboard {
         const partsDropdown = document.getElementById('parts-dropdown');
 
         if (!partsSearchInput || !partsDropdown) {
-            console.warn('Parts selection elements not found');
             return;
         }
 
@@ -144,7 +141,6 @@ class AdminDashboard {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.error('No token found for parts loading');
                 return;
             }
 
@@ -173,12 +169,10 @@ class AdminDashboard {
                     description: part.description || '',
                     supplierName: part.supplier_name || 'Unknown'
                 }));
-                console.log(`Loaded ${this.availableParts.length} parts successfully`);
             } else {
                 this.showError('Error loading parts: ' + data.message);
             }
         } catch (error) {
-            console.error('Error loading parts:', error);
             this.showError('Error loading parts data');
         }
     }
@@ -358,7 +352,6 @@ class AdminDashboard {
         }
     }
 
-    // Existing methods continue here...
 
     async loadAppointments() {
         try {
@@ -410,7 +403,6 @@ class AdminDashboard {
                 this.showError('Error loading appointments: ' + data.message);
             }
         } catch (error) {
-            console.error('Error loading appointments:', error);
             this.showError('Connection error. Please try again.');
         } finally {
             this.hideLoading();
@@ -515,7 +507,6 @@ class AdminDashboard {
                 this.showError('Error loading details: ' + data.message);
             }
         } catch (error) {
-            console.error('Error fetching appointment details:', error);
             this.showError('Connection error.');
         }
     }
@@ -688,7 +679,6 @@ class AdminDashboard {
                 this.showError('Error loading details: ' + data.message);
             }
         } catch (error) {
-            console.error('Error fetching appointment details:', error);
             this.showError('Connection error.');
         }
     }
@@ -844,7 +834,6 @@ class AdminDashboard {
             }
 
         } catch (error) {
-            console.error('Error updating appointment:', error);
             this.showError('Connection error.');
         }
     }
@@ -905,7 +894,7 @@ class AdminDashboard {
     }
 
     hideLoading() {
-        // Loading will be hidden when appointments are rendered
+        // Loading will be hidden when appointments are made
     }
 
     showError(message) {
@@ -993,7 +982,6 @@ class AdminDashboard {
     }
 }
 
-// Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new AdminDashboard();
 });
