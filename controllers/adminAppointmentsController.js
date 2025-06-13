@@ -71,7 +71,6 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
-            console.error('Error loading appointments:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading appointments for admin',
@@ -161,7 +160,6 @@ class AdminAppointmentsController {
             });
 
         } catch (error) {
-            console.error('Error loading appointment details:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading appointment details'
@@ -169,7 +167,7 @@ class AdminAppointmentsController {
         }
     }
 
-    // PUT /admin/api/appointments/:id/status - Update appointment status (approve/reject)
+    // PUT /admin/api/appointments/:id/status - Update appointment status with stock management
     static async updateAppointmentStatus(req, res) {
         try {
             const appointmentId = parseInt(req.params.id);
@@ -180,8 +178,14 @@ class AdminAppointmentsController {
                 warranty,
                 rejectionReason,
                 retryDays,
-                selectedParts = [] // New field for selected parts
+                selectedParts = [] // Parts to be allocated
             } = req.body;
+
+            console.log('Updating appointment status:', {
+                appointmentId,
+                status,
+                selectedPartsCount: selectedParts.length
+            });
 
             if (!appointmentId || appointmentId <= 0) {
                 return sendJSON(res, 400, {
@@ -212,13 +216,26 @@ class AdminAppointmentsController {
                     });
                 }
 
-                // Validate selected parts if any
+                // Validate selected parts if any - CHECK STOCK AVAILABILITY
                 if (selectedParts && selectedParts.length > 0) {
+                    console.log('Validating stock for parts:', selectedParts);
+
                     const partValidation = await Part.checkAvailability(selectedParts);
                     if (!partValidation.available) {
+                        console.log('Stock validation failed:', partValidation.unavailableParts);
+
+                        const errorDetails = partValidation.unavailableParts.map(part => {
+                            if (part.reason === 'Part not found') {
+                                return `Part ID ${part.partId}: Not found`;
+                            } else {
+                                return `${part.name}: Requested ${part.requested}, Available ${part.available}`;
+                            }
+                        }).join('; ');
+
                         return sendJSON(res, 400, {
                             success: false,
-                            message: 'Some selected parts are not available',
+                            message: 'Cannot approve appointment due to insufficient stock',
+                            details: errorDetails,
                             unavailableParts: partValidation.unavailableParts
                         });
                     }
@@ -267,7 +284,13 @@ class AdminAppointmentsController {
                 updateData.warrantyInfo = `${warranty} warranty months`;
             }
 
-            // Update appointment status and parts in a transaction
+            // Update appointment status, parts, and REDUCE STOCK in a transaction
+            console.log('Calling updateStatusWithParts with:', {
+                appointmentId,
+                status: updateData.status,
+                partsCount: selectedParts.length
+            });
+
             const updatedAppointment = await Appointment.updateStatusWithParts(
                 appointmentId,
                 updateData,
@@ -287,17 +310,47 @@ class AdminAppointmentsController {
                 'pending': 'Appointment was set to pending',
             };
 
-            // Get the parts total if parts were selected
+            // Get the parts total and stock update info
             let partsInfo = null;
+            let stockInfo = null;
+
             if (status === 'approved' && selectedParts && selectedParts.length > 0) {
                 const partsTotal = await AppointmentParts.getAppointmentPartsTotal(appointmentId);
                 partsInfo = {
                     partsCount: partsTotal.partsCount,
                     totalPartsCost: partsTotal.totalCost
                 };
+
+                // Include stock update information
+                if (updatedAppointment.stockUpdateResult) {
+                    stockInfo = {
+                        partsUpdated: updatedAppointment.stockUpdateResult.totalPartsUpdated,
+                        updatedParts: updatedAppointment.stockUpdateResult.updatedParts.map(part => ({
+                            name: part.name,
+                            quantityUsed: part.quantityUsed,
+                            remainingStock: part.stock_quantity,
+                            previousStock: part.previous_stock
+                        }))
+                    };
+                }
             }
 
-            sendJSON(res, 200, {
+            // Check for low stock warnings
+            let lowStockWarnings = null;
+            if (stockInfo && stockInfo.updatedParts) {
+                const lowStockParts = stockInfo.updatedParts.filter(part => {
+                    // You can adjust this threshold or get it from the database
+                    return part.remainingStock <= 5; // Warning when stock is 5 or below
+                });
+
+                if (lowStockParts.length > 0) {
+                    lowStockWarnings = lowStockParts.map(part =>
+                        `${part.name}: Only ${part.remainingStock} remaining`
+                    );
+                }
+            }
+
+            const responseData = {
                 success: true,
                 message: statusMessages[status],
                 appointment: {
@@ -308,16 +361,47 @@ class AdminAppointmentsController {
                     retryDays: updatedAppointment.retry_days,
                     estimatedPrice: updatedAppointment.estimated_price,
                     warrantyInfo: updatedAppointment.warranty_info,
-                    updatedAt: updatedAppointment.updated_at,
-                    partsInfo: partsInfo
+                    updatedAt: updatedAppointment.updated_at
                 }
+            };
+
+            // Add parts and stock info to response
+            if (partsInfo) {
+                responseData.partsInfo = partsInfo;
+            }
+            if (stockInfo) {
+                responseData.stockInfo = stockInfo;
+            }
+            if (lowStockWarnings) {
+                responseData.lowStockWarnings = lowStockWarnings;
+                responseData.message += ` (Warning: Low stock detected on ${lowStockWarnings.length} parts)`;
+            }
+
+            console.log('Appointment update successful:', {
+                appointmentId,
+                status,
+                partsAllocated: partsInfo?.partsCount || 0,
+                stockUpdated: stockInfo?.partsUpdated || 0
             });
+
+            sendJSON(res, 200, responseData);
 
         } catch (error) {
             console.error('Error updating appointment status:', error);
+
+            // Handle specific stock-related errors
+            if (error.message.includes('Insufficient stock') || error.message.includes('Stock validation failed')) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Stock validation error',
+                    details: error.message
+                });
+            }
+
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error updating appointment status',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
     }
@@ -337,6 +421,27 @@ class AdminAppointmentsController {
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading statistics'
+            });
+        }
+    }
+
+    // NEW ENDPOINT: GET /admin/api/parts/low-stock - Get parts with low stock levels
+    static async getLowStockParts(req, res) {
+        try {
+            const lowStockParts = await Part.getLowStockParts();
+
+            sendJSON(res, 200, {
+                success: true,
+                message: 'Low stock parts loaded successfully',
+                parts: lowStockParts,
+                count: lowStockParts.length
+            });
+
+        } catch (error) {
+            console.error('Error loading low stock parts:', error);
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error loading low stock parts'
             });
         }
     }

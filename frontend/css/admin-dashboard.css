@@ -230,6 +230,10 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
+.search-btn::before {
+    content: "🔍";
+}
+
 .notifications {
     position: relative;
 }
@@ -447,6 +451,8 @@ h1, h2, h3, h4, h5, h6 {
     cursor: pointer;
     color: var(--text-light);
     transition: color 0.3s;
+    background: none;
+    border: none;
 }
 
 .close-modal:hover {
@@ -638,6 +644,267 @@ textarea[readonly] {
     color: white;
 }
 
+/* Parts Selection Styles */
+.parts-selection {
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    margin-top: 15px;
+    background-color: #fdfdfd;
+}
+
+.parts-selection h4 {
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.parts-search {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.parts-search input {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    cursor: pointer;
+    background-color: white;
+}
+
+.parts-search input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.parts-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--medium-gray);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 200;
+    display: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.parts-dropdown.show {
+    display: block;
+}
+
+.part-option {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background-color 0.2s ease;
+}
+
+.part-option:hover {
+    background-color: var(--light-gray);
+}
+
+.part-option:last-child {
+    border-bottom: none;
+}
+
+.part-name {
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 2px;
+}
+
+.part-details {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.selected-parts {
+    min-height: 80px;
+    border: 2px dashed var(--medium-gray);
+    border-radius: var(--radius-sm);
+    padding: 15px;
+    background-color: white;
+}
+
+.selected-parts.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    font-style: italic;
+    font-size: 14px;
+}
+
+.selected-part-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--light-gray);
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #e0e0e0;
+}
+
+.selected-part-item:last-child {
+    margin-bottom: 0;
+}
+
+.part-info {
+    flex: 1;
+}
+
+.part-info .name {
+    font-weight: 500;
+    color: var(--text-color);
+    margin-bottom: 2px;
+}
+
+.part-info .price {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 15px;
+}
+
+.quantity-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--medium-gray);
+    background: white;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.quantity-btn:hover {
+    background-color: var(--light-gray);
+    border-color: var(--text-light);
+}
+
+.quantity-input {
+    width: 50px;
+    text-align: center;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    font-size: 14px;
+}
+
+.remove-part {
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.remove-part:hover {
+    background: #c82333;
+}
+
+.parts-total {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--medium-gray);
+    text-align: right;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 15px;
+}
+
+/* Loading and Notifications */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px;
+    color: var(--text-light);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    color: white;
+    z-index: 1000;
+    transform: translateX(400px);
+    transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 300px;
+    box-shadow: var(--shadow-lg);
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification-error {
+    background-color: var(--danger);
+}
+
+.notification-success {
+    background-color: var(--success);
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.no-appointments {
+    text-align: center;
+    padding: 50px;
+    color: var(--text-light);
+    font-size: 16px;
+}
+
 /* Responsive Styles */
 @media (max-width: 992px) {
     .sidebar {
@@ -702,6 +969,16 @@ textarea[readonly] {
     .appointments-list {
         grid-template-columns: 1fr;
     }
+
+    .selected-part-item {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .quantity-controls {
+        margin: 0;
+    }
 }
 
 @media (max-width: 576px) {
@@ -723,5 +1000,13 @@ textarea[readonly] {
 
     .modal-content {
         padding: 15px;
+    }
+
+    .parts-selection {
+        padding: 10px;
+    }
+
+    .selected-part-item {
+        padding: 10px;
     }
 }

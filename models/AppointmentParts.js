@@ -15,8 +15,8 @@ class AppointmentParts {
             // Insert new parts
             if (partsList && partsList.length > 0) {
                 const insertQuery = `
-                    INSERT INTO "AppointmentParts" 
-                    (appointment_id, part_id, quantity, unit_price, subtotal, created_at)
+                    INSERT INTO "AppointmentParts"
+                        (appointment_id, part_id, quantity, unit_price, subtotal, created_at)
                     VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
                 `;
 
@@ -54,7 +54,7 @@ class AppointmentParts {
                 p.category,
                 p.description
             FROM "AppointmentParts" ap
-            JOIN "Parts" p ON ap.part_id = p.id
+                     JOIN "Parts" p ON ap.part_id = p.id
             WHERE ap.appointment_id = $1
             ORDER BY ap.created_at ASC
         `;
@@ -70,7 +70,7 @@ class AppointmentParts {
     // Get total cost of parts for an appointment
     static async getAppointmentPartsTotal(appointmentId) {
         const query = `
-            SELECT 
+            SELECT
                 COALESCE(SUM(subtotal), 0) as total_parts_cost,
                 COUNT(*) as parts_count
             FROM "AppointmentParts"

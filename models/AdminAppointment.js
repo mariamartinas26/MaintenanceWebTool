@@ -1,7 +1,9 @@
 const { pool } = require('../database/db');
+const AppointmentParts = require('./AppointmentParts');
+const Part = require('./Part');
 
 class AdminAppointment {
-    // Get all appointments for admin dashboard
+    // Get all appointments for admin dashboard (existing method - no changes)
     static async getAllForAdmin(filters = {}) {
         let query = `
             SELECT
@@ -89,7 +91,7 @@ class AdminAppointment {
         }
     }
 
-    // Get single appointment details for admin
+    // Get single appointment details for admin (existing method - no changes)
     static async getByIdForAdmin(id) {
         const query = `
             SELECT
@@ -118,7 +120,7 @@ class AdminAppointment {
         }
     }
 
-    // Get appointment media files
+    // Get appointment media files (existing method - no changes)
     static async getAppointmentMedia(appointmentId) {
         const query = `
             SELECT
@@ -141,17 +143,8 @@ class AdminAppointment {
         }
     }
 
-    // Update appointment status (approve/reject) with calendar integration
-    static async updateStatus(id, updateData, adminId = null) {
-        const {
-            status,
-            adminResponse,
-            rejectionReason,
-            retryDays,
-            estimatedPrice,
-            warrantyInfo
-        } = updateData;
-
+    // UPDATED METHOD: Update appointment status with parts support AND stock reduction
+    static async updateStatusWithParts(id, updateData, selectedParts = [], adminId = null) {
         const client = await pool.connect();
 
         try {
@@ -167,10 +160,41 @@ class AdminAppointment {
             const currentResult = await client.query(getCurrentQuery, [id]);
 
             if (currentResult.rows.length === 0) {
-                throw new Error('Programarea nu a fost găsită');
+                throw new Error('Appointment not found');
             }
 
             const currentAppointment = currentResult.rows[0];
+
+            // If appointment is being approved with parts, validate and reduce stock
+            let stockUpdateResult = null;
+            if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
+                console.log('Attempting to reduce stock for parts:', selectedParts);
+
+                // Validate stock availability first
+                const availability = await Part.checkAvailability(selectedParts);
+                if (!availability.available) {
+                    const errorMessage = availability.unavailableParts
+                        .map(p => `${p.name || 'Unknown part'}: needed ${p.requested}, available ${p.available}`)
+                        .join('; ');
+                    throw new Error(`Cannot approve appointment. Insufficient stock: ${errorMessage}`);
+                }
+
+                // Reduce stock for all selected parts
+                stockUpdateResult = await Part.updateMultipleStock(selectedParts, client);
+                console.log('Stock update successful:', stockUpdateResult);
+            }
+
+            // If appointment was previously approved with parts and now being changed to another status,
+            // we should restore the stock (optional - depends on business logic)
+            if (currentAppointment.old_status === 'approved' && updateData.status !== 'approved') {
+                const existingParts = await AppointmentParts.getAppointmentParts(id);
+                if (existingParts.length > 0) {
+                    console.log('Restoring stock for previously approved appointment parts');
+                    for (const part of existingParts) {
+                        await Part.restoreStock(part.part_id, part.quantity, client);
+                    }
+                }
+            }
 
             // Update appointment with all new fields
             const updateQuery = `
@@ -184,23 +208,31 @@ class AdminAppointment {
                     warranty_info = $7,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $1
-                    RETURNING *
+                RETURNING *
             `;
 
             const updateResult = await client.query(updateQuery, [
                 id,
-                status,
-                adminResponse,
-                rejectionReason,
-                retryDays,
-                estimatedPrice,
-                warrantyInfo
+                updateData.status,
+                updateData.adminResponse,
+                updateData.rejectionReason,
+                updateData.retryDays,
+                updateData.estimatedPrice,
+                updateData.warrantyInfo
             ]);
 
             const updatedAppointment = updateResult.rows[0];
 
+            // Save selected parts if appointment is approved and parts are provided
+            if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
+                await AppointmentParts.saveAppointmentParts(id, selectedParts, client);
+            } else {
+                // Clear any existing parts if not approved or no parts selected
+                await AppointmentParts.saveAppointmentParts(id, [], client);
+            }
+
             // Update calendar if appointment is rejected or cancelled
-            if (status === 'rejected' && currentAppointment.old_status !== 'rejected') {
+            if (updateData.status === 'rejected' && currentAppointment.old_status !== 'rejected') {
                 const appointmentDateTime = currentAppointment.appointment_date;
                 const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
                 const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 8);
@@ -224,17 +256,28 @@ class AdminAppointment {
                 VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
             `;
 
-            const action = status === 'approved' ? 'approved' :
-                status === 'rejected' ? 'rejected' : 'updated';
+            const action = updateData.status === 'approved' ? 'approved' :
+                updateData.status === 'rejected' ? 'rejected' : 'updated';
 
             // Use appropriate comment based on status
             let comment;
-            if (status === 'rejected' && rejectionReason) {
-                comment = `Programare respinsă: ${rejectionReason}`;
-            } else if (adminResponse) {
-                comment = adminResponse;
+            if (updateData.status === 'rejected' && updateData.rejectionReason) {
+                comment = `Appointment rejected: ${updateData.rejectionReason}`;
+            } else if (updateData.adminResponse) {
+                comment = updateData.adminResponse;
             } else {
-                comment = `Programare ${action} de către admin`;
+                comment = `Appointment ${action} by admin`;
+            }
+
+            // Add parts info to comment if parts were selected and stock was updated
+            if (updateData.status === 'approved' && stockUpdateResult && stockUpdateResult.updatedParts.length > 0) {
+                const partsCount = stockUpdateResult.updatedParts.length;
+                const totalPartsCost = selectedParts.reduce((sum, part) => sum + (part.quantity * part.unitPrice), 0);
+                const stockInfo = stockUpdateResult.updatedParts.map(p =>
+                    `${p.name}: used ${p.quantityUsed}, remaining ${p.stock_quantity}`
+                ).join('; ');
+
+                comment += ` (${partsCount} parts allocated, total cost: ${totalPartsCost.toFixed(2)} RON. Stock updated: ${stockInfo})`;
             }
 
             await client.query(historyQuery, [
@@ -242,23 +285,33 @@ class AdminAppointment {
                 currentAppointment.user_id,
                 action,
                 currentAppointment.old_status,
-                status,
+                updateData.status,
                 comment
             ]);
 
             await client.query('COMMIT');
 
-            return updatedAppointment;
+            // Return the updated appointment with stock update info
+            return {
+                ...updatedAppointment,
+                stockUpdateResult: stockUpdateResult
+            };
 
         } catch (error) {
             await client.query('ROLLBACK');
+            console.error('Error in updateStatusWithParts:', error);
             throw error;
         } finally {
             client.release();
         }
     }
 
-    // Get appointment statistics for admin dashboard
+    // EXISTING METHOD: Update appointment status (keep for backward compatibility)
+    static async updateStatus(id, updateData, adminId = null) {
+        return this.updateStatusWithParts(id, updateData, [], adminId);
+    }
+
+    // Get appointment statistics for admin dashboard (existing method - no changes)
     static async getStatistics() {
         try {
             const query = `

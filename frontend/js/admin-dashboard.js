@@ -93,7 +93,7 @@ class AdminDashboard {
             const iconElement = link.querySelector('.icon');
             if (iconElement) {
                 // Inventory navigation
-                if (iconElement.textContent.includes('🔧')) {
+                if (iconElement.textContent.includes('Tool') || link.textContent.toLowerCase().includes('inventory')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         console.log('Inventory button clicked');
@@ -102,20 +102,11 @@ class AdminDashboard {
                 }
 
                 // Suppliers navigation
-                if (iconElement.textContent.includes('🏪')) {
+                if (iconElement.textContent.includes('Store') || link.textContent.toLowerCase().includes('supplier')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         console.log('Suppliers button clicked');
                         window.location.href = '/suppliers';
-                    });
-                }
-
-                // Orders navigation
-                if (iconElement.textContent.includes('📦')) {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        console.log('Orders button clicked');
-                        window.location.href = '/suppliers#orders';
                     });
                 }
             }
@@ -127,13 +118,18 @@ class AdminDashboard {
         const partsSearchInput = document.getElementById('parts-search-input');
         const partsDropdown = document.getElementById('parts-dropdown');
 
-        partsSearchInput.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            this.filterParts(query);
+        if (!partsSearchInput || !partsDropdown) {
+            console.warn('Parts selection elements not found');
+            return;
+        }
+
+        // Show dropdown on click/focus
+        partsSearchInput.addEventListener('click', () => {
+            this.showPartsDropdown();
         });
 
         partsSearchInput.addEventListener('focus', () => {
-            partsDropdown.classList.add('show');
+            this.showPartsDropdown();
         });
 
         // Close dropdown when clicking outside
@@ -146,90 +142,56 @@ class AdminDashboard {
 
     async loadParts() {
         try {
-            // Mock data pentru demonstrație - înlocuiește cu API real
-            this.availableParts = [
-                {
-                    id: 1,
-                    name: "Brake Pads Front",
-                    partNumber: "BP-001",
-                    category: "Braking",
-                    price: 45.99,
-                    stockQuantity: 25,
-                    description: "High-quality brake pads for front wheels"
-                },
-                {
-                    id: 2,
-                    name: "Chain KMC X11",
-                    partNumber: "CH-KMC-X11",
-                    category: "Drivetrain",
-                    price: 32.50,
-                    stockQuantity: 15,
-                    description: "11-speed bicycle chain"
-                },
-                {
-                    id: 3,
-                    name: "Tire Continental 700x25c",
-                    partNumber: "TR-CON-700",
-                    category: "Wheels",
-                    price: 28.99,
-                    stockQuantity: 8,
-                    description: "Road bike tire 700x25c"
-                },
-                {
-                    id: 4,
-                    name: "Shimano Brake Cable",
-                    partNumber: "BC-SH-001",
-                    category: "Braking",
-                    price: 12.99,
-                    stockQuantity: 30,
-                    description: "Brake cable for road bikes"
-                },
-                {
-                    id: 5,
-                    name: "Battery 36V 10Ah",
-                    partNumber: "BAT-36V-10",
-                    category: "Electric",
-                    price: 299.99,
-                    stockQuantity: 5,
-                    description: "Lithium battery for e-bikes"
-                }
-            ];
-
-            // Pentru implementarea reală, folosește acest cod:
-            /*
             const token = localStorage.getItem('token');
-            const response = await fetch('/admin/api/parts', {
+            if (!token) {
+                console.error('No token found for parts loading');
+                return;
+            }
+
+            const response = await fetch('/admin/api/parts?available_only=true', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
+
             const data = await response.json();
-            if (data.success) {
-                this.availableParts = data.parts;
+
+            if (response.status === 401) {
+                this.handleAuthError();
+                return;
             }
-            */
+
+            if (data.success) {
+                this.availableParts = data.parts.map(part => ({
+                    id: part.id,
+                    name: part.name,
+                    partNumber: part.part_number,
+                    category: part.category,
+                    price: parseFloat(part.price),
+                    stockQuantity: part.stock_quantity,
+                    description: part.description || '',
+                    supplierName: part.supplier_name || 'Unknown'
+                }));
+                console.log(`Loaded ${this.availableParts.length} parts successfully`);
+            } else {
+                this.showError('Error loading parts: ' + data.message);
+            }
         } catch (error) {
             console.error('Error loading parts:', error);
             this.showError('Error loading parts data');
         }
     }
 
-    filterParts(query) {
+    showPartsDropdown() {
         const dropdown = document.getElementById('parts-dropdown');
 
-        if (query.length < 2) {
-            dropdown.classList.remove('show');
-            return;
+        if (this.availableParts.length === 0) {
+            dropdown.innerHTML = '<div class="part-option">No parts available</div>';
+        } else {
+            this.renderPartsDropdown(this.availableParts);
         }
 
-        const filteredParts = this.availableParts.filter(part =>
-            part.name.toLowerCase().includes(query) ||
-            part.partNumber.toLowerCase().includes(query) ||
-            part.category.toLowerCase().includes(query)
-        );
-
-        this.renderPartsDropdown(filteredParts);
         dropdown.classList.add('show');
     }
 
@@ -245,33 +207,42 @@ class AdminDashboard {
             <div class="part-option" data-part-id="${part.id}">
                 <div class="part-name">${part.name}</div>
                 <div class="part-details">
-                    ${part.partNumber} | Stock: ${part.stockQuantity} | ${part.price} RON
+                    ${part.partNumber} | Stock: ${part.stockQuantity} | ${part.price.toFixed(2)} RON
+                    ${part.category ? ` | ${part.category}` : ''}
                 </div>
             </div>
         `).join('');
 
         // Add click events for part selection
-        dropdown.querySelectorAll('.part-option').forEach(option => {
+        dropdown.querySelectorAll('.part-option[data-part-id]').forEach(option => {
             option.addEventListener('click', (e) => {
                 const partId = parseInt(e.currentTarget.dataset.partId);
-                this.addPartToSelection(partId);
-                dropdown.classList.remove('show');
-                document.getElementById('parts-search-input').value = '';
+                const selectedPart = parts.find(p => p.id === partId);
+                if (selectedPart) {
+                    this.addPartToSelection(selectedPart);
+                    dropdown.classList.remove('show');
+                    document.getElementById('parts-search-input').value = '';
+                }
             });
         });
     }
 
-    addPartToSelection(partId) {
-        const part = this.availableParts.find(p => p.id === partId);
-        if (!part) return;
+    addPartToSelection(part) {
+        if (!part || !part.id) return;
 
         // Check if part already selected
-        const existingPart = this.selectedParts.find(p => p.id === partId);
+        const existingPart = this.selectedParts.find(p => p.id === part.id);
         if (existingPart) {
             existingPart.quantity += 1;
         } else {
             this.selectedParts.push({
-                ...part,
+                id: part.id,
+                name: part.name,
+                partNumber: part.partNumber,
+                category: part.category,
+                price: part.price,
+                stockQuantity: part.stockQuantity,
+                description: part.description,
                 quantity: 1
             });
         }
@@ -647,7 +618,7 @@ class AdminDashboard {
                     <div class="attachments-list">
                         ${appointment.mediaFiles.map(file => `
                             <div class="attachment-item">
-                                <span>📎</span>
+                                <span>Attachment</span>
                                 <a href="${file.filePath}" target="_blank">${file.fileName}</a>
                             </div>
                         `).join('')}
