@@ -189,10 +189,8 @@ async function loadAdminInfo() {
     try {
         // Get admin info from token or session
         const adminName = localStorage.getItem('adminName') || 'Admin';
-        document.getElementById('adminName').textContent = adminName;
         document.getElementById('admin-name').textContent = adminName;
     } catch (error) {
-        document.getElementById('adminName').textContent = 'Admin';
         document.getElementById('admin-name').textContent = 'Admin';
     }
 }
