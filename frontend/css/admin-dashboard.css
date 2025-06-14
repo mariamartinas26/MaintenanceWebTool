@@ -1,9 +1,6 @@
-/* Admin Dashboard CSS */
-
-/* Variables & Reset */
 :root {
-    --primary-color: #ff6b6b;
-    --primary-dark: #ff5252;
+    --primary-color: #101c5a;
+    --primary-dark: #0c1446;
     --secondary-color: #4ecdc4;
     --text-color: #333333;
     --text-light: #6c757d;
@@ -180,8 +177,6 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(-1px);
 }
 
-
-
 /* Main Content */
 .main-content {
     flex: 1;
@@ -190,80 +185,14 @@ h1, h2, h3, h4, h5, h6 {
     min-height: 100vh;
 }
 
-/* Top Bar */
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--medium-gray);
-}
-
-.search-container {
-    display: flex;
-    align-items: center;
-    background: white;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    width: 400px;
-    max-width: 100%;
-}
-
-.search-container input {
-    flex: 1;
-    border: none;
-    padding: 12px 15px;
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
-    font-size: 14px;
-}
-
-.search-container input:focus {
-    outline: none;
-}
-
-.search-btn {
-    background: none;
-    border: none;
-    padding: 12px 15px;
-    cursor: pointer;
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-}
-
-.search-btn::before {
-    content: "🔍";
-}
-
-.notifications {
-    position: relative;
-}
-
-.notification-icon {
-    font-size: 20px;
-    cursor: pointer;
-}
-
-.notification-count {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background-color: var(--primary-color);
-    color: white;
-    font-size: 12px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 /* Page Header */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--medium-gray);
 }
 
 .page-header h1 {
@@ -313,7 +242,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .appointment-card:hover {
-    transform: translateY(-5px);
     box-shadow: var(--shadow-md);
 }
 
@@ -947,11 +875,6 @@ textarea[readonly] {
 }
 
 @media (max-width: 768px) {
-    .search-container {
-        width: 100%;
-        max-width: 250px;
-    }
-
     .page-header {
         flex-direction: column;
         align-items: flex-start;
@@ -982,17 +905,6 @@ textarea[readonly] {
 }
 
 @media (max-width: 576px) {
-    .top-bar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-
-    .search-container {
-        width: 100%;
-        max-width: 100%;
-    }
-
     .notifications {
         align-self: flex-end;
         margin-top: -35px;

@@ -4,9 +4,7 @@ class AdminDashboard {
         this.availableParts = [];
         this.selectedParts = [];
         this.currentFilters = {
-            status: 'all',
-            date: 'all',
-            search: ''
+            status: 'all'
         };
         this.init();
     }
@@ -21,37 +19,21 @@ class AdminDashboard {
     }
 
     bindEvents() {
-        // Search functionality
-        const searchInput = document.getElementById('search-input');
-        const searchBtn = document.querySelector('.search-btn');
-
-        searchInput.addEventListener('input', this.debounce(() => {
-            this.currentFilters.search = searchInput.value;
-            this.loadAppointments();
-        }, 300));
-
-        searchBtn.addEventListener('click', () => {
-            this.currentFilters.search = searchInput.value;
-            this.loadAppointments();
-        });
-
         // Filter functionality
         const statusFilter = document.getElementById('status-filter');
-        const dateFilter = document.getElementById('date-filter');
 
         statusFilter.addEventListener('change', () => {
             this.currentFilters.status = statusFilter.value;
             this.loadAppointments();
         });
 
-        dateFilter.addEventListener('change', () => {
-            this.currentFilters.date = dateFilter.value;
-            this.loadAppointments();
-        });
-
         // Logout functionality
         const logoutBtn = document.getElementById('logout-btn');
-        logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+        } else {
+            console.error('Logout button not found!');
+        }
     }
 
     setupModals() {
@@ -352,7 +334,6 @@ class AdminDashboard {
         }
     }
 
-
     async loadAppointments() {
         try {
             this.showLoading();
@@ -369,12 +350,6 @@ class AdminDashboard {
             const params = new URLSearchParams();
             if (this.currentFilters.status !== 'all') {
                 params.append('status', this.currentFilters.status);
-            }
-            if (this.currentFilters.date !== 'all') {
-                params.append('date_filter', this.currentFilters.date);
-            }
-            if (this.currentFilters.search) {
-                params.append('search', this.currentFilters.search);
             }
 
             const response = await fetch(`/admin/api/appointments?${params}`, {
@@ -415,7 +390,7 @@ class AdminDashboard {
         if (this.appointments.length === 0) {
             container.innerHTML = `
                 <div class="no-appointments">
-                    <p>No appointments found for the selected filters.</p>
+                    <p>No appointments found for the selected filter.</p>
                 </div>
             `;
             return;
@@ -894,7 +869,7 @@ class AdminDashboard {
     }
 
     hideLoading() {
-        // Loading will be hidden when appointments are made
+        // Loading will be hidden when appointments are rendered
     }
 
     showError(message) {

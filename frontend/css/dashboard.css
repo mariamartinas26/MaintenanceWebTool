@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #ff6b6b;
-    --primary-dark: #ff5252;
+    --primary-color: #101c5a;
+    --primary-dark: #0c1446;
     --secondary-color: #4ecdc4;
     --text-color: #333333;
     --light-gray: #f8f9fa;
@@ -626,11 +626,9 @@ input[type="checkbox"] {
     box-shadow: var(--box-shadow);
     padding: 24px;
     transition: all var(--transition);
-    border-left: 4px solid var(--primary-color);
 }
 
 .appointment-card:hover {
-    transform: translateY(-5px);
     box-shadow: var(--box-shadow-hover);
 }
 
@@ -716,7 +714,6 @@ input[type="checkbox"] {
 }
 
 .admin-response {
-    background-color: #e8f5e8;
     border-left: 4px solid var(--success);
     padding: 12px;
     border-radius: var(--border-radius);
@@ -724,7 +721,6 @@ input[type="checkbox"] {
 }
 
 .estimated-price {
-    background-color: #fff3cd;
     border-left: 4px solid var(--warning);
     padding: 12px;
     border-radius: var(--border-radius);
@@ -732,15 +728,8 @@ input[type="checkbox"] {
 }
 
 .vehicle-info {
-    background-color: #d1ecf1;
-    border-left: 4px solid var(--pending);
     padding: 12px;
     border-radius: var(--border-radius);
-}
-
-.created-at {
-    color: var(--dark-gray);
-    font-size: 12px;
 }
 
 /* Appointment Actions */

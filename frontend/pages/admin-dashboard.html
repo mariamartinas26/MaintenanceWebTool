@@ -43,13 +43,6 @@
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="top-bar">
-            <div class="search-container">
-                <input type="text" placeholder="Searching for appointments..." id="search-input">
-                <button class="search-btn"></button>
-            </div>
-        </header>
-
         <div class="content">
             <div class="page-header">
                 <h1>Appointments</h1>
@@ -60,19 +53,11 @@
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
                     </select>
-                    <select id="date-filter">
-                        <option value="all">All dates</option>
-                        <option value="today">Today</option>
-                        <option value="tomorrow">Tomorrow</option>
-                        <option value="week">This week</option>
-                        <option value="month">This month</option>
-                    </select>
                 </div>
             </div>
 
             <div class="appointments-section">
                 <div class="appointments-list" id="appointments-container">
-                    <!-- Appointment cards will be loaded here dynamically -->
                 </div>
             </div>
         </div>

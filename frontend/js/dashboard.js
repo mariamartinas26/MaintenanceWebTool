@@ -630,9 +630,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <strong>Vehicle:</strong> ${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})${appointment.vehicle.is_electric ? ' Electric' : ''}
                             </div>
                         ` : ''}
-                        <div class="created-at">
-                            <small>Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}</small>
-                        </div>
                     </div>
                     <div class="appointment-actions">
                         ${canCancel ? `
@@ -734,7 +731,7 @@ Service: ${getServiceTypeText(appointment.serviceType)}
 Status: ${getStatusText(appointment.status)}
 Description: ${appointment.description}
 ${appointment.adminResponse ? '\nAdmin response: ' + appointment.adminResponse : ''}
-${appointment.estimatedPrice ? '\nEstimated price: $' + appointment.estimatedPrice : ''}
+${appointment.estimatedPrice ? '\nEstimated price: RON' + appointment.estimatedPrice : ''}
 ${appointment.vehicle ? '\nVehicle: ' + appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' (' + appointment.vehicle.year + ')' : ''}
 Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
         `;

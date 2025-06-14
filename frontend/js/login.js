@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageElement = document.getElementById('mesaj');
     const closeButton = document.getElementById('closeButton');
 
-    // Close button functionality
+    //close button functionality
     closeButton.addEventListener('click', function() {
         window.location.href = '/';
     });
 
-    // Login form submission
+    //login form submission
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -22,8 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            showMessage('Logging in...', 'info');
-
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -35,13 +33,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                // Save JWT token and user data
+                //save jwt token+user data
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
                 showMessage('Login successful! Redirecting...', 'success');
-                // mama mea e florareaasa au au au au
-                // Redirect based on user role
 
                 setTimeout(() => {
                     if (data.user.role === 'admin') {
@@ -54,8 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage(data.message || 'Login failed', 'error');
             }
         } catch (error) {
-            console.error('Login error:', error);
-            showMessage('Network error. Please try again.', 'error');
+            showMessage('Network error', 'error');
         }
     });
 
@@ -98,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Check if user is already logged in
+    //check if user is already logged in
     const token = localStorage.getItem('token');
     if (token) {
         const user = JSON.parse(localStorage.getItem('user') || '{}');

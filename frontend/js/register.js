@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     closeButton.addEventListener('click', function() {
         window.location.href = '/';
     });
-//coment pt push
+
     registerForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
@@ -23,8 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            showMessage('Registering...', 'info');
-
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: {
@@ -52,8 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         } catch (error) {
-            console.error('Registration error:', error);
-            showMessage('Network error. Please try again.', 'error');
+            showMessage('Network error', 'error');
         }
     });
 
