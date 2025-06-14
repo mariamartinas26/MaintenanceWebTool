@@ -1,13 +1,11 @@
 // Global variables
 let allParts = [];
 let filteredParts = [];
-let currentView = 'grid';
 let currentPage = 1;
 let itemsPerPage = 12;
 let selectedParts = new Set();
 let deletePartId = null;
 let updatePartId = null;
-let searchTimeout = null;
 
 function getAuthHeaders() {
     const token = localStorage.getItem('token');
@@ -37,19 +35,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadParts();
     loadCategories();
     loadAdminInfo();
+    highlightCurrentPage();
 });
 
 // Setup event listeners
 function setupEventListeners() {
-    // Search input
-    document.getElementById('searchInput').addEventListener('input', handleSearch);
-    document.getElementById('clearSearch').addEventListener('click', clearSearch);
-
-    // Filters
+    // Filters only (no search)
     document.getElementById('categoryFilter').addEventListener('change', applyFilters);
     document.getElementById('stockFilter').addEventListener('change', applyFilters);
-    document.getElementById('sortBy').addEventListener('change', applyFilters);
-    document.getElementById('sortOrder').addEventListener('change', applyFilters);
 
     // Stock update form
     document.getElementById('stockUpdateForm').addEventListener('submit', handleStockUpdate);
@@ -123,10 +116,6 @@ function logout() {
 
 // Initialize page settings
 function initializePage() {
-    // Load saved view preference
-    const savedView = localStorage.getItem('partsView') || 'grid';
-    setView(savedView);
-
     // Load saved items per page
     const savedItemsPerPage = localStorage.getItem('partsItemsPerPage');
     if (savedItemsPerPage) {
@@ -192,53 +181,13 @@ function populateCategoryFilter(categories) {
     });
 }
 
-// Handle search input
-function handleSearch() {
-    const searchTerm = document.getElementById('searchInput').value.trim();
-    const clearBtn = document.getElementById('clearSearch');
-
-    // Show/hide clear button
-    clearBtn.style.display = searchTerm ? 'block' : 'none';
-
-    // Clear previous timeout
-    if (searchTimeout) {
-        clearTimeout(searchTimeout);
-    }
-
-    // Debounce search
-    searchTimeout = setTimeout(() => {
-        applyFilters();
-    }, 300);
-}
-
-// Clear search
-function clearSearch() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('clearSearch').style.display = 'none';
-    applyFilters();
-}
-
-// Apply all filters and sorting
+// Apply all filters and sorting (no search, sort by name ascending only)
 function applyFilters() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
     const categoryFilter = document.getElementById('categoryFilter').value;
     const stockFilter = document.getElementById('stockFilter').value;
-    const sortBy = document.getElementById('sortBy').value;
-    const sortOrder = document.getElementById('sortOrder').value;
 
     // Start with all parts
     filteredParts = [...allParts];
-
-    // Apply search filter
-    if (searchTerm) {
-        filteredParts = filteredParts.filter(part =>
-            part.name.toLowerCase().includes(searchTerm) ||
-            (part.partNumber && part.partNumber.toLowerCase().includes(searchTerm)) ||
-            (part.description && part.description.toLowerCase().includes(searchTerm)) ||
-            part.category.toLowerCase().includes(searchTerm) ||
-            (part.supplier.name && part.supplier.name.toLowerCase().includes(searchTerm))
-        );
-    }
 
     // Apply category filter
     if (categoryFilter !== 'all') {
@@ -258,30 +207,12 @@ function applyFilters() {
             break;
     }
 
-    // Apply sorting
+    // Sort by name ascending only
     filteredParts.sort((a, b) => {
-        let aVal = a[sortBy];
-        let bVal = b[sortBy];
-
-        // Handle nested properties
-        if (sortBy.includes('.')) {
-            const keys = sortBy.split('.');
-            aVal = keys.reduce((obj, key) => obj?.[key], a);
-            bVal = keys.reduce((obj, key) => obj?.[key], b);
-        }
-
-        // Handle different data types
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-            aVal = aVal.toLowerCase();
-            bVal = bVal.toLowerCase();
-        }
-
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-            return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
-        }
-
-        if (aVal < bVal) return sortOrder === 'desc' ? 1 : -1;
-        if (aVal > bVal) return sortOrder === 'desc' ? -1 : 1;
+        const aVal = a.name.toLowerCase();
+        const bVal = b.name.toLowerCase();
+        if (aVal < bVal) return -1;
+        if (aVal > bVal) return 1;
         return 0;
     });
 
@@ -289,25 +220,13 @@ function applyFilters() {
     currentPage = 1;
 
     // Update display
-    updateResultsCount();
     displayParts();
     updatePagination();
 }
 
-// Update results count display
-function updateResultsCount() {
-    const count = filteredParts.length;
-    const total = allParts.length;
-    const countElement = document.getElementById('resultsCount');
 
-    if (count === total) {
-        countElement.textContent = `Showing all ${total} parts`;
-    } else {
-        countElement.textContent = `Showing ${count} of ${total} parts`;
-    }
-}
 
-// Display parts based on current view and pagination
+// Display parts in horizontal list view only
 function displayParts() {
     const container = document.getElementById('partsContainer');
 
@@ -316,15 +235,12 @@ function displayParts() {
         return;
     }
 
-
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageItems = filteredParts.slice(startIndex, endIndex);
 
     const html = pageItems.map(part => createPartCard(part)).join('');
     container.innerHTML = html;
-
-    container.className = `parts-${currentView === 'grid' ? 'grid' : 'grid list-view'}`;
 }
 
 function createPartCard(part) {
@@ -350,26 +266,9 @@ function createPartCard(part) {
                     </button>
                 </div>
             </div>
-            
-            <div class="part-details">
-                <span class="part-category">${escapeHtml(part.category)}</span>
-                ${part.description ? `<p class="part-description">${escapeHtml(part.description)}</p>` : ''}
-            </div>
-            
-            <div class="part-footer">
-                <div class="part-price">${formatCurrency(part.price)}</div>
-                <div class="part-stock">
-                    <div class="stock-info">
-                        <span class="stock-current">${part.stockQuantity}</span> / 
-                        <span class="stock-minimum">${part.minimumStockLevel}</span>
-                    </div>
-                    <span class="stock-status ${stockClass}">${stockStatus}</span>
-                </div>
-            </div>
         </div>
     `;
 }
-
 
 function getStockStatus(part) {
     if (part.stockQuantity === 0) {
@@ -380,7 +279,6 @@ function getStockStatus(part) {
         return 'In Stock';
     }
 }
-
 
 function displayEmptyState(message = null) {
     const container = document.getElementById('partsContainer');
@@ -401,13 +299,8 @@ function displayEmptyState(message = null) {
 }
 
 function clearAllFilters() {
-    document.getElementById('searchInput').value = '';
     document.getElementById('categoryFilter').value = 'all';
     document.getElementById('stockFilter').value = 'in-stock'; // Default to in-stock instead of 'all'
-    document.getElementById('sortBy').value = 'name';
-    document.getElementById('sortOrder').value = 'asc';
-    document.getElementById('clearSearch').style.display = 'none';
-
     applyFilters();
 }
 
@@ -444,16 +337,6 @@ function changePage(direction) {
             block: 'start'
         });
     }
-}
-
-function setView(view) {
-    currentView = view;
-    localStorage.setItem('partsView', view);
-
-    document.getElementById('gridViewBtn').classList.toggle('active', view === 'grid');
-    document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
-
-    displayParts();
 }
 
 async function showPartDetails(partId) {
@@ -637,7 +520,6 @@ async function handleStockUpdate(e) {
     }
 }
 
-
 function showDeleteModal(partId) {
     const part = allParts.find(p => p.id === partId);
     if (!part) return;
@@ -705,145 +587,6 @@ function hideAllModals() {
     });
     updatePartId = null;
     deletePartId = null;
-}
-
-// Bulk operations
-function togglePartSelection(partId) {
-    if (selectedParts.has(partId)) {
-        selectedParts.delete(partId);
-    } else {
-        selectedParts.add(partId);
-    }
-
-    updateBulkActionsVisibility();
-}
-
-function selectAllParts() {
-    const visibleParts = filteredParts.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
-
-    visibleParts.forEach(part => selectedParts.add(part.id));
-    updateBulkActionsVisibility();
-    updatePartSelections();
-}
-
-function deselectAllParts() {
-    selectedParts.clear();
-    updateBulkActionsVisibility();
-    updatePartSelections();
-}
-
-function updateBulkActionsVisibility() {
-    const bulkActions = document.getElementById('bulkActions');
-    bulkActions.style.display = selectedParts.size > 0 ? 'flex' : 'none';
-}
-
-function updatePartSelections() {
-    document.querySelectorAll('.part-checkbox').forEach(checkbox => {
-        const partId = parseInt(checkbox.dataset.partId);
-        checkbox.checked = selectedParts.has(partId);
-    });
-}
-
-function exportSelected() {
-    if (selectedParts.size === 0) {
-        showNotification('Please select parts to export', 'warning');
-        return;
-    }
-
-    const selectedPartsData = allParts.filter(part => selectedParts.has(part.id));
-    const csvContent = generateCSV(selectedPartsData);
-    downloadCSV(csvContent, 'selected_parts.csv');
-
-    showNotification(`Exported ${selectedParts.size} parts`, 'success');
-}
-
-function deleteSelected() {
-    if (selectedParts.size === 0) {
-        showNotification('Please select parts to delete', 'warning');
-        return;
-    }
-
-    if (confirm(`Are you sure you want to delete ${selectedParts.size} selected parts? This action cannot be undone.`)) {
-        bulkDeleteParts();
-    }
-}
-
-async function bulkDeleteParts() {
-    const partsToDelete = Array.from(selectedParts);
-    let successCount = 0;
-    let errorCount = 0;
-
-    showLoading(true);
-
-    for (const partId of partsToDelete) {
-        try {
-            const response = await fetch(`/inventory/api/parts/${partId}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                successCount++;
-                selectedParts.delete(partId);
-            } else {
-                errorCount++;
-            }
-        } catch (error) {
-            errorCount++;
-        }
-    }
-
-    showLoading(false);
-
-    if (successCount > 0) {
-        showNotification(`Successfully deleted ${successCount} parts`, 'success');
-        await loadParts();
-    }
-
-    if (errorCount > 0) {
-        showNotification(`Failed to delete ${errorCount} parts`, 'error');
-    }
-
-    updateBulkActionsVisibility();
-}
-
-// CSV export functions
-function generateCSV(parts) {
-    const headers = ['Name', 'Part Number', 'Category', 'Description', 'Price', 'Stock Quantity', 'Minimum Level', 'Supplier'];
-    const rows = parts.map(part => [
-        part.name,
-        part.partNumber || '',
-        part.category,
-        part.description || '',
-        part.price,
-        part.stockQuantity,
-        part.minimumStockLevel,
-        part.supplier.name || ''
-    ]);
-
-    return [headers, ...rows]
-        .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
-        .join('\n');
-}
-
-function downloadCSV(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
 }
 
 function showLoading(show) {
@@ -954,26 +697,21 @@ function refreshParts() {
     loadParts();
 }
 
+// Auto-refresh every 5 minutes
 setInterval(refreshParts, 5 * 60 * 1000);
 
+function highlightCurrentPage() {
+    const currentPath = window.location.pathname;
+    const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
 
-// Export current view to CSV
-function exportCurrentView() {
-    const visibleParts = filteredParts.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
-
-    const csvContent = generateCSV(visibleParts);
-    downloadCSV(csvContent, 'parts_current_view.csv');
-
-    showNotification(`Exported ${visibleParts.length} parts from current view`, 'success');
-}
-
-// Export all filtered parts
-function exportAll() {
-    const csvContent = generateCSV(filteredParts);
-    downloadCSV(csvContent, 'parts_filtered.csv');
-
-    showNotification(`Exported ${filteredParts.length} parts`, 'success');
+    sidebarLinks.forEach(link => {
+        const linkPath = new URL(link.href).pathname;
+        if (currentPath.startsWith('/inventory') && linkPath === '/inventory/dashboard') {
+            link.parentElement.classList.add('active');
+        } else if (currentPath === linkPath) {
+            link.parentElement.classList.add('active');
+        } else {
+            link.parentElement.classList.remove('active');
+        }
+    });
 }

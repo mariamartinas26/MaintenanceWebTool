@@ -43,35 +43,21 @@
 
     <!-- Main Content -->
     <main class="main-content">
-
-
         <!-- Navigation Tabs -->
         <nav class="dashboard-nav">
             <div class="nav-content">
                 <a href="/inventory/dashboard" class="nav-link">
-                     Dashboard
+                    Dashboard
                 </a>
                 <a href="/inventory/parts" class="nav-link active">
-                     Manage Parts
+                    Manage Parts
                 </a>
             </div>
         </nav>
 
-
         <div class="content">
-
             <section class="filters-section">
                 <div class="filters-container">
-                    <div class="search-group">
-                        <div class="search-input-container">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="searchInput" placeholder="Search parts by name, part number, or description..." />
-                            <button id="clearSearch" class="clear-search" style="display: none;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-
                     <div class="filters-group">
                         <select id="categoryFilter">
                             <option value="all">All Categories</option>
@@ -82,53 +68,16 @@
                             <option value="low-stock">Low Stock</option>
                             <option value="out-of-stock">Out of Stock</option>
                         </select>
-
-                        <select id="sortBy">
-                            <option value="name">Sort by Name</option>
-                            <option value="stockQuantity">Sort by Stock</option>
-                            <option value="price">Sort by Price</option>
-                            <option value="category">Sort by Category</option>
-                            <option value="createdAt">Sort by Date Added</option>
-                        </select>
-
-                        <select id="sortOrder">
-                            <option value="asc">Ascending</option>
-                            <option value="desc">Descending</option>
-                        </select>
-                    </div>
-
-                    <div class="view-toggle">
-                        <button id="gridViewBtn" class="view-btn active" onclick="setView('grid')">
-                            <i class="fas fa-th"></i>
-                        </button>
-                        <button id="listViewBtn" class="view-btn" onclick="setView('list')">
-                            <i class="fas fa-list"></i>
-                        </button>
                     </div>
                 </div>
             </section>
 
-
-            <section class="results-section">
-                <div class="results-summary">
-                    <span id="resultsCount">Loading parts...</span>
-                    <div class="bulk-actions" id="bulkActions" style="display: none;">
-                        <button class="btn-secondary" onclick="exportSelected()">
-                            <i class="fas fa-download"></i> Export Selected
-                        </button>
-                        <button class="btn-danger" onclick="deleteSelected()">
-                            <i class="fas fa-trash"></i> Delete Selected
-                        </button>
-                    </div>
-                </div>
-            </section>
 
 
             <section class="parts-section">
                 <div id="partsContainer" class="parts-grid">
                     <div class="loading">Loading parts...</div>
                 </div>
-
 
                 <div id="pagination" class="pagination" style="display: none;">
                     <button id="prevPage" class="page-btn" onclick="changePage(-1)">
@@ -144,7 +93,7 @@
     </main>
 </div>
 
-
+<!-- Modals -->
 <div id="partDetailsModal" class="modal">
     <div class="modal-content large">
         <div class="modal-header">
@@ -152,7 +101,6 @@
             <span class="modal-close" onclick="hidePartDetailsModal()">&times;</span>
         </div>
         <div class="modal-body" id="partDetailsContent">
-
         </div>
     </div>
 </div>
@@ -230,59 +178,5 @@
 </div>
 
 <script src="/js/inventory-parts.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Navigation functionality
-        const providersLink = document.getElementById('providers-link');
-        if (providersLink) {
-            providersLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = '/suppliers';
-            });
-        }
-
-        const ordersLink = document.getElementById('orders-link');
-        if (ordersLink) {
-            ordersLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = '/suppliers#orders';
-            });
-        }
-
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function() {
-                logout();
-            });
-        }
-
-        highlightCurrentPage();
-    });
-
-    function highlightCurrentPage() {
-        const currentPath = window.location.pathname;
-        const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
-
-        sidebarLinks.forEach(link => {
-            const linkPath = new URL(link.href).pathname;
-            if (currentPath.startsWith('/inventory') && linkPath === '/inventory/dashboard') {
-                link.parentElement.classList.add('active');
-            } else if (currentPath === linkPath) {
-                link.parentElement.classList.add('active');
-            } else {
-                link.parentElement.classList.remove('active');
-            }
-        });
-    }
-
-    function logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('adminName');
-            window.location.href = '/admin/login';
-        }
-    }
-</script>
 </body>
 </html>
