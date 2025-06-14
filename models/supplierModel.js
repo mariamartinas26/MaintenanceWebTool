@@ -207,29 +207,31 @@ class SupplierModel {
         }));
     }
 
-// De asemenea, actualizează metoda getAllOrders pentru consistency:
     static async getAllOrders(filters = {}) {
         let query = `
-        SELECT o.*, s.company_name as supplier_name,
-               o.total_amount::numeric as total_amount,
-               COALESCE(
-                   json_agg(
-                       json_build_object(
-                           'id', oi.id,
-                           'part_id', oi.part_id,
-                           'name', p.name,
-                           'quantity', oi.quantity::integer,
-                           'unit_price', oi.unit_price::numeric,
-                           'subtotal', oi.subtotal::numeric
-                       )
-                   ) FILTER (WHERE oi.id IS NOT NULL), 
-                   '[]'
-               ) as items
-        FROM "Orders" o
-        LEFT JOIN "Suppliers" s ON o.supplier_id = s.id
-        LEFT JOIN "OrderItems" oi ON o.id = oi.order_id
-        LEFT JOIN "Parts" p ON oi.part_id = p.id
-    `;
+            SELECT o.*, s.company_name as supplier_name,
+                   o.total_amount::numeric as total_amount,
+                    o.product_name,
+                   o.product_quantity,
+                   o.product_unit_price::numeric as product_unit_price,
+                    COALESCE(
+                            json_agg(
+                                    json_build_object(
+                                            'id', oi.id,
+                                            'part_id', oi.part_id,
+                                            'name', COALESCE(p.name, 'Unknown Item'),
+                                            'quantity', oi.quantity::integer,
+                                            'unit_price', oi.unit_price::numeric,
+                                            'subtotal', oi.subtotal::numeric
+                                    )
+                            ) FILTER (WHERE oi.id IS NOT NULL),
+                            '[]'
+                    ) as items
+            FROM "Orders" o
+                     LEFT JOIN "Suppliers" s ON o.supplier_id = s.id
+                     LEFT JOIN "OrderItems" oi ON o.id = oi.order_id
+                     LEFT JOIN "Parts" p ON oi.part_id = p.id
+        `;
 
         const conditions = [];
         const values = [];
@@ -259,6 +261,7 @@ class SupplierModel {
         return result.rows.map(order => ({
             ...order,
             total_amount: parseFloat(order.total_amount) || 0,
+            product_unit_price: parseFloat(order.product_unit_price) || 0,
             items: Array.isArray(order.items) ? order.items.map(item => ({
                 ...item,
                 quantity: parseInt(item.quantity) || 0,
@@ -347,71 +350,116 @@ class SupplierModel {
         try {
             await client.query('BEGIN');
 
-            // Calculate total amount
-            const total_amount = orderData.items.reduce((sum, item) =>
-                sum + (item.quantity * item.unit_price), 0
-            );
+            console.log('Creating order with data:', orderData);
 
-            // Create order
+            // Validează datele de intrare
+            if (!orderData.supplier_id) {
+                throw new Error('supplier_id is required');
+            }
+
+            if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
+                throw new Error('items array is required and must not be empty');
+            }
+
+            // Calculate total amount
+            const total_amount = orderData.items.reduce((sum, item) => {
+                const quantity = parseFloat(item.quantity) || 0;
+                const unitPrice = parseFloat(item.unit_price) || 0;
+                return sum + (quantity * unitPrice);
+            }, 0);
+
+            // Pentru noua structură - extrage informațiile despre primul produs
+            const firstItem = orderData.items[0];
+            const productName = orderData.items.length === 1 ?
+                (firstItem.name || 'Unknown Product') :
+                `${firstItem.name || 'Mixed Items'} +${orderData.items.length - 1} more`;
+            const productQuantity = orderData.items.length === 1 ?
+                (parseInt(firstItem.quantity) || 1) :
+                orderData.items.reduce((sum, item) => sum + (parseInt(item.quantity) || 1), 0);
+            const productUnitPrice = orderData.items.length === 1 ?
+                (parseFloat(firstItem.unit_price) || 0) :
+                (total_amount / productQuantity);
+
+            console.log('Calculated values:', {
+                total_amount,
+                productName,
+                productQuantity,
+                productUnitPrice
+            });
+
+            // Create order cu coloanele noi populate
             const orderQuery = `
-                INSERT INTO "Orders" (
-                    supplier_id, order_date, expected_delivery_date,
-                    status, total_amount, notes
-                ) VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING *
-            `;
+            INSERT INTO "Orders" (
+                supplier_id, order_date, expected_delivery_date,
+                status, total_amount, notes, items,
+                product_name, product_quantity, product_unit_price
+            ) VALUES ($1, NOW(), $2, 'ordered', $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `;
 
             const orderValues = [
                 parseInt(orderData.supplier_id),
-                new Date().toISOString(),
-                orderData.expected_delivery_date,
-                'ordered',
+                orderData.expected_delivery_date || null,
                 total_amount,
-                orderData.notes || ''
+                orderData.notes || '',
+                JSON.stringify(orderData.items), // Păstrează items pentru compatibilitate
+                productName,                      // Noua coloană
+                productQuantity,                  // Noua coloană
+                productUnitPrice                  // Noua coloană
             ];
 
+            console.log('Executing order query with values:', orderValues);
             const orderResult = await client.query(orderQuery, orderValues);
             const newOrder = orderResult.rows[0];
 
-            // Create order items
-            for (const item of orderData.items) {
-                // Try to find existing part by name
-                const partQuery = 'SELECT id FROM "Parts" WHERE name = $1 LIMIT 1';
-                const partResult = await client.query(partQuery, [item.name]);
+            console.log('Order created successfully:', newOrder.id);
 
-                let partId = null;
-                if (partResult.rows.length > 0) {
-                    partId = partResult.rows[0].id;
-                }
+            // Create order items (păstrează logica existentă pentru OrderItems dacă tabelul există)
+            try {
+                for (const item of orderData.items) {
+                    // Try to find existing part by name
+                    const partQuery = 'SELECT id FROM "Parts" WHERE name = $1 LIMIT 1';
+                    const partResult = await client.query(partQuery, [item.name]);
 
-                const itemQuery = `
+                    let partId = null;
+                    if (partResult.rows.length > 0) {
+                        partId = partResult.rows[0].id;
+                    }
+
+                    const itemQuery = `
                     INSERT INTO "OrderItems" (
                         order_id, part_id, quantity, unit_price, subtotal
                     ) VALUES ($1, $2, $3, $4, $5)
                 `;
 
-                const subtotal = item.quantity * item.unit_price;
-                await client.query(itemQuery, [
-                    newOrder.id,
-                    partId,
-                    item.quantity,
-                    item.unit_price,
-                    subtotal
-                ]);
+                    const subtotal = (parseInt(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
+                    await client.query(itemQuery, [
+                        newOrder.id,
+                        partId,
+                        parseInt(item.quantity) || 1,
+                        parseFloat(item.unit_price) || 0,
+                        subtotal
+                    ]);
+                }
+            } catch (orderItemsError) {
+                // Nu eșuează întreaga tranzacție dacă tabelul OrderItems nu există
+                console.log('OrderItems table might not exist, skipping order items creation:', orderItemsError.message);
             }
 
             await client.query('COMMIT');
+            console.log('Transaction committed successfully');
 
             return {
                 ...newOrder,
                 items: orderData.items.map(item => ({
                     ...item,
-                    subtotal: item.quantity * item.unit_price
+                    subtotal: (parseInt(item.quantity) || 1) * (parseFloat(item.unit_price) || 0)
                 }))
             };
 
         } catch (error) {
             await client.query('ROLLBACK');
+            console.error('Error in createOrder:', error);
             throw error;
         } finally {
             client.release();

@@ -2,7 +2,6 @@ const SupplierModel = require('../models/supplierModel');
 
 class SupplierController {
 
-
     async getAllSuppliers(req, res, query = {}) {
         try {
             const suppliers = await SupplierModel.getAllSuppliers(query);
@@ -190,70 +189,8 @@ class SupplierController {
         }
     }
 
-    // Get all parts
-    async getAllParts(req, res, query = {}) {
-        try {
-            const parts = await SupplierModel.getAllParts(query);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: parts }));
 
-        } catch (error) {
-            console.error('Error getting parts:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching parts: ' + error.message }));
-        }
-    }
-
-    // Create part
-    async createPart(req, res, data) {
-        try {
-            // Validate required fields
-            if (!data.name || !data.price || !data.supplier_id) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Name, price, and supplier ID are required'
-                }));
-                return;
-            }
-
-            // Validate price
-            if (isNaN(data.price) || data.price < 0) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Price must be a valid positive number'
-                }));
-                return;
-            }
-
-            // Validate supplier exists
-            const supplier = await SupplierModel.getSupplierById(data.supplier_id);
-            if (!supplier) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Supplier not found'
-                }));
-                return;
-            }
-
-            const part = await SupplierModel.createPart(data);
-
-            res.writeHead(201, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                success: true,
-                data: part,
-                message: 'Part created successfully'
-            }));
-
-        } catch (error) {
-            console.error('Error creating part:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error creating part: ' + error.message }));
-        }
-    }
 
     // Get all orders
     async getAllOrders(req, res, query = {}) {
@@ -269,12 +206,35 @@ class SupplierController {
             res.end(JSON.stringify({ success: false, message: 'Error fetching orders: ' + error.message }));
         }
     }
+    async getAllParts(req, res, query = {}) {
+        try {
+            const parts = await SupplierModel.getAllParts(query);
 
-    // Create order
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: true,
+                data: parts,
+                message: 'Parts retrieved successfully'
+            }));
+
+        } catch (error) {
+            console.error('Error getting parts:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Error fetching parts: ' + error.message
+            }));
+        }
+    }
+
     async createOrder(req, res, data) {
         try {
+            console.log('=== CREATE ORDER CONTROLLER DEBUG ===');
+            console.log('Controller - Received data:', JSON.stringify(data, null, 2));
+
             // Validate required fields
             if (!data.supplier_id || !data.items || !Array.isArray(data.items) || data.items.length === 0) {
+                console.log('Controller - Validation failed: missing required fields');
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -283,9 +243,12 @@ class SupplierController {
                 return;
             }
 
+            console.log('Controller - Basic validation passed');
+
             // Validate supplier exists
             const supplier = await SupplierModel.getSupplierById(data.supplier_id);
             if (!supplier) {
+                console.log('Controller - Supplier not found:', data.supplier_id);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -294,10 +257,15 @@ class SupplierController {
                 return;
             }
 
+            console.log('Controller - Supplier found:', supplier.company_name);
+
             // Validate order items
             for (let i = 0; i < data.items.length; i++) {
                 const item = data.items[i];
+                console.log(`Controller - Validating item ${i + 1}:`, item);
+
                 if (!item.name || !item.quantity || !item.unit_price) {
+                    console.log(`Controller - Item ${i + 1} validation failed: missing fields`);
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({
                         success: false,
@@ -307,6 +275,7 @@ class SupplierController {
                 }
 
                 if (isNaN(item.quantity) || item.quantity < 1) {
+                    console.log(`Controller - Item ${i + 1} validation failed: invalid quantity`);
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({
                         success: false,
@@ -316,6 +285,7 @@ class SupplierController {
                 }
 
                 if (isNaN(item.unit_price) || item.unit_price < 0) {
+                    console.log(`Controller - Item ${i + 1} validation failed: invalid unit_price`);
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({
                         success: false,
@@ -325,7 +295,11 @@ class SupplierController {
                 }
             }
 
+            console.log('Controller - All validations passed, calling SupplierModel.createOrder');
+
             const order = await SupplierModel.createOrder(data);
+
+            console.log('Controller - Order created successfully:', order.id);
 
             res.writeHead(201, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
@@ -335,9 +309,15 @@ class SupplierController {
             }));
 
         } catch (error) {
-            console.error('Error creating order:', error);
+            console.error('Controller - Error creating order:', error);
+            console.error('Controller - Error stack:', error.stack);
+
             res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error creating order: ' + error.message }));
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Error creating order: ' + error.message,
+                error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            }));
         }
     }
 
@@ -414,33 +394,6 @@ class SupplierController {
         }
     }
 
-    // Get low stock parts
-    async getLowStockParts(req, res, query = {}) {
-        try {
-            const parts = await SupplierModel.getAllParts({ ...query, low_stock: 'true' });
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: parts }));
-
-        } catch (error) {
-            console.error('Error getting low stock parts:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching low stock parts: ' + error.message }));
-        }
-    }
-
-    // Compatibility methods for existing routes
-    async getPartsBySupplier(req, res, params) {
-        try {
-            const { supplierId } = params;
-            await this.getAllParts(req, res, { supplier_id: supplierId });
-        } catch (error) {
-            console.error('Error in getPartsBySupplier:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching parts by supplier: ' + error.message }));
-        }
-    }
-
     async getOrdersBySupplier(req, res, params) {
         try {
             const { supplierId } = params;
@@ -449,109 +402,6 @@ class SupplierController {
             console.error('Error in getOrdersBySupplier:', error);
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, message: 'Error fetching orders by supplier: ' + error.message }));
-        }
-    }
-
-    async updateSupplierEvaluation(req, res, data) {
-        try {
-            const { supplierId, quality, punctuality, delivery, overall } = data;
-
-            if (!supplierId) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Supplier ID is required' }));
-                return;
-            }
-
-            // For now, just return success - could implement manual evaluation updates in model
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                success: true,
-                message: 'Evaluation update received (manual evaluation updates not yet implemented)'
-            }));
-
-        } catch (error) {
-            console.error('Error updating supplier evaluation:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error updating evaluation: ' + error.message }));
-        }
-    }
-
-    async createAutoOrders(req, res, data) {
-        try {
-            // Get low stock parts
-            const lowStockParts = await SupplierModel.getAllParts({ low_stock: 'true' });
-
-            if (lowStockParts.length === 0) {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    success: true,
-                    data: { ordersCreated: 0 },
-                    message: 'No low stock parts found'
-                }));
-                return;
-            }
-
-            // Group parts by supplier
-            const partsBySupplier = {};
-            for (const part of lowStockParts) {
-                if (!partsBySupplier[part.supplier_id]) {
-                    partsBySupplier[part.supplier_id] = [];
-                }
-                partsBySupplier[part.supplier_id].push(part);
-            }
-
-            let ordersCreated = 0;
-
-            // Create orders for each supplier
-            for (const [supplierId, parts] of Object.entries(partsBySupplier)) {
-                try {
-                    const supplier = await SupplierModel.getSupplierById(supplierId);
-                    if (!supplier) {
-                        console.warn(`Supplier ${supplierId} not found, skipping auto order`);
-                        continue;
-                    }
-
-                    // Calculate delivery date
-                    const expectedDeliveryDate = new Date();
-                    expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + (supplier.delivery_time_days || 7));
-
-                    // Prepare order items
-                    const orderItems = parts.map(part => {
-                        const orderQuantity = Math.max(part.minimum_stock_level * 2, 10);
-                        return {
-                            name: part.name,
-                            quantity: orderQuantity,
-                            unit_price: part.price
-                        };
-                    });
-
-                    // Create auto order
-                    const orderData = {
-                        supplier_id: parseInt(supplierId),
-                        items: orderItems,
-                        notes: 'Auto-generated order for low stock items',
-                        expected_delivery_date: expectedDeliveryDate.toISOString().split('T')[0]
-                    };
-
-                    await SupplierModel.createOrder(orderData);
-                    ordersCreated++;
-
-                } catch (orderError) {
-                    console.error(`Error creating auto order for supplier ${supplierId}:`, orderError);
-                    // Continue with other suppliers
-                }
-            }
-
-            res.writeHead(201, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                success: true,
-                data: { ordersCreated },
-                message: `${ordersCreated} auto orders created successfully`
-            }));
-
-        } catch (error) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error creating auto orders: ' + error.message }));
         }
     }
 }

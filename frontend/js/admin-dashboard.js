@@ -942,18 +942,6 @@ class AdminDashboard {
             window.location.href = '/login';
         }, 2000);
     }
-
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

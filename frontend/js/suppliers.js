@@ -1,6 +1,6 @@
 let suppliers = [];
-let parts = [];
 let orders = [];
+let parts = [];
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -20,6 +20,11 @@ function setupEventListeners() {
         });
     });
 
+    // Logout functionality
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 
     // Supplier form submission
     const supplierForm = document.getElementById('supplierForm');
@@ -47,12 +52,6 @@ function setupEventListeners() {
             }
         });
     });
-
-    // Order total calculation
-    const orderItems = document.getElementById('orderItems');
-    if (orderItems) {
-        orderItems.addEventListener('input', calculateOrderTotal);
-    }
 }
 
 // Tab management
@@ -83,10 +82,6 @@ function showTab(tabName) {
         case 'suppliers':
             loadSuppliers();
             break;
-        case 'catalog':
-            loadParts();
-            loadSupplierFilter();
-            break;
         case 'orders':
             loadOrders();
             break;
@@ -116,7 +111,38 @@ async function loadSuppliersFromAPI() {
         hideLoading('suppliers-list');
     }
 }
+// Adaugă această funcție în fișierul JavaScript, după loadOrdersFromAPI
+async function loadPartsFromAPI() {
+    try {
+        console.log('Loading parts from API...');
+        const response = await fetch('/api/parts');
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('Parts API response:', result);
+
+        if (result.success) {
+            parts = result.data;
+            console.log('Parts loaded successfully:', parts);
+            console.log('Number of parts:', parts.length);
+
+            // Debug: afișează primele câteva părți
+            if (parts.length > 0) {
+                console.log('First part example:', parts[0]);
+            }
+        } else {
+            throw new Error(result.message || 'Failed to load parts');
+        }
+    } catch (error) {
+        console.error('Error loading parts from API:', error);
+        showNotification('Error loading parts from API: ' + error.message, 'error');
+        // Nu lăsa aplicația să crașeze - setează parts ca array gol
+        parts = [];
+    }
+}
 async function saveSupplierToAPI(supplierData) {
     try {
         const isUpdate = supplierData.id;
@@ -163,29 +189,6 @@ async function deleteSupplierFromAPI(id) {
     }
 }
 
-async function loadPartsFromAPI() {
-    try {
-        showLoading('parts-list');
-        const response = await fetch('/api/parts');
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-            parts = cleanPartData(result.data);
-            loadParts();
-        } else {
-            throw new Error(result.message || 'Failed to load parts');
-        }
-    } catch (error) {
-        showNotification('Error loading parts from API: ' + error.message, 'error');
-        hideLoading('parts-list');
-    }
-}
-
 async function loadOrdersFromAPI() {
     try {
         showLoading('orders-list');
@@ -199,10 +202,14 @@ async function loadOrdersFromAPI() {
 
         if (result.success) {
             orders = result.data;
+            console.log('=== ORDERS DEBUG ===');
+            console.log('All orders from API:', orders);
 
-            orders.forEach((order, index) => {
-                console.log(`  ${index + 1}. ID: "${order.id}" (${typeof order.id}), Status: ${order.status}`);
-            });
+            if (orders && orders.length > 0) {
+                console.log('First order complete structure:');
+                console.log(JSON.stringify(orders[0], null, 2));
+            }
+            console.log('=== END DEBUG ===');
 
             loadOrders();
         } else {
@@ -213,7 +220,6 @@ async function loadOrdersFromAPI() {
         hideLoading('orders-list');
     }
 }
-
 async function saveOrderToAPI(orderData) {
     try {
         const response = await fetch('/api/orders', {
@@ -237,6 +243,93 @@ async function saveOrderToAPI(orderData) {
     }
 }
 
+function saveOrder() {
+    console.log('saveOrder called');
+
+    const supplierIdElement = document.getElementById('orderSupplier');
+    const notesElement = document.getElementById('orderNotes');
+
+    if (!supplierIdElement) {
+        showNotification('Order form elements not found', 'error');
+        return;
+    }
+
+    const supplierId = supplierIdElement.value;
+    const supplier = suppliers.find(s => s.id === parseInt(supplierId));
+    const notes = notesElement?.value || '';
+
+    if (!supplierId) {
+        showNotification('Please select a supplier', 'error');
+        return;
+    }
+
+    const orderItems = [];
+    document.querySelectorAll('.order-item').forEach(item => {
+        const partSelect = item.querySelector('.part-select');
+        const quantity = parseInt(item.querySelector('.quantity')?.value);
+        const unitPrice = parseFloat(item.querySelector('.unit-price')?.value);
+
+        console.log('Processing item:', {
+            partSelectValue: partSelect?.value,
+            quantity,
+            unitPrice,
+            partsArray: parts
+        });
+
+        if (partSelect && partSelect.value && quantity && unitPrice) {
+            // Găsește partea selectată pentru a obține numele
+            const selectedPart = parts.find(p => p.id === parseInt(partSelect.value));
+
+            console.log('Selected part:', selectedPart);
+
+            if (selectedPart) {
+                orderItems.push({
+                    name: selectedPart.name,
+                    part_id: selectedPart.id,
+                    quantity,
+                    unit_price: unitPrice
+                });
+            } else {
+                console.error('Part not found for ID:', partSelect.value);
+                // Fallback - folosește textul din option
+                const selectedOption = partSelect.options[partSelect.selectedIndex];
+                if (selectedOption) {
+                    orderItems.push({
+                        name: selectedOption.text.split(' - ')[0],
+                        part_id: parseInt(partSelect.value),
+                        quantity,
+                        unit_price: unitPrice
+                    });
+                }
+            }
+        }
+    });
+
+    console.log('=== SAVING ORDER ===');
+    console.log('Final order items being sent:', orderItems);
+
+    if (orderItems.length === 0) {
+        showNotification('Please add at least one order item', 'error');
+        return;
+    }
+
+    const expectedDelivery = new Date();
+    expectedDelivery.setDate(expectedDelivery.getDate() + (supplier.delivery_time_days || supplier.deliveryTime || 7));
+
+    const orderData = {
+        supplier_id: parseInt(supplierId),
+        items: orderItems,
+        notes: notes,
+        expected_delivery_date: expectedDelivery.toISOString().split('T')[0]
+    };
+
+    console.log('Order data structure:', orderData);
+
+    saveOrderToAPI(orderData);
+    closeOrderModal();
+}
+
+
 async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
     try {
         const response = await fetch(`/api/orders/${orderId}/status`, {
@@ -245,7 +338,6 @@ async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, 
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                orderId: orderId,
                 status: status,
                 actual_delivery_date: actualDeliveryDate,
                 notes: notes
@@ -257,10 +349,6 @@ async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, 
         if (result.success) {
             showNotification(result.message, 'success');
             await loadOrdersFromAPI();
-
-            if (status === 'delivered') {
-                await loadPartsFromAPI();
-            }
         } else {
             throw new Error(result.message || 'Failed to update order status');
         }
@@ -269,7 +357,7 @@ async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, 
     }
 }
 
-
+// Display functions
 function loadSuppliers() {
     const suppliersList = document.getElementById('suppliers-list');
 
@@ -287,7 +375,7 @@ function loadSuppliers() {
         <div class="supplier-card">
             <div class="supplier-header">
                 <div>
-                    <h3 class="supplier-name">${supplier.company_name || suppliFer.name}</h3>
+                    <h3 class="supplier-name">${supplier.company_name || supplier.name}</h3>
                     <p class="supplier-specialization">${supplier.specialization || 'General'}</p>
                 </div>
             </div>
@@ -313,43 +401,6 @@ function loadSuppliers() {
     `).join('');
 }
 
-function loadParts() {
-    const partsList = document.getElementById('parts-list');
-
-    if (!partsList) {
-        console.error('parts-list element not found');
-        return;
-    }
-
-    if (parts.length === 0) {
-        partsList.innerHTML = '<div class="empty-state"><h3>No parts found</h3><p>Parts catalog is empty</p></div>';
-        return;
-    }
-
-    const filteredParts = filterPartsBySupplier();
-
-    partsList.innerHTML = filteredParts.map(part => {
-        const stockStatus = getStockStatus(part.stock_quantity || part.stock, part.minimum_stock_level || part.minStock);
-
-        const price = parseFloat(part.price) || 0;
-
-        return `
-            <div class="part-card">
-                <h3 class="part-name">${part.name}</h3>
-                <p class="part-supplier">Supplier: ${part.supplier_name || part.supplierName}</p>
-                <div class="part-price">$${price.toFixed(2)}</div>
-                <div class="part-stock ${stockStatus.class}">
-                    Stock: ${part.stock_quantity || part.stock} units ${stockStatus.indicator}
-                </div>
-                <div class="part-actions">
-                    <button class="btn btn-sm secondary-btn" onclick="editPart(${part.id})">Edit</button>
-                    <button class="btn btn-sm primary-btn" onclick="orderPart(${part.id})">Order</button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
 function loadOrders() {
     const ordersList = document.getElementById('orders-list');
 
@@ -365,46 +416,74 @@ function loadOrders() {
     ordersList.innerHTML = orders.map(order => {
         const totalAmount = parseFloat(order.total_amount || order.total || 0);
 
+        // Debug log pentru fiecare comandă
+        console.log('Processing order:', order.id, 'Structure:', order);
+
+        // Încearcă să obții numele produsului din noile coloane sau din items array (pentru compatibilitate)
+        let productName = 'Unknown Product';
+        let quantity = 1;
+        let unitPrice = totalAmount;
+
+        if (order.product_name) {
+            // Folosește noua structură
+            productName = order.product_name;
+            quantity = order.product_quantity || 1;
+            unitPrice = parseFloat(order.product_unit_price || totalAmount);
+            console.log('Using new structure:', productName, quantity, unitPrice);
+        } else if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            // Folosește vechea structură pentru compatibilitate
+            const firstItem = order.items[0];
+            console.log('First item from items array:', firstItem);
+
+            // Încearcă toate câmpurile posibile pentru numele produsului
+            productName = firstItem.name ||
+                firstItem.part_name ||
+                firstItem.item_name ||
+                firstItem.description ||
+                firstItem.product_name ||
+                `Product #${order.id}`;
+
+            quantity = firstItem.quantity || firstItem.qty || 1;
+            unitPrice = parseFloat(firstItem.unit_price || firstItem.unitPrice || firstItem.price || 0);
+
+            console.log('Using items structure:', {
+                name: firstItem.name,
+                part_name: firstItem.part_name,
+                resolved_name: productName,
+                quantity: quantity,
+                unitPrice: unitPrice
+            });
+        } else {
+            // Fallback - folosește ID-ul comenzii ca nume
+            productName = `Order Items #${order.id}`;
+            quantity = 1;
+            unitPrice = totalAmount;
+            console.log('Using fallback structure for order:', order.id);
+        }
+
         return `
         <div class="order-card ${order.status}">
             <div class="order-header">
-                <h3 class="order-number">${order.id}</h3>
-                <span class="order-status status-${order.status}">${order.status}</span>
+                <h3 class="order-number">ORDER #${order.id}</h3>
+                <span class="order-status status-${order.status}">${order.status ? order.status.toUpperCase() : 'ORDERED'}</span>
             </div>
             <p class="order-supplier">Supplier: ${order.supplier_name || order.supplierName || 'N/A'}</p>
             <div class="order-items">
-                ${order.items ? order.items.map(item => {
-            const unitPrice = parseFloat(item.unit_price || item.unitPrice) || 0;
-            const quantity = parseInt(item.quantity) || 0;
-            const total = quantity * unitPrice;
-
-            return `
-                        <div class="order-item">
-                            <span>${item.name || item.part_name} (${quantity}x)</span>
-                            <span>$${total.toFixed(2)}</span>
-                        </div>
-                    `;
-        }).join('') : ''}
+                <div class="order-item-display">
+                    <span>${productName} (${quantity}x)</span>
+                    <span>RON ${(quantity * unitPrice).toFixed(2)}</span>
+                </div>
             </div>
-            <div class="order-total">Total: $${totalAmount.toFixed(2)}</div>
+            <div class="order-total">Total: RON ${totalAmount.toFixed(2)}</div>
             <div class="order-date">Ordered: ${formatDate(order.order_date || order.orderDate)}</div>
             ${order.expected_delivery_date || order.estimatedDelivery ? `<div class="order-date">Est. Delivery: ${formatDate(order.expected_delivery_date || order.estimatedDelivery)}</div>` : ''}
+            ${order.actual_delivery_date ? `<div class="order-date">Actual Delivery: ${formatDate(order.actual_delivery_date)}</div>` : ''}
             <div class="order-actions">
-                <button class="btn btn-sm secondary-btn" onclick="viewOrderDetails('${order.id}')">View Details</button>
                 ${order.status !== 'delivered' ? `<button class="btn btn-sm primary-btn" onclick="updateOrderStatus('${order.id}')">Update Status</button>` : ''}
             </div>
         </div>
-    `;
+        `;
     }).join('');
-}
-
-function cleanPartData(parts) {
-    return parts.map(part => ({
-        ...part,
-        price: parseFloat(part.price) || 0,
-        stock_quantity: parseInt(part.stock_quantity) || 0,
-        minimum_stock_level: parseInt(part.minimum_stock_level) || 0
-    }));
 }
 
 // Modal functions
@@ -461,6 +540,143 @@ function populateSupplierForm(supplier) {
         }
     }
 }
+// Funcție pentru actualizarea prețului când se selectează o parte
+function updatePartPrice(selectElement) {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const price = selectedOption.getAttribute('data-price');
+
+    const orderItem = selectElement.closest('.order-item');
+    const priceInput = orderItem.querySelector('.unit-price');
+
+    if (price && priceInput) {
+        priceInput.value = parseFloat(price).toFixed(2);
+        calculateOrderTotal();
+    }
+}
+
+function openOrderModal() {
+    const modal = document.getElementById('orderModal');
+    const supplierSelect = document.getElementById('orderSupplier');
+
+    if (!modal || !supplierSelect) {
+        return;
+    }
+
+    // Verifică dacă parts sunt încărcate
+    if (!parts || parts.length === 0) {
+        showNotification('Parts are still loading. Please wait...', 'warning');
+        // Încearcă să reîncarchezi parts-urile
+        loadPartsFromAPI().then(() => {
+            // Reîncearcă să deschizi modalul după încărcare
+            if (parts && parts.length > 0) {
+                openOrderModal();
+            } else {
+                showNotification('No parts available. Please add parts first.', 'error');
+            }
+        });
+        return;
+    }
+
+    // Populate supplier dropdown
+    supplierSelect.innerHTML = '<option value="">Select Supplier</option>' +
+        suppliers.map(supplier => `<option value="${supplier.id}">${supplier.company_name || supplier.name}</option>`).join('');
+
+    const orderForm = document.getElementById('orderForm');
+    if (orderForm) {
+        orderForm.reset();
+    }
+
+    // Structură nouă cu dropdown pentru parts
+    const orderItems = document.getElementById('orderItems');
+    if (orderItems) {
+        orderItems.innerHTML = createOrderItemHTML();
+    }
+
+    calculateOrderTotal();
+    modal.style.display = 'flex';
+}
+
+// Funcție helper pentru crearea HTML-ului unui order item
+function createOrderItemHTML() {
+    // Verifică dacă parts sunt încărcate
+    if (!parts || parts.length === 0) {
+        console.warn('Parts not loaded yet or empty');
+        return `
+            <div class="order-item">
+                <div class="form-row">
+                    <div class="form-group">
+                        <select class="part-select" required onchange="updatePartPrice(this)">
+                            <option value="">Loading parts...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="number" placeholder="Quantity" class="quantity" min="1" required onchange="calculateOrderTotal()">
+                    </div>
+                    <div class="form-group">
+                        <input type="number" placeholder="Unit Price" class="unit-price" step="0.01" min="0" required readonly>
+                    </div>
+                    <button type="button" class="btn danger-btn" onclick="removeOrderItem(this)">Remove</button>
+                </div>
+            </div>
+        `;
+    }
+
+    const partsOptions = parts.map(part =>
+        `<option value="${part.id}" data-price="${part.price}">${part.name} - RON ${parseFloat(part.price).toFixed(2)}</option>`
+    ).join('');
+
+    return `
+        <div class="order-item">
+            <div class="form-row">
+                <div class="form-group">
+                    <select class="part-select" required onchange="updatePartPrice(this)">
+                        <option value="">Select Part</option>
+                        ${partsOptions}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="number" placeholder="Quantity" class="quantity" min="1" required onchange="calculateOrderTotal()">
+                </div>
+                <div class="form-group">
+                    <input type="number" placeholder="Unit Price" class="unit-price" step="0.01" min="0" required readonly>
+                </div>
+                <button type="button" class="btn danger-btn" onclick="removeOrderItem(this)">Remove</button>
+            </div>
+        </div>
+    `;
+}
+function createOrderItemHTML() {
+    const partsOptions = parts.map(part =>
+        `<option value="${part.id}" data-price="${part.price}">${part.name} - RON ${parseFloat(part.price).toFixed(2)}</option>`
+    ).join('');
+
+    return `
+        <div class="order-item">
+            <div class="form-row">
+                <div class="form-group">
+                    <select class="part-select" required onchange="updatePartPrice(this)">
+                        <option value="">Select Part</option>
+                        ${partsOptions}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="number" placeholder="Quantity" class="quantity" min="1" required onchange="calculateOrderTotal()">
+                </div>
+                <div class="form-group">
+                    <input type="number" placeholder="Unit Price" class="unit-price" step="0.01" min="0" required readonly>
+                </div>
+                <button type="button" class="btn danger-btn" onclick="removeOrderItem(this)">Remove</button>
+            </div>
+        </div>
+    `;
+}
+
+function closeOrderModal() {
+    const modal = document.getElementById('orderModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
 
 // Save functions
 function saveSupplier() {
@@ -488,66 +704,292 @@ function saveSupplier() {
         return;
     }
 
-    if (typeof saveSupplierToAPI === 'function') {
-        saveSupplierToAPI(formData);
-    } else {
-        // Fallback to local storage
-        if (formData.id) {
-            const index = suppliers.findIndex(s => s.id === parseInt(formData.id));
-            if (index !== -1) {
-                suppliers[index] = { ...suppliers[index], ...formData };
-                showNotification('Supplier updated successfully!', 'success');
-            }
-        } else {
-            const newId = suppliers.length > 0 ? Math.max(...suppliers.map(s => s.id)) + 1 : 1;
-            suppliers.push({
-                id: newId,
-                ...formData,
-                rating: 0,
-                evaluation: { quality: 0, punctuality: 0, delivery: 0, overall: 0 }
-            });
-            showNotification('Supplier added successfully!', 'success');
-        }
-        loadSuppliers();
-    }
-
+    saveSupplierToAPI(formData);
     closeSupplierModal();
 }
 
-// Utility functions
-function getStockStatus(stock, minStock) {
-    if (stock === 0) {
-        return { class: 'stock-out' };
-    } else if (stock <= minStock) {
-        return { class: 'stock-low' };
-    } else {
-        return { class: 'stock-available' };
+
+
+// Order item management
+function addOrderItem() {
+    const container = document.getElementById('orderItems');
+    if (!container) return;
+
+    const newItem = document.createElement('div');
+    newItem.className = 'order-item';
+    newItem.innerHTML = createOrderItemHTML();
+    container.appendChild(newItem);
+}
+
+function removeOrderItem(button) {
+    const orderItem = button.closest('.order-item');
+    if (document.querySelectorAll('.order-item').length > 1) {
+        orderItem.remove();
+        calculateOrderTotal();
     }
 }
 
-function filterPartsBySupplier() {
-    const supplierFilter = document.getElementById('supplierFilter');
-    const categoryFilter = document.getElementById('categoryFilter');
+function calculateOrderTotal() {
+    const orderItems = document.querySelectorAll('.order-item');
+    let total = 0;
 
-    const supplierValue = supplierFilter?.value || '';
-    const categoryValue = categoryFilter?.value || '';
+    orderItems.forEach(item => {
+        const quantity = parseFloat(item.querySelector('.quantity')?.value) || 0;
+        const unitPrice = parseFloat(item.querySelector('.unit-price')?.value) || 0;
+        total += quantity * unitPrice;
+    });
 
-    return parts.filter(part => {
-        const matchesSupplier = !supplierValue || (part.supplier_id || part.supplierId).toString() === supplierValue;
-        const matchesCategory = !categoryValue || part.category === categoryValue;
-        return matchesSupplier && matchesCategory;
+    const totalElement = document.getElementById('orderTotal');
+    if (totalElement) {
+        totalElement.textContent = total.toFixed(2);
+    }
+}
+
+// Order status management
+function updateOrderStatus(orderId) {
+    const order = orders.find(o => o.id == orderId);
+
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+
+    openOrderStatusModal(orderId);
+}
+
+function openOrderStatusModal(orderId) {
+    const order = orders.find(o => o.id == orderId);
+
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+
+    const totalAmount = parseFloat(order.total_amount || order.total || 0);
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'orderStatusModal';
+    modal.style.display = 'flex';
+
+    const statuses = [
+        { value: 'ordered', label: 'Ordered', color: '#6c757d', description: 'Order has been placed' },
+        { value: 'in_transit', label: 'In Transit', color: '#ffc107', description: 'Order is being shipped/in transit' },
+        { value: 'delivered', label: 'Delivered', color: '#28a745', description: 'Order has been delivered' },
+        { value: 'cancelled', label: 'Cancelled', color: '#dc3545', description: 'Order has been cancelled' }
+    ];
+
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Update Order Status</h2>
+                <span class="close-modal" onclick="closeOrderStatusModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="order-info">
+                    <h3>Order #${order.id}</h3>
+                    <p><strong>Supplier:</strong> ${order.supplier_name || order.supplierName || 'N/A'}</p>
+                    <p><strong>Current Status:</strong> <span class="status-badge status-${order.status}">${(order.status || 'ordered').toUpperCase()}</span></p>
+                    <p><strong>Total:</strong> RON ${totalAmount.toFixed(2)}</p>
+                </div>
+
+                <form id="orderStatusForm">
+                    <input type="hidden" id="statusOrderId" value="${order.id}">
+                    
+                    <div class="form-group">
+                        <label>Select New Status:</label>
+                        <div class="status-options">
+                            ${statuses.map(status => `
+                                <div class="status-option ${status.value === order.status ? 'disabled' : ''}" 
+                                     ${status.value === order.status ? '' : `onclick="selectOrderStatus('${status.value}')"`}>
+                                    <div class="status-indicator" style="background-color: ${status.color}"></div>
+                                    <div class="status-info">
+                                        <div class="status-label">${status.label}</div>
+                                        <div class="status-description">${status.description}</div>
+                                    </div>
+                                    ${status.value === order.status ? '<span class="current-badge">Current</span>' : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="deliveryDateGroup" style="display: none;">
+                        <label for="actualDeliveryDate">Actual Delivery Date:</label>
+                        <input type="date" id="actualDeliveryDate" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="statusNotes">Notes (optional):</label>
+                        <textarea id="statusNotes" rows="3" placeholder="Add any notes about this status change..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn secondary-btn" onclick="closeOrderStatusModal()">Cancel</button>
+                        <button type="submit" class="btn primary-btn" id="updateStatusBtn" disabled>Update Status</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add form submit handler
+    document.getElementById('orderStatusForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        updateOrderStatusFromModal();
+    });
+
+    // Close on outside click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeOrderStatusModal();
+        }
     });
 }
 
-function loadSupplierFilter() {
-    const supplierFilter = document.getElementById('supplierFilter');
-    if (supplierFilter) {
-        supplierFilter.innerHTML = '<option value="">All Suppliers</option>' +
-            suppliers.map(supplier => `<option value="${supplier.id}">${supplier.company_name || supplier.name}</option>`).join('');
+function selectOrderStatus(status) {
+    // Remove previous selection
+    document.querySelectorAll('#orderStatusModal .status-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+
+    // Select current option by status value
+    const currentOption = document.querySelector(`#orderStatusModal .status-option[onclick*="${status}"]`);
+    if (currentOption) {
+        currentOption.classList.add('selected');
+    }
+
+    // Store selected status
+    document.getElementById('orderStatusForm').setAttribute('data-selected-status', status);
+
+    // Enable update button
+    document.getElementById('updateStatusBtn').disabled = false;
+
+    // Show delivery date field for delivered status
+    const deliveryDateGroup = document.getElementById('deliveryDateGroup');
+    if (status === 'delivered') {
+        deliveryDateGroup.style.display = 'block';
+    } else {
+        deliveryDateGroup.style.display = 'none';
     }
 }
 
+async function updateOrderStatusFromModal() {
+    const orderId = document.getElementById('statusOrderId').value;
+    const selectedStatus = document.getElementById('orderStatusForm').getAttribute('data-selected-status');
+    const actualDeliveryDate = document.getElementById('actualDeliveryDate').value;
+    const notes = document.getElementById('statusNotes').value;
+
+    if (!selectedStatus) {
+        showNotification('Please select a new status', 'error');
+        return;
+    }
+
+    try {
+        const updateBtn = document.getElementById('updateStatusBtn');
+        updateBtn.disabled = true;
+        updateBtn.textContent = 'Updating...';
+
+        await updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate, notes);
+        closeOrderStatusModal();
+
+    } catch (error) {
+        showNotification('Error updating order status: ' + error.message, 'error');
+
+        const updateBtn = document.getElementById('updateStatusBtn');
+        updateBtn.disabled = false;
+        updateBtn.textContent = 'Update Status';
+    }
+}
+
+function closeOrderStatusModal() {
+    const modal = document.getElementById('orderStatusModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.removeChild(modal);
+    }
+}
+
+// Action functions
+function editSupplier(id) {
+    openSupplierModal(id);
+}
+
+function deleteSupplier(id) {
+    if (confirm('Are you sure you want to delete this supplier?')) {
+        deleteSupplierFromAPI(id);
+    }
+}
+
+function viewOrderDetails(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) {
+        showNotification('Order not found', 'error');
+        return;
+    }
+
+    const orderTotal = parseFloat(order.total_amount || order.total || 0);
+    const orderDate = formatDate(order.order_date || order.orderDate);
+    const supplierName = order.supplier_name || order.supplierName || 'Unknown Supplier';
+
+    let productDetails = '';
+
+    console.log('Viewing order details for:', order.id, order);
+
+    if (order.product_name) {
+        // Folosește noua structură
+        const productName = order.product_name;
+        const quantity = order.product_quantity || 1;
+        const unitPrice = parseFloat(order.product_unit_price || orderTotal);
+
+        productDetails = `Product: ${productName}
+Quantity: ${quantity}
+Unit Price: RON ${unitPrice.toFixed(2)}
+Line Total: RON ${(quantity * unitPrice).toFixed(2)}`;
+    } else if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+        // Folosește vechea structură pentru compatibilitate
+        productDetails = 'Products:\n' + order.items.map((item, index) => {
+
+
+            const name = item.name ||
+                item.part_name ||
+                item.item_name ||
+                item.description ||
+                item.product_name ||
+                `Item #${index + 1}`;
+
+            const qty = item.quantity || item.qty || 1;
+            const price = parseFloat(item.unit_price || item.unitPrice || item.price || 0);
+
+            console.log(`Resolved item ${index}:`, { name, qty, price });
+
+            return `• ${name} (${qty}x) - RON ${(qty * price).toFixed(2)}`;
+        }).join('\n');
+    } else {
+        productDetails = 'Product details not available';
+    }
+
+    const details = `Order Details:
+
+Order ID: ${order.id}
+Supplier: ${supplierName}
+Status: ${(order.status || 'ordered').toUpperCase()}
+Total: RON ${orderTotal.toFixed(2)}
+Order Date: ${orderDate}
+${order.expected_delivery_date ? `Expected Delivery: ${formatDate(order.expected_delivery_date)}` : ''}
+${order.actual_delivery_date ? `Actual Delivery: ${formatDate(order.actual_delivery_date)}` : ''}
+
+${productDetails}
+
+${order.notes ? `Notes: ${order.notes}` : ''}`;
+
+    alert(details);
+}
+
+// Utility functions
 function formatDate(dateString) {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString();
 }
 
@@ -586,439 +1028,15 @@ function hideLoading(elementId) {
     }
 }
 
-// Action functions
-function editSupplier(id) {
-    openSupplierModal(id);
-}
-
-function deleteSupplier(id) {
-    if (confirm('Are you sure you want to delete this supplier?')) {
-        if (typeof deleteSupplierFromAPI === 'function') {
-            deleteSupplierFromAPI(id);
-        } else {
-            suppliers = suppliers.filter(s => s.id !== id);
-            loadSuppliers();
-            showNotification('Supplier deleted successfully!', 'success');
-        }
+function handleLogout() {
+    if (confirm('Are you sure you want to log out?')) {
+        window.location.href = '/homepage';
     }
 }
 
-function viewOrderDetails(orderId) {
-    const order = orders.find(o => o.id === orderId);
-    if (order) {
-        const orderTotal = order.total_amount || order.total;
-        const orderDate = order.order_date || order.orderDate;
-        const supplierName = order.supplier_name || order.supplierName;
-
-        const itemsText = order.items ? order.items.map(item =>
-            `${item.name || item.part_name} (${item.quantity}x) - ${(item.quantity * (item.unit_price || item.unitPrice)).toFixed(2)}`
-        ).join('\n') : 'No items';
-
-        alert(`Order Details:\n\nOrder ID: ${order.id}\nSupplier: ${supplierName}\nStatus: ${order.status}\nTotal: ${orderTotal.toFixed(2)}\nOrder Date: ${orderDate}\n\nItems:\n${itemsText}`);
-    }
-}
-
-function editPart(id) {
-    const part = parts.find(p => p.id === id);
-    if (part) {
-        const partData = `
-            Part: ${part.name}
-            Category: ${part.category}
-            Price: ${part.price}
-            Stock: ${part.stock_quantity || part.stock}
-            Min Stock: ${part.minimum_stock_level || part.minStock}
-            Supplier: ${part.supplier_name || part.supplierName}
-        `;
-        alert(`Edit Part:\n\n${partData}\n\nPart editing functionality can be implemented here.`);
-    }
-}
-
-function orderPart(id) {
-    const part = parts.find(p => p.id === id);
-    if (part) {
-        openOrderModal();
-
-        const orderSupplier = document.getElementById('orderSupplier');
-        if (orderSupplier) {
-            orderSupplier.value = part.supplier_id || part.supplierId;
-        }
-
-        const firstPartName = document.querySelector('.part-name');
-        const firstUnitPrice = document.querySelector('.unit-price');
-
-        if (firstPartName && firstUnitPrice) {
-            firstPartName.value = part.name;
-
-            const price = parseFloat(part.price) || 0;
-            firstUnitPrice.value = price.toFixed(2);
-
-            const currentStock = part.stock_quantity || part.stock || 0;
-            const minStock = part.minimum_stock_level || part.minStock || 10;
-            const suggestedQuantity = Math.max(minStock - currentStock, 1);
-
-            const firstQuantity = document.querySelector('.quantity');
-            if (firstQuantity) {
-                firstQuantity.value = suggestedQuantity;
-                calculateOrderTotal();
-            }
-        }
-    }
-}
-
-
-function openOrderModal() {
-    const modal = document.getElementById('orderModal');
-    const supplierSelect = document.getElementById('orderSupplier');
-
-    if (!modal || !supplierSelect) {
-        return;
-    }
-
-    //supplier dropdown
-    supplierSelect.innerHTML = '<option value="">Select Supplier</option>' +
-        suppliers.map(supplier => `<option value="${supplier.id}">${supplier.company_name || supplier.name}</option>`).join('');
-
-    const orderForm = document.getElementById('orderForm');
-    if (orderForm) {
-        orderForm.reset();
-    }
-
-    modal.style.display = 'flex';
-}
-
-function closeOrderModal() {
-    const modal = document.getElementById('orderModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-function addOrderItem() {
-    const container = document.getElementById('orderItems');
-    if (!container) return;
-
-    const newItem = document.createElement('div');
-    newItem.className = 'order-item';
-    newItem.innerHTML = `
-        <div class="form-row">
-            <div class="form-group">
-                <input type="text" placeholder="Part Name" class="part-name" required>
-            </div>
-            <div class="form-group">
-                <input type="number" placeholder="Quantity" class="quantity" min="1" required>
-            </div>
-            <div class="form-group">
-                <input type="number" placeholder="Unit Price" class="unit-price" step="0.01" min="0" required>
-            </div>
-            <button type="button" class="btn danger-btn" onclick="removeOrderItem(this)">Remove</button>
-        </div>
-    `;
-    container.appendChild(newItem);
-}
-
-function removeOrderItem(button) {
-    const orderItem = button.closest('.order-item');
-    if (document.querySelectorAll('.order-item').length > 1) {
-        orderItem.remove();
-        calculateOrderTotal();
-    }
-}
-
-function calculateOrderTotal() {
-    const orderItems = document.querySelectorAll('.order-item');
-    let total = 0;
-
-    orderItems.forEach(item => {
-        const quantity = parseFloat(item.querySelector('.quantity')?.value) || 0;
-        const unitPrice = parseFloat(item.querySelector('.unit-price')?.value) || 0;
-        total += quantity * unitPrice;
-    });
-
-    const totalElement = document.getElementById('orderTotal');
-    if (totalElement) {
-        totalElement.textContent = total.toFixed(2);
-    }
-}
-
-function saveOrder() {
-    const supplierIdElement = document.getElementById('orderSupplier');
-    const notesElement = document.getElementById('orderNotes');
-
-    if (!supplierIdElement) {
-        showNotification('Order form elements not found', 'error');
-        return;
-    }
-
-    const supplierId = supplierIdElement.value;
-    const supplier = suppliers.find(s => s.id === parseInt(supplierId));
-    const notes = notesElement?.value || '';
-
-    if (!supplierId) {
-        showNotification('Please select a supplier', 'error');
-        return;
-    }
-
-    const orderItems = [];
-    document.querySelectorAll('.order-item').forEach(item => {
-        const partName = item.querySelector('.part-name')?.value;
-        const quantity = parseInt(item.querySelector('.quantity')?.value);
-        const unitPrice = parseFloat(item.querySelector('.unit-price')?.value);
-
-        if (partName && quantity && unitPrice) {
-            orderItems.push({ name: partName, quantity, unit_price: unitPrice });
-        }
-    });
-
-    if (orderItems.length === 0) {
-        showNotification('Please add at least one order item', 'error');
-        return;
-    }
-
-    const total = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-    const orderDate = new Date().toISOString().split('T')[0];
-    const expectedDelivery = new Date();
-    expectedDelivery.setDate(expectedDelivery.getDate() + (supplier.delivery_time_days || supplier.deliveryTime || 7));
-
-    const orderData = {
-        supplier_id: parseInt(supplierId),
-        items: orderItems,
-        notes: notes,
-        expected_delivery_date: expectedDelivery.toISOString().split('T')[0]
-    };
-
-    if (typeof saveOrderToAPI === 'function') {
-        saveOrderToAPI(orderData);
-    } else {
-        const newOrder = {
-            id: `ORD-${String(orders.length + 1).padStart(3, '0')}`,
-            supplier_id: parseInt(supplierId),
-            supplier_name: supplier.company_name || supplier.name,
-            status: 'ordered',
-            order_date: orderDate,
-            expected_delivery_date: expectedDelivery.toISOString().split('T')[0],
-            items: orderItems,
-            total_amount: total,
-            notes: notes
-        };
-
-        orders.unshift(newOrder);
-        showNotification('Order placed successfully!', 'success');
-        loadOrders();
-    }
-
-    closeOrderModal();
-}
-
-function generateAutoOrder(part) {
-    const supplierId = part.supplier_id || part.supplierId;
-    const supplier = suppliers.find(s => s.id === supplierId);
-    if (supplier) {
-        const minStock = part.minimum_stock_level || part.minStock || 10;
-        const orderQuantity = Math.max(minStock * 2, 10);
-
-        const autoOrder = {
-            id: `AUTO-${String(orders.length + 1).padStart(3, '0')}`,
-            supplier_id: supplier.id,
-            supplier_name: supplier.company_name || supplier.name,
-            status: 'ordered',
-            order_date: new Date().toISOString().split('T')[0],
-            expected_delivery_date: new Date(Date.now() + (supplier.delivery_time_days || supplier.deliveryTime || 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            items: [{ name: part.name, quantity: orderQuantity, unit_price: part.price }],
-            total_amount: orderQuantity * part.price,
-            notes: 'Auto-generated order for low stock'
-        };
-
-        orders.unshift(autoOrder);
-        showNotification(`Auto-order generated for ${part.name}`, 'info');
-    }
-}
-
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        window.location.href = '/login';
-    }
-}
-
-function openOrderStatusModal(orderId) {
-    let order = null;
-
-    order = orders.find(o => o.id === orderId);
-
-    if (!order) {
-        order = orders.find(o => String(o.id) === String(orderId));
-    }
-
-    if (!order) {
-        if (!isNaN(orderId)) {
-            order = orders.find(o => Number(o.id) === Number(orderId));
-        }
-    }
-
-    if (!order) {
-        showNotification('Order not found', 'error');
-        return;
-    }
-    const totalAmount = parseFloat(order.total_amount || order.total || 0);
-    console.log('Total amount debug:', {
-        raw_total_amount: order.total_amount,
-        raw_total: order.total,
-        parsed_total: totalAmount,
-        type: typeof totalAmount
-    });
-
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.id = 'orderStatusModal';
-    modal.style.display = 'flex';
-
-    const statuses = [
-        { value: 'ordered', label: 'Ordered', color: '#17a2b8' },
-        { value: 'confirmed', label: 'Confirmed', color: '#4ecdc4' },
-        { value: 'in_transit', label: 'In Transit', color: '#ffc107' },
-        { value: 'delivered', label: 'Delivered', color: '#28a745' },
-        { value: 'cancelled', label: 'Cancelled', color: '#dc3545' }
-    ];
-
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Update Order Status</h2>
-                <span class="close-modal" onclick="closeOrderStatusModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="order-info">
-                    <h3>Order: ${order.id}</h3>
-                    <p><strong>Supplier:</strong> ${order.supplier_name || order.supplierName || 'N/A'}</p>
-                    <p><strong>Current Status:</strong> <span class="status-badge status-${order.status}">${order.status}</span></p>
-                    <p><strong>Total:</strong> $${totalAmount.toFixed(2)}</p>
-                </div>
-
-                <form id="orderStatusForm">
-                    <input type="hidden" id="statusOrderId" value="${order.id}">
-                    
-                    <div class="form-group">
-                        <label>Select New Status:</label>
-                        <div class="status-options">
-                            ${statuses.map(status => `
-                                <div class="status-option ${status.value === order.status ? 'disabled' : ''}" 
-                                     ${status.value === order.status ? '' : `onclick="selectOrderStatus('${status.value}')"`}>
-                                    <div class="status-indicator" style="background-color: ${status.color}"></div>
-                                    <div class="status-info">
-                                        <div class="status-label">${status.label}</div>
-                                        <div class="status-description">${getStatusDescription(status.value)}</div>
-                                    </div>
-                                    ${status.value === order.status ? '<span class="current-badge">Current</span>' : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-
-                    <div class="form-group" id="deliveryDateGroup" style="display: none;">
-                        <label for="actualDeliveryDate">Actual Delivery Date:</label>
-                        <input type="date" id="actualDeliveryDate" value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="statusNotes">Notes (optional):</label>
-                        <textarea id="statusNotes" rows="3" placeholder="Add any notes about this status change..."></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn secondary-btn" onclick="closeOrderStatusModal()">Cancel</button>
-                        <button type="submit" class="btn primary-btn" id="updateStatusBtn" disabled>Update Status</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    document.getElementById('orderStatusForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        updateOrderStatusFromModal();
-    });
-
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeOrderStatusModal();
-        }
-    });
-}
-
-
-async function updateOrderStatusFromModal() {
-    const orderId = document.getElementById('statusOrderId').value;
-    const selectedStatus = document.getElementById('orderStatusForm').getAttribute('data-selected-status');
-    const actualDeliveryDate = document.getElementById('actualDeliveryDate').value;
-    const notes = document.getElementById('statusNotes').value;
-
-    console.log('Frontend - updateOrderStatusFromModal called with:');
-    console.log('  orderId:', orderId, 'Type:', typeof orderId);
-    console.log('  selectedStatus:', selectedStatus);
-
-    if (!selectedStatus) {
-        showNotification('Please select a new status', 'error');
-        return;
-    }
-
-    try {
-        document.getElementById('updateStatusBtn').disabled = true;
-        document.getElementById('updateStatusBtn').textContent = 'Updating...';
-        await updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate, notes);
-
-        closeOrderStatusModal();
-
-    } catch (error) {
-        showNotification('Error updating order status: ' + error.message, 'error');
-
-        document.getElementById('updateStatusBtn').disabled = false;
-        document.getElementById('updateStatusBtn').textContent = 'Update Status';
-    }
-}
-
-
-function getStatusDescription(status) {
-    const descriptions = {
-        'ordered': 'Order has been placed with supplier',
-        'confirmed': 'Supplier has confirmed the order',
-        'in_transit': 'Order is being shipped',
-        'delivered': 'Order has been delivered',
-        'cancelled': 'Order has been cancelled'
-    };
-    return descriptions[status] || '';
-}
-
-function updateOrderStatus(orderId) {
-    let order = orders.find(o => o.id === orderId);
-
-    if (!order) {
-        order = orders.find(o => String(o.id) === String(orderId));
-    }
-
-    if (!order) {
-        if (!isNaN(orderId)) {
-            order = orders.find(o => Number(o.id) === Number(orderId));
-        }
-    }
-
-    if (order) {
-        openOrderStatusModal(orderId);
-    } else {
-        showNotification('Order not found in local data', 'error');
-    }
-}
-
-
-function closeOrderStatusModal() {
-    const modal = document.getElementById('orderStatusModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.removeChild(modal);
-    }
-}
+// Initialize data
 async function initializeData() {
-        await loadSuppliersFromAPI();
-        await loadPartsFromAPI();
-        await loadOrdersFromAPI();
+    await loadSuppliersFromAPI();
+    await loadPartsFromAPI();
+    await loadOrdersFromAPI();
 }

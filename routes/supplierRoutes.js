@@ -57,11 +57,6 @@ async function handleSupplierRoutes(req, res) {
             await supplierController.deleteSupplier(req, res, { id });
         }
 
-        // GET /api/suppliers/:id/parts - Get parts by supplier
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)\/parts$/) && method === 'GET') {
-            const supplierId = pathname.split('/')[3];
-            await supplierController.getPartsBySupplier(req, res, { supplierId, ...query });
-        }
 
         // GET /api/suppliers/:id/orders - Get orders by supplier
         else if (pathname.match(/^\/api\/suppliers\/(\d+)\/orders$/) && method === 'GET') {
@@ -69,17 +64,9 @@ async function handleSupplierRoutes(req, res) {
             await supplierController.getOrdersBySupplier(req, res, { supplierId, ...query });
         }
 
-        // GET /api/suppliers/:id/evaluation - Get supplier evaluation
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)\/evaluation$/) && method === 'GET') {
-            const supplierId = pathname.split('/')[3];
-            await supplierController.getSupplierEvaluation(req, res, { supplierId });
-        }
-
-        // PUT /api/suppliers/:id/evaluation - Update supplier evaluation
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)\/evaluation$/) && method === 'PUT') {
-            const supplierId = pathname.split('/')[3];
-            const body = await getRequestBody(req);
-            await supplierController.updateSupplierEvaluation(req, res, { supplierId, ...body });
+        // GET /api/parts - Get all parts
+        else if (pathname === '/api/parts' && method === 'GET') {
+            await supplierController.getAllParts(req, res, query);
         }
 
         // POST /api/orders - Create new order
@@ -98,22 +85,6 @@ async function handleSupplierRoutes(req, res) {
             const orderId = pathname.split('/')[3];
             const body = await getRequestBody(req);
             await supplierController.updateOrderStatus(req, res, { orderId, ...body });
-        }
-
-        // GET /api/parts - Get all parts
-        else if (pathname === '/api/parts' && method === 'GET') {
-            await supplierController.getAllParts(req, res, query);
-        }
-
-        // GET /api/parts/low-stock - Get low stock parts
-        else if (pathname === '/api/parts/low-stock' && method === 'GET') {
-            await supplierController.getLowStockParts(req, res, query);
-        }
-
-        // POST /api/parts/auto-order - Create auto orders for low stock
-        else if (pathname === '/api/parts/auto-order' && method === 'POST') {
-            const body = await getRequestBody(req);
-            await supplierController.createAutoOrders(req, res, body);
         }
 
         else {
