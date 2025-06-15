@@ -331,18 +331,22 @@ function saveOrder() {
     closeOrderModal();
 }
 
-async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
+async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
     try {
+        const body = {
+            status: status
+        };
+
+        if (actualDeliveryDate) {
+            body.actual_delivery_date = actualDeliveryDate;
+        }
+
         const response = await fetch(`/api/orders/${orderId}/status`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                status: status,
-                actual_delivery_date: actualDeliveryDate,
-                notes: notes
-            })
+            body: JSON.stringify(body)
         });
 
         const result = await response.json();
@@ -417,26 +421,16 @@ function loadOrders() {
     ordersList.innerHTML = orders.map(order => {
         const totalAmount = parseFloat(order.total_amount || order.total || 0);
 
-        // Debug log pentru fiecare comandă
-        console.log('Processing order:', order.id, 'Structure:', order);
-
-        // Încearcă să obții numele produsului din noile coloane sau din items array (pentru compatibilitate)
         let productName = 'Unknown Product';
         let quantity = 1;
         let unitPrice = totalAmount;
 
         if (order.product_name) {
-            // Folosește noua structură
             productName = order.product_name;
             quantity = order.product_quantity || 1;
             unitPrice = parseFloat(order.product_unit_price || totalAmount);
-            console.log('Using new structure:', productName, quantity, unitPrice);
         } else if (order.items && Array.isArray(order.items) && order.items.length > 0) {
-            // Folosește vechea structură pentru compatibilitate
             const firstItem = order.items[0];
-            console.log('First item from items array:', firstItem);
-
-            // Încearcă toate câmpurile posibile pentru numele produsului
             productName = firstItem.name ||
                 firstItem.part_name ||
                 firstItem.item_name ||
@@ -447,19 +441,6 @@ function loadOrders() {
             quantity = firstItem.quantity || firstItem.qty || 1;
             unitPrice = parseFloat(firstItem.unit_price || firstItem.unitPrice || firstItem.price || 0);
 
-            console.log('Using items structure:', {
-                name: firstItem.name,
-                part_name: firstItem.part_name,
-                resolved_name: productName,
-                quantity: quantity,
-                unitPrice: unitPrice
-            });
-        } else {
-            // Fallback - folosește ID-ul comenzii ca nume
-            productName = `Order Items #${order.id}`;
-            quantity = 1;
-            unitPrice = totalAmount;
-            console.log('Using fallback structure for order:', order.id);
         }
 
         return `
@@ -478,7 +459,6 @@ function loadOrders() {
             <div class="order-total">Total: RON ${totalAmount.toFixed(2)}</div>
             <div class="order-date">Ordered: ${formatDate(order.order_date || order.orderDate)}</div>
             ${order.expected_delivery_date || order.estimatedDelivery ? `<div class="order-date">Est. Delivery: ${formatDate(order.expected_delivery_date || order.estimatedDelivery)}</div>` : ''}
-            ${order.actual_delivery_date ? `<div class="order-date">Actual Delivery: ${formatDate(order.actual_delivery_date)}</div>` : ''}
             <div class="order-actions">
                 ${order.status !== 'delivered' ? `<button class="btn btn-sm primary-btn" onclick="updateOrderStatus('${order.id}')">Update Status</button>` : ''}
             </div>
@@ -556,7 +536,7 @@ function updatePartPrice(selectElement) {
     }
 }
 
-// FIXED: Proper openOrderModal function
+
 function openOrderModal() {
     const modal = document.getElementById('orderModal');
     const supplierSelect = document.getElementById('orderSupplier');
@@ -599,9 +579,7 @@ function openOrderModal() {
     modal.style.display = 'flex';
 }
 
-// Funcție helper pentru crearea HTML-ului unui order item
 function createOrderItemHTML() {
-    // Verifică dacă parts sunt încărcate
     if (!parts || parts.length === 0) {
         console.warn('Parts not loaded yet or empty');
         return `
@@ -766,14 +744,12 @@ function openOrderStatusModal(orderId) {
                     <h3>Order #${order.id}</h3>
                     <p><strong>Supplier:</strong> ${order.supplier_name || order.supplierName || 'N/A'}</p>
                     <p><strong>Current Status:</strong> <span class="status-badge status-${order.status}">${(order.status || 'ordered').toUpperCase()}</span></p>
-                    <p><strong>Total:</strong> RON ${totalAmount.toFixed(2)}</p>
                 </div>
 
                 <form id="orderStatusForm">
                     <input type="hidden" id="statusOrderId" value="${order.id}">
                     
                     <div class="form-group">
-                        <label>Select New Status:</label>
                         <div class="status-options">
                             ${statuses.map(status => `
                                 <div class="status-option ${status.value === order.status ? 'disabled' : ''}" 
@@ -792,11 +768,6 @@ function openOrderStatusModal(orderId) {
                     <div class="form-group" id="deliveryDateGroup" style="display: none;">
                         <label for="actualDeliveryDate">Actual Delivery Date:</label>
                         <input type="date" id="actualDeliveryDate" value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="statusNotes">Notes (optional):</label>
-                        <textarea id="statusNotes" rows="3" placeholder="Add any notes about this status change..."></textarea>
                     </div>
 
                     <div class="form-actions">
@@ -852,30 +823,41 @@ function selectOrderStatus(status) {
 }
 
 async function updateOrderStatusFromModal() {
-    const orderId = document.getElementById('statusOrderId').value;
-    const selectedStatus = document.getElementById('orderStatusForm').getAttribute('data-selected-status');
-    const actualDeliveryDate = document.getElementById('actualDeliveryDate').value;
-    const notes = document.getElementById('statusNotes').value;
+    const orderId = document.getElementById('statusOrderId')?.value;
+    const form = document.getElementById('orderStatusForm');
+    const selectedStatus = form?.getAttribute('data-selected-status');
+    const actualDeliveryDateEl = document.getElementById('actualDeliveryDate');
+    const actualDeliveryDate = actualDeliveryDateEl ? actualDeliveryDateEl.value : null;
+
 
     if (!selectedStatus) {
         showNotification('Please select a new status', 'error');
         return;
     }
 
+    if (!orderId) {
+        showNotification('Order ID not found', 'error');
+        return;
+    }
+
     try {
         const updateBtn = document.getElementById('updateStatusBtn');
-        updateBtn.disabled = true;
-        updateBtn.textContent = 'Updating...';
+        if (updateBtn) {
+            updateBtn.disabled = true;
+        }
 
-        await updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate, notes);
+        await updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate);
         closeOrderStatusModal();
 
     } catch (error) {
+        console.error('Error updating order status:', error);
         showNotification('Error updating order status: ' + error.message, 'error');
 
         const updateBtn = document.getElementById('updateStatusBtn');
-        updateBtn.disabled = false;
-        updateBtn.textContent = 'Update Status';
+        if (updateBtn) {
+            updateBtn.disabled = false;
+            updateBtn.textContent = 'Update Status';
+        }
     }
 }
 
@@ -896,69 +878,6 @@ function deleteSupplier(id) {
     if (confirm('Are you sure you want to delete this supplier?')) {
         deleteSupplierFromAPI(id);
     }
-}
-
-function viewOrderDetails(orderId) {
-    const order = orders.find(o => o.id == orderId);
-    if (!order) {
-        showNotification('Order not found', 'error');
-        return;
-    }
-
-    const orderTotal = parseFloat(order.total_amount || order.total || 0);
-    const orderDate = formatDate(order.order_date || order.orderDate);
-    const supplierName = order.supplier_name || order.supplierName || 'Unknown Supplier';
-
-    let productDetails = '';
-
-    console.log('Viewing order details for:', order.id, order);
-
-    if (order.product_name) {
-        // Folosește noua structură
-        const productName = order.product_name;
-        const quantity = order.product_quantity || 1;
-        const unitPrice = parseFloat(order.product_unit_price || orderTotal);
-
-        productDetails = `Product: ${productName}
-Quantity: ${quantity}
-Unit Price: RON ${unitPrice.toFixed(2)}
-Line Total: RON ${(quantity * unitPrice).toFixed(2)}`;
-    } else if (order.items && Array.isArray(order.items) && order.items.length > 0) {
-        // Folosește vechea structură pentru compatibilitate
-        productDetails = 'Products:\n' + order.items.map((item, index) => {
-            const name = item.name ||
-                item.part_name ||
-                item.item_name ||
-                item.description ||
-                item.product_name ||
-                `Item #${index + 1}`;
-
-            const qty = item.quantity || item.qty || 1;
-            const price = parseFloat(item.unit_price || item.unitPrice || item.price || 0);
-
-            console.log(`Resolved item ${index}:`, { name, qty, price });
-
-            return `• ${name} (${qty}x) - RON ${(qty * price).toFixed(2)}`;
-        }).join('\n');
-    } else {
-        productDetails = 'Product details not available';
-    }
-
-    const details = `Order Details:
-
-Order ID: ${order.id}
-Supplier: ${supplierName}
-Status: ${(order.status || 'ordered').toUpperCase()}
-Total: RON ${orderTotal.toFixed(2)}
-Order Date: ${orderDate}
-${order.expected_delivery_date ? `Expected Delivery: ${formatDate(order.expected_delivery_date)}` : ''}
-${order.actual_delivery_date ? `Actual Delivery: ${formatDate(order.actual_delivery_date)}` : ''}
-
-${productDetails}
-
-${order.notes ? `Notes: ${order.notes}` : ''}`;
-
-    alert(details);
 }
 
 // Utility functions
@@ -1008,7 +927,6 @@ function handleLogout() {
     }
 }
 
-// NEW FUNCTION: Check for preselected part and auto-open order modal
 function checkForPreselectedPart() {
     const urlParams = new URLSearchParams(window.location.search);
     const preselectedPartData = localStorage.getItem('preselectedPart');
@@ -1036,7 +954,6 @@ function checkForPreselectedPart() {
     }
 }
 
-// NEW FUNCTION: Open order modal with preselected part
 function openOrderModalWithPreselectedPart(partData) {
     const modal = document.getElementById('orderModal');
     const supplierSelect = document.getElementById('orderSupplier');
@@ -1070,7 +987,7 @@ function openOrderModalWithPreselectedPart(partData) {
     calculateOrderTotal();
     modal.style.display = 'flex';
 
-    // Show additional notification about the preselected part
+
     showNotification(`Part "${partData.name}" has been preselected for this order`, 'success');
 }
 
@@ -1085,7 +1002,6 @@ function createOrderItemHTMLWithPreselection(preselectedPart) {
         return `<option value="${part.id}" data-price="${part.price}" ${isSelected}>${part.name} - RON ${parseFloat(part.price).toFixed(2)}</option>`;
     }).join('');
 
-    // Calculate suggested quantity based on stock levels
     const suggestedQuantity = Math.max(1, (preselectedPart.minimumStockLevel || 10) - (preselectedPart.stockQuantity || 0));
     const preselectedPrice = parseFloat(preselectedPart.price || 0).toFixed(2);
 
@@ -1108,14 +1024,6 @@ function createOrderItemHTMLWithPreselection(preselectedPart) {
             </div>
         </div>
     `;
-}
-
-
-function clearOrderURLParams() {
-    const url = new URL(window.location);
-    url.searchParams.delete('action');
-    url.searchParams.delete('part');
-    window.history.replaceState({}, '', url);
 }
 
 async function initializeData() {

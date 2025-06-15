@@ -14,12 +14,12 @@ class SupplierModel {
 
     static async getAllSuppliers(filters = {}) {
         let query = `
-            SELECT s.*, 
+            SELECT s.*,
                    COUNT(DISTINCT p.id) as parts_count,
                    COUNT(DISTINCT o.id) as orders_count
             FROM "Suppliers" s
-            LEFT JOIN "Parts" p ON s.id = p.supplier_id
-            LEFT JOIN "Orders" o ON s.id = o.supplier_id
+                     LEFT JOIN "Parts" p ON s.id = p.supplier_id
+                     LEFT JOIN "Orders" o ON s.id = o.supplier_id
         `;
 
         const conditions = [];
@@ -65,10 +65,10 @@ class SupplierModel {
 
         const query = `
             INSERT INTO "Suppliers" (
-                company_name, contact_person, email, phone, 
+                company_name, contact_person, email, phone,
                 address, delivery_time_days
             ) VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
+                RETURNING *
         `;
 
         const values = [
@@ -105,15 +105,15 @@ class SupplierModel {
 
         const query = `
             UPDATE "Suppliers" SET
-                company_name = COALESCE($1, company_name),
-                contact_person = COALESCE($2, contact_person),
-                email = COALESCE($3, email),
-                phone = COALESCE($4, phone),
-                address = COALESCE($5, address),
-                delivery_time_days = COALESCE($6, delivery_time_days),
-                updated_at = CURRENT_TIMESTAMP
+                                   company_name = COALESCE($1, company_name),
+                                   contact_person = COALESCE($2, contact_person),
+                                   email = COALESCE($3, email),
+                                   phone = COALESCE($4, phone),
+                                   address = COALESCE($5, address),
+                                   delivery_time_days = COALESCE($6, delivery_time_days),
+                                   updated_at = CURRENT_TIMESTAMP
             WHERE id = $7
-            RETURNING *
+                RETURNING *
         `;
 
         const values = [
@@ -272,7 +272,7 @@ class SupplierModel {
                 name, description, part_number, category, price,
                 stock_quantity, minimum_stock_level, supplier_id
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING *
+                RETURNING *
         `;
 
         const values = [
@@ -295,22 +295,22 @@ class SupplierModel {
         let query = `
             SELECT o.*, s.company_name as supplier_name,
                    COALESCE(
-                       json_agg(
-                           json_build_object(
-                               'id', oi.id,
-                               'part_id', oi.part_id,
-                               'name', p.name,
-                               'quantity', oi.quantity,
-                               'unit_price', oi.unit_price,
-                               'subtotal', oi.subtotal
-                           )
-                       ) FILTER (WHERE oi.id IS NOT NULL), 
-                       '[]'
+                           json_agg(
+                                   json_build_object(
+                                           'id', oi.id,
+                                           'part_id', oi.part_id,
+                                           'name', p.name,
+                                           'quantity', oi.quantity,
+                                           'unit_price', oi.unit_price,
+                                           'subtotal', oi.subtotal
+                                   )
+                           ) FILTER (WHERE oi.id IS NOT NULL),
+                           '[]'
                    ) as items
             FROM "Orders" o
-            LEFT JOIN "Suppliers" s ON o.supplier_id = s.id
-            LEFT JOIN "OrderItems" oi ON o.id = oi.order_id
-            LEFT JOIN "Parts" p ON oi.part_id = p.id
+                     LEFT JOIN "Suppliers" s ON o.supplier_id = s.id
+                     LEFT JOIN "OrderItems" oi ON o.id = oi.order_id
+                     LEFT JOIN "Parts" p ON oi.part_id = p.id
         `;
 
         const conditions = [];
@@ -414,14 +414,14 @@ class SupplierModel {
                 }
 
                 const itemQuery = `
-                INSERT INTO "OrderItems" (
-                    order_id, 
-                    part_id, 
-                    quantity, 
-                    unit_price, 
-                    subtotal
-                ) VALUES ($1, $2, $3, $4, $5)
-            `;
+                    INSERT INTO "OrderItems" (
+                        order_id,
+                        part_id,
+                        quantity,
+                        unit_price,
+                        subtotal
+                    ) VALUES ($1, $2, $3, $4, $5)
+                `;
 
                 const quantity = parseInt(item.quantity) || 1;
                 const unitPrice = parseFloat(item.unit_price) || 0;
@@ -467,24 +467,24 @@ class SupplierModel {
 
             if (notes && notes.trim() !== '') {
                 query = `
-                UPDATE "Orders" SET
-                    status = $1,
-                    actual_delivery_date = $2,
-                    notes = CONCAT(COALESCE(notes, ''), CASE WHEN COALESCE(notes, '') = '' THEN '' ELSE '\n' END, $3),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $4
-                RETURNING *
-            `;
+                    UPDATE "Orders" SET
+                                        status = $1,
+                                        actual_delivery_date = $2,
+                                        notes = CONCAT(COALESCE(notes, ''), CASE WHEN COALESCE(notes, '') = '' THEN '' ELSE '\n' END, $3),
+                                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $4
+                        RETURNING *
+                `;
                 values = [status, actualDeliveryDate, notes, orderId];
             } else {
                 query = `
-                UPDATE "Orders" SET
-                    status = $1,
-                    actual_delivery_date = $2,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $3
-                RETURNING *
-            `;
+                    UPDATE "Orders" SET
+                                        status = $1,
+                                        actual_delivery_date = $2,
+                                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $3
+                        RETURNING *
+                `;
                 values = [status, actualDeliveryDate, orderId];
             }
 
@@ -509,11 +509,11 @@ class SupplierModel {
     static async updateInventoryFromOrder(order) {
         try {
             const itemsQuery = `
-            SELECT oi.*, p.name, p.id as part_id
-            FROM "OrderItems" oi
-            LEFT JOIN "Parts" p ON oi.part_id = p.id
-            WHERE oi.order_id = $1
-        `;
+                SELECT oi.*, p.name, p.id as part_id
+                FROM "OrderItems" oi
+                         LEFT JOIN "Parts" p ON oi.part_id = p.id
+                WHERE oi.order_id = $1
+            `;
 
             const itemsResult = await pool.query(itemsQuery, [order.id]);
 

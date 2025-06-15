@@ -379,28 +379,11 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     padding: 20px;
-    border-left: 4px solid var(--pending);
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .order-card:hover {
     box-shadow: var(--shadow-md);
-}
-
-.order-card.placed {
-    border-left-color: var(--pending);
-}
-
-.order-card.confirmed {
-    border-left-color: var(--secondary-color);
-}
-
-.order-card.shipped {
-    border-left-color: var(--warning);
-}
-
-.order-card.delivered {
-    border-left-color: var(--success);
 }
 
 .order-header {
@@ -500,7 +483,6 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: var(--radius-md);
     width: 100%;
     max-width: 600px;
-    box-shadow: var(--shadow-lg);
     max-height: 90vh;
     display: flex;
     flex-direction: column;
@@ -639,36 +621,30 @@ textarea {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-top: 15px;
+    margin: 15px 0;
 }
 
 .status-option {
     display: flex;
     align-items: center;
     padding: 15px;
-    border: 2px solid var(--medium-gray);
-    border-radius: var(--radius-md);
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
-    position: relative;
 }
 
 .status-option:hover:not(.disabled) {
-    border-color: var(--primary-color);
-    background-color: rgba(16, 28, 90, 0.05);
-    transform: translateY(-1px);
+    background-color: #f8f9fa;
 }
 
 .status-option.selected {
-    border-color: var(--primary-color);
-    background-color: rgba(16, 28, 90, 0.1);
-    box-shadow: 0 2px 8px rgba(16, 28, 90, 0.2);
+    background-color: #e3f2fd;
 }
 
 .status-option.disabled {
-    opacity: 0.5;
     cursor: not-allowed;
-    background-color: var(--light-gray);
+    opacity: 0.6;
 }
 
 .status-indicator {
@@ -739,7 +715,6 @@ textarea {
     background-color: var(--light-gray);
     padding: 15px;
     border-radius: var(--radius-md);
-    border-left: 4px solid var(--success);
 }
 
 /* Order Summary */
@@ -860,7 +835,6 @@ textarea {
     background-color: var(--light-gray);
     padding: 15px;
     border-radius: var(--radius-md);
-    border-left: 4px solid var(--success);
 }
 
 #deliveryDateGroup label {
