@@ -111,7 +111,7 @@ async function loadSuppliersFromAPI() {
         hideLoading('suppliers-list');
     }
 }
-// Adaugă această funcție în fișierul JavaScript, după loadOrdersFromAPI
+
 async function loadPartsFromAPI() {
     try {
         console.log('Loading parts from API...');
@@ -143,6 +143,7 @@ async function loadPartsFromAPI() {
         parts = [];
     }
 }
+
 async function saveSupplierToAPI(supplierData) {
     try {
         const isUpdate = supplierData.id;
@@ -220,6 +221,7 @@ async function loadOrdersFromAPI() {
         hideLoading('orders-list');
     }
 }
+
 async function saveOrderToAPI(orderData) {
     try {
         const response = await fetch('/api/orders', {
@@ -328,7 +330,6 @@ function saveOrder() {
     saveOrderToAPI(orderData);
     closeOrderModal();
 }
-
 
 async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null, notes = null) {
     try {
@@ -540,6 +541,7 @@ function populateSupplierForm(supplier) {
         }
     }
 }
+
 // Funcție pentru actualizarea prețului când se selectează o parte
 function updatePartPrice(selectElement) {
     const selectedOption = selectElement.options[selectElement.selectedIndex];
@@ -554,6 +556,7 @@ function updatePartPrice(selectElement) {
     }
 }
 
+// FIXED: Proper openOrderModal function
 function openOrderModal() {
     const modal = document.getElementById('orderModal');
     const supplierSelect = document.getElementById('orderSupplier');
@@ -586,7 +589,7 @@ function openOrderModal() {
         orderForm.reset();
     }
 
-    // Structură nouă cu dropdown pentru parts
+    // Normal order item creation
     const orderItems = document.getElementById('orderItems');
     if (orderItems) {
         orderItems.innerHTML = createOrderItemHTML();
@@ -621,31 +624,6 @@ function createOrderItemHTML() {
         `;
     }
 
-    const partsOptions = parts.map(part =>
-        `<option value="${part.id}" data-price="${part.price}">${part.name} - RON ${parseFloat(part.price).toFixed(2)}</option>`
-    ).join('');
-
-    return `
-        <div class="order-item">
-            <div class="form-row">
-                <div class="form-group">
-                    <select class="part-select" required onchange="updatePartPrice(this)">
-                        <option value="">Select Part</option>
-                        ${partsOptions}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <input type="number" placeholder="Quantity" class="quantity" min="1" required onchange="calculateOrderTotal()">
-                </div>
-                <div class="form-group">
-                    <input type="number" placeholder="Unit Price" class="unit-price" step="0.01" min="0" required readonly>
-                </div>
-                <button type="button" class="btn danger-btn" onclick="removeOrderItem(this)">Remove</button>
-            </div>
-        </div>
-    `;
-}
-function createOrderItemHTML() {
     const partsOptions = parts.map(part =>
         `<option value="${part.id}" data-price="${part.price}">${part.name} - RON ${parseFloat(part.price).toFixed(2)}</option>`
     ).join('');
@@ -707,8 +685,6 @@ function saveSupplier() {
     saveSupplierToAPI(formData);
     closeSupplierModal();
 }
-
-
 
 // Order item management
 function addOrderItem() {
@@ -950,8 +926,6 @@ Line Total: RON ${(quantity * unitPrice).toFixed(2)}`;
     } else if (order.items && Array.isArray(order.items) && order.items.length > 0) {
         // Folosește vechea structură pentru compatibilitate
         productDetails = 'Products:\n' + order.items.map((item, index) => {
-
-
             const name = item.name ||
                 item.part_name ||
                 item.item_name ||
@@ -1034,9 +1008,120 @@ function handleLogout() {
     }
 }
 
-// Initialize data
+// NEW FUNCTION: Check for preselected part and auto-open order modal
+function checkForPreselectedPart() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedPartData = localStorage.getItem('preselectedPart');
+
+    if (urlParams.get('action') === 'new-order' && preselectedPartData) {
+        try {
+            const partData = JSON.parse(preselectedPartData);
+
+            // Clear the stored data
+            localStorage.removeItem('preselectedPart');
+
+            // Show notification about the preselected part
+            showNotification(`Creating order for: ${partData.name}`, 'info');
+
+            // Switch to orders tab and open order modal with preselected part
+            setTimeout(() => {
+                showTab('orders');
+                openOrderModalWithPreselectedPart(partData);
+            }, 500);
+
+        } catch (error) {
+            console.error('Error parsing preselected part data:', error);
+            localStorage.removeItem('preselectedPart');
+        }
+    }
+}
+
+// NEW FUNCTION: Open order modal with preselected part
+function openOrderModalWithPreselectedPart(partData) {
+    const modal = document.getElementById('orderModal');
+    const supplierSelect = document.getElementById('orderSupplier');
+
+    if (!modal || !supplierSelect) {
+        showNotification('Order modal not available', 'error');
+        return;
+    }
+
+    // Check if parts are loaded
+    if (!parts || parts.length === 0) {
+        showNotification('Parts are still loading. Please wait...', 'warning');
+        return;
+    }
+
+    // Populate supplier dropdown
+    supplierSelect.innerHTML = '<option value="">Select Supplier</option>' +
+        suppliers.map(supplier => `<option value="${supplier.id}">${supplier.company_name || supplier.name}</option>`).join('');
+
+    const orderForm = document.getElementById('orderForm');
+    if (orderForm) {
+        orderForm.reset();
+    }
+
+    // Create order item with preselected part
+    const orderItems = document.getElementById('orderItems');
+    if (orderItems) {
+        orderItems.innerHTML = createOrderItemHTMLWithPreselection(partData);
+    }
+
+    calculateOrderTotal();
+    modal.style.display = 'flex';
+
+    // Show additional notification about the preselected part
+    showNotification(`Part "${partData.name}" has been preselected for this order`, 'success');
+}
+
+
+function createOrderItemHTMLWithPreselection(preselectedPart) {
+    if (!parts || parts.length === 0) {
+        return createOrderItemHTML();
+    }
+
+    const partsOptions = parts.map(part => {
+        const isSelected = part.id === preselectedPart.id ? 'selected' : '';
+        return `<option value="${part.id}" data-price="${part.price}" ${isSelected}>${part.name} - RON ${parseFloat(part.price).toFixed(2)}</option>`;
+    }).join('');
+
+    // Calculate suggested quantity based on stock levels
+    const suggestedQuantity = Math.max(1, (preselectedPart.minimumStockLevel || 10) - (preselectedPart.stockQuantity || 0));
+    const preselectedPrice = parseFloat(preselectedPart.price || 0).toFixed(2);
+
+    return `
+        <div class="order-item">
+            <div class="form-row">
+                <div class="form-group">
+                    <select class="part-select" required onchange="updatePartPrice(this)">
+                        <option value="">Select Part</option>
+                        ${partsOptions}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <input type="number" placeholder="Quantity" class="quantity" min="1" value="${suggestedQuantity}" required onchange="calculateOrderTotal()">
+                </div>
+                <div class="form-group">
+                    <input type="number" placeholder="Unit Price" class="unit-price" step="0.01" min="0" value="${preselectedPrice}" required readonly>
+                </div>
+                <button type="button" class="btn danger-btn" onclick="removeOrderItem(this)">Remove</button>
+            </div>
+        </div>
+    `;
+}
+
+
+function clearOrderURLParams() {
+    const url = new URL(window.location);
+    url.searchParams.delete('action');
+    url.searchParams.delete('part');
+    window.history.replaceState({}, '', url);
+}
+
 async function initializeData() {
     await loadSuppliersFromAPI();
     await loadPartsFromAPI();
     await loadOrdersFromAPI();
+
+    checkForPreselectedPart();
 }

@@ -224,8 +224,6 @@ function applyFilters() {
     updatePagination();
 }
 
-
-
 // Display parts in horizontal list view only
 function displayParts() {
     const container = document.getElementById('partsContainer');
@@ -258,8 +256,8 @@ function createPartCard(part) {
                     <button class="action-btn" onclick="showPartDetails(${part.id})" title="View Details">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="action-btn stock" onclick="showStockUpdateModal(${part.id})" title="Update Stock">
-                        <i class="fas fa-warehouse"></i>
+                    <button class="action-btn stock" onclick="redirectToNewOrder(${part.id})" title="Order More Stock">
+                        <i class="fas fa-plus-circle"></i>
                     </button>
                     <button class="action-btn delete" onclick="showDeleteModal(${part.id})" title="Delete Part">
                         <i class="fas fa-trash"></i>
@@ -268,6 +266,36 @@ function createPartCard(part) {
             </div>
         </div>
     `;
+}
+
+// NEW FUNCTION: Redirect to suppliers page with pre-selected part
+function redirectToNewOrder(partId) {
+    const part = allParts.find(p => p.id === partId);
+    if (!part) {
+        showNotification('Part not found', 'error');
+        return;
+    }
+
+    // Store the selected part data in localStorage to be used by the suppliers page
+    const partData = {
+        id: part.id,
+        name: part.name,
+        partNumber: part.partNumber,
+        price: part.price,
+        category: part.category,
+        stockQuantity: part.stockQuantity,
+        minimumStockLevel: part.minimumStockLevel
+    };
+
+    localStorage.setItem('preselectedPart', JSON.stringify(partData));
+
+    // Show a notification before redirecting
+    showNotification(`Redirecting to create order for: ${part.name}`, 'info');
+
+    // Redirect to suppliers page after a short delay
+    setTimeout(() => {
+        window.location.href = '/suppliers?action=new-order&part=' + part.id;
+    }, 1000);
 }
 
 function getStockStatus(part) {
@@ -450,8 +478,8 @@ function displayPartDetails(part) {
         
         <div class="detail-actions">
             <button class="btn-secondary" onclick="hidePartDetailsModal()">Close</button>
-            <button class="btn-primary" onclick="showStockUpdateModal(${part.id})">
-                <i class="fas fa-warehouse"></i> Update Stock
+            <button class="btn-primary" onclick="redirectToNewOrder(${part.id})">
+                <i class="fas fa-plus-circle"></i> Order More Stock
             </button>
         </div>
     `;

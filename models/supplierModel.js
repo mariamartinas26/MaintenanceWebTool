@@ -1,9 +1,7 @@
-// models/supplierModel.js
 const { pool } = require('../database/db');
 
 class SupplierModel {
 
-    // Initialize - nu mai e nevoie să creezi fișiere
     static async initializeStorage() {
         try {
             // Test connection
@@ -14,7 +12,6 @@ class SupplierModel {
         }
     }
 
-    // Supplier CRUD operations
     static async getAllSuppliers(filters = {}) {
         let query = `
             SELECT s.*, 
@@ -94,7 +91,7 @@ class SupplierModel {
             throw new Error('Supplier not found');
         }
 
-        // Check for duplicate email (exclude current supplier)
+        // Check for duplicate email
         if (updateData.email) {
             const emailCheck = await pool.query(
                 'SELECT id FROM "Suppliers" WHERE email = $1 AND id != $2',
@@ -198,7 +195,6 @@ class SupplierModel {
 
         const result = await pool.query(query, values);
 
-        // Asigură-te că toate valorile numerice sunt corect convertite
         return result.rows.map(part => ({
             ...part,
             price: parseFloat(part.price) || 0,
@@ -257,7 +253,6 @@ class SupplierModel {
 
         const result = await pool.query(query, values);
 
-        // Procesează rezultatele pentru a asigura type-urile corecte
         return result.rows.map(order => ({
             ...order,
             total_amount: parseFloat(order.total_amount) || 0,
@@ -350,9 +345,6 @@ class SupplierModel {
         try {
             await client.query('BEGIN');
 
-            console.log('Creating order with data:', orderData);
-
-            // Validează datele de intrare
             if (!orderData.supplier_id) {
                 throw new Error('supplier_id is required');
             }
@@ -361,14 +353,12 @@ class SupplierModel {
                 throw new Error('items array is required and must not be empty');
             }
 
-            // Calculate total amount
             const total_amount = orderData.items.reduce((sum, item) => {
                 const quantity = parseFloat(item.quantity) || 0;
                 const unitPrice = parseFloat(item.unit_price) || 0;
                 return sum + (quantity * unitPrice);
             }, 0);
 
-            // Pentru noua structură - extrage informațiile despre primul produs
             const firstItem = orderData.items[0];
             const productName = orderData.items.length === 1 ?
                 (firstItem.name || 'Unknown Product') :
@@ -380,74 +370,74 @@ class SupplierModel {
                 (parseFloat(firstItem.unit_price) || 0) :
                 (total_amount / productQuantity);
 
-            console.log('Calculated values:', {
-                total_amount,
-                productName,
-                productQuantity,
-                productUnitPrice
-            });
 
-            // Create order cu coloanele noi populate
             const orderQuery = `
-            INSERT INTO "Orders" (
-                supplier_id, order_date, expected_delivery_date,
-                status, total_amount, notes, items,
-                product_name, product_quantity, product_unit_price
-            ) VALUES ($1, NOW(), $2, 'ordered', $3, $4, $5, $6, $7, $8)
-            RETURNING *
-        `;
+                INSERT INTO "Orders" (
+                    supplier_id,
+                    order_date,
+                    expected_delivery_date,
+                    status,
+                    total_amount,
+                    notes,
+                    product_name,
+                    product_quantity,
+                    product_unit_price
+                ) VALUES ($1, NOW(), $2, 'ordered', $3, $4, $5, $6, $7)
+                    RETURNING *
+            `;
 
             const orderValues = [
                 parseInt(orderData.supplier_id),
                 orderData.expected_delivery_date || null,
                 total_amount,
                 orderData.notes || '',
-                JSON.stringify(orderData.items), // Păstrează items pentru compatibilitate
-                productName,                      // Noua coloană
-                productQuantity,                  // Noua coloană
-                productUnitPrice                  // Noua coloană
+                productName,
+                productQuantity,
+                productUnitPrice
             ];
 
-            console.log('Executing order query with values:', orderValues);
             const orderResult = await client.query(orderQuery, orderValues);
             const newOrder = orderResult.rows[0];
 
-            console.log('Order created successfully:', newOrder.id);
 
-            // Create order items (păstrează logica existentă pentru OrderItems dacă tabelul există)
-            try {
-                for (const item of orderData.items) {
-                    // Try to find existing part by name
+            for (const item of orderData.items) {
+                let partId = null;
+                if (item.part_id) {
+                    partId = parseInt(item.part_id);
+                } else if (item.name) {
+
                     const partQuery = 'SELECT id FROM "Parts" WHERE name = $1 LIMIT 1';
                     const partResult = await client.query(partQuery, [item.name]);
-
-                    let partId = null;
                     if (partResult.rows.length > 0) {
                         partId = partResult.rows[0].id;
                     }
-
-                    const itemQuery = `
-                    INSERT INTO "OrderItems" (
-                        order_id, part_id, quantity, unit_price, subtotal
-                    ) VALUES ($1, $2, $3, $4, $5)
-                `;
-
-                    const subtotal = (parseInt(item.quantity) || 1) * (parseFloat(item.unit_price) || 0);
-                    await client.query(itemQuery, [
-                        newOrder.id,
-                        partId,
-                        parseInt(item.quantity) || 1,
-                        parseFloat(item.unit_price) || 0,
-                        subtotal
-                    ]);
                 }
-            } catch (orderItemsError) {
-                // Nu eșuează întreaga tranzacție dacă tabelul OrderItems nu există
-                console.log('OrderItems table might not exist, skipping order items creation:', orderItemsError.message);
+
+                const itemQuery = `
+                INSERT INTO "OrderItems" (
+                    order_id, 
+                    part_id, 
+                    quantity, 
+                    unit_price, 
+                    subtotal
+                ) VALUES ($1, $2, $3, $4, $5)
+            `;
+
+                const quantity = parseInt(item.quantity) || 1;
+                const unitPrice = parseFloat(item.unit_price) || 0;
+                const subtotal = quantity * unitPrice;
+
+                await client.query(itemQuery, [
+                    newOrder.id,
+                    partId,
+                    quantity,
+                    unitPrice,
+                    subtotal
+                ]);
+
             }
 
             await client.query('COMMIT');
-            console.log('Transaction committed successfully');
 
             return {
                 ...newOrder,
@@ -459,7 +449,6 @@ class SupplierModel {
 
         } catch (error) {
             await client.query('ROLLBACK');
-            console.error('Error in createOrder:', error);
             throw error;
         } finally {
             client.release();
@@ -506,7 +495,6 @@ class SupplierModel {
                 throw new Error(`Order with ID ${orderId} not found`);
             }
 
-            // Update inventory if delivered
             if (status === 'delivered') {
                 await this.updateInventoryFromOrder(result.rows[0]);
             }
@@ -520,7 +508,6 @@ class SupplierModel {
 
     static async updateInventoryFromOrder(order) {
         try {
-            // Get order items
             const itemsQuery = `
             SELECT oi.*, p.name, p.id as part_id
             FROM "OrderItems" oi
@@ -530,26 +517,18 @@ class SupplierModel {
 
             const itemsResult = await pool.query(itemsQuery, [order.id]);
 
-            // Update stock for each item
             for (const item of itemsResult.rows) {
                 if (item.part_id) {
-                    console.log(`Model - Updating stock for part ${item.part_id}: +${item.quantity}`);
 
                     const updateStockQuery = `
-                    UPDATE "Parts" 
-                    SET stock_quantity = stock_quantity + $1, 
-                        updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = $2
-                    RETURNING name, stock_quantity
-                `;
+                        UPDATE "Parts"
+                        SET stock_quantity = stock_quantity + $1,
+                            updated_at     = CURRENT_TIMESTAMP
+                        WHERE id = $2 RETURNING name, stock_quantity
+                    `;
 
                     const result = await pool.query(updateStockQuery, [item.quantity, item.part_id]);
 
-                    if (result.rows.length > 0) {
-                        console.log(`Model - Updated ${result.rows[0].name}: new stock = ${result.rows[0].stock_quantity}`);
-                    }
-                } else {
-                    console.log(`Model - Skipping item without part_id: ${item.name}`);
                 }
             }
         } catch (error) {
@@ -557,9 +536,7 @@ class SupplierModel {
         }
     }
 
-    // Sample data initialization
     static async initializeSampleData() {
-        // Check if suppliers already exist
         const suppliersCount = await pool.query('SELECT COUNT(*) FROM "Suppliers"');
 
         if (parseInt(suppliersCount.rows[0].count) === 0) {
@@ -592,7 +569,6 @@ class SupplierModel {
             }
         }
 
-        // Check if parts already exist
         const partsCount = await pool.query('SELECT COUNT(*) FROM "Parts"');
 
         if (parseInt(partsCount.rows[0].count) === 0) {
