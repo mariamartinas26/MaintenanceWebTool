@@ -28,6 +28,10 @@
                     <span class="icon"></span>
                     <span>Suppliers</span>
                 </a></li>
+                <li><a href="#" id="export-link">
+                    <span class="icon"></span>
+                    <span>Export Data</span>
+                </a></li>
             </ul>
         </nav>
         <div class="user-info">
@@ -182,6 +186,68 @@
     </div>
 </div>
 
+<!-- Export Modal -->
+<div class="modal" id="export-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Export Data</h2>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="export-options">
+                <h3>Select Data to Export</h3>
+                <div class="export-data-selection">
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="export-appointments" checked>
+                        <span class="checkmark"></span>
+                        Appointments
+                    </label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="export-parts" checked>
+                        <span class="checkmark"></span>
+                        Parts Inventory
+                    </label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="export-suppliers" checked>
+                        <span class="checkmark"></span>
+                        Suppliers
+                    </label>
+                    <label class="export-checkbox">
+                        <input type="checkbox" id="export-orders" checked>
+                        <span class="checkmark"></span>
+                        Orders
+                    </label>
+                </div>
+
+                <h3>Select Export Format</h3>
+                <div class="export-format-selection">
+                    <label class="export-radio">
+                        <input type="radio" name="export-format" value="csv" checked>
+                        <span class="radio-checkmark"></span>
+                        CSV Files
+                    </label>
+                    <label class="export-radio">
+                        <input type="radio" name="export-format" value="json">
+                        <span class="radio-checkmark"></span>
+                        JSON Files
+                    </label>
+                    <label class="export-radio">
+                        <input type="radio" name="export-format" value="pdf">
+                        <span class="radio-checkmark"></span>
+                        PDF Report
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn secondary-btn close-modal">Cancel</button>
+                <button type="button" class="btn primary-btn" id="start-export-btn">Start Export</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="../js/admin-dashboard.js"></script>
+<script src="../js/export-functionality.js"></script>
 </body>
 </html>

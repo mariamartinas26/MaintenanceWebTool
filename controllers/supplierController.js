@@ -404,6 +404,109 @@ class SupplierController {
             res.end(JSON.stringify({ success: false, message: 'Error fetching orders by supplier: ' + error.message }));
         }
     }
+
+    async getSuppliersForExport(req, res) {
+        try {
+            const result = await this.getSuppliersForExportData(req);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: true,
+                data: result,
+                total: result.length,
+                exported_at: new Date().toISOString()
+            }));
+        } catch (error) {
+            console.error('Export suppliers error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Failed to export suppliers data'
+            }));
+        }
+    }
+
+    async getSuppliersForExportData(req) {
+        try {
+            // Folosește modelul SupplierModel existent
+            const suppliers = await SupplierModel.getAllSuppliers({}); // Obține toți furnizorii
+
+            return suppliers.map(supplier => ({
+                id: supplier.id,
+                company_name: supplier.company_name,
+                contact_person: supplier.contact_person,
+                email: supplier.email,
+                phone: supplier.phone,
+                address: supplier.address,
+                delivery_time_days: parseInt(supplier.delivery_time_days) || 0,
+                total_parts_supplied: parseInt(supplier.total_parts_supplied) || 0,
+                total_orders: parseInt(supplier.total_orders) || 0,
+                total_order_value: parseFloat(supplier.total_order_value) || 0,
+                last_order_date: supplier.last_order_date ? new Date(supplier.last_order_date).toLocaleString() : null,
+                created_at: supplier.created_at ? new Date(supplier.created_at).toLocaleString() : null
+            }));
+
+        } catch (error) {
+            console.error('Error getting suppliers for export:', error);
+            throw error;
+        }
+    }
+
+    // Export methods for orders
+    async getOrdersForExport(req, res) {
+        try {
+            const result = await this.getOrdersForExportData(req);
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: true,
+                data: result,
+                total: result.length,
+                exported_at: new Date().toISOString()
+            }));
+        } catch (error) {
+            console.error('Export orders error:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Failed to export orders data'
+            }));
+        }
+    }
+
+    async getOrdersForExportData(req) {
+        try {
+
+            const orders = await SupplierModel.getAllOrders({});
+
+            return orders.map(order => ({
+                id: order.id,
+                supplier_name: order.supplier_name || 'Unknown Supplier',
+                supplier_contact: order.supplier_contact,
+                supplier_email: order.supplier_email,
+                supplier_phone: order.supplier_phone,
+                order_date: order.order_date ? new Date(order.order_date).toLocaleString() : null,
+                expected_delivery_date: order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleString() : null,
+                actual_delivery_date: order.actual_delivery_date ? new Date(order.actual_delivery_date).toLocaleString() : null,
+                status: order.status,
+                total_amount: parseFloat(order.total_amount) || 0,
+                notes: order.notes,
+                total_items: parseInt(order.total_items) || 0,
+                total_quantity: parseInt(order.total_quantity) || 0,
+                delivery_status: order.actual_delivery_date && order.expected_delivery_date
+                    ? (new Date(order.actual_delivery_date) > new Date(order.expected_delivery_date) ? 'Late' :
+                        new Date(order.actual_delivery_date) < new Date(order.expected_delivery_date) ? 'Early' : 'On Time')
+                    : 'Pending',
+                delivery_delay_days: order.actual_delivery_date && order.expected_delivery_date
+                    ? Math.ceil((new Date(order.actual_delivery_date) - new Date(order.expected_delivery_date)) / (1000 * 60 * 60 * 24))
+                    : null
+            }));
+
+        } catch (error) {
+            console.error('Error getting orders for export:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new SupplierController();

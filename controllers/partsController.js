@@ -89,6 +89,56 @@ class PartsController {
             });
         }
     }
+
+    static async getPartsForExport(req, res) {
+        try {
+            const result = await PartsController.getPartsForExportData(req);
+
+            sendJSON(res, 200, {
+                success: true,
+                data: result,
+                total: result.length,
+                exported_at: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Export parts error:', error);
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Failed to export parts data'
+            });
+        }
+    }
+
+    static async getPartsForExportData(req) {
+        try {
+
+            const parts = await Part.getAll({});
+
+            return parts.map(part => ({
+                id: part.id,
+                name: part.name,
+                description: part.description,
+                part_number: part.part_number,
+                category: part.category,
+                price: parseFloat(part.price) || 0,
+                stock_quantity: parseInt(part.stock_quantity) || 0,
+                minimum_stock_level: parseInt(part.minimum_stock_level) || 0,
+                supplier_name: part.supplier_name || 'Unknown Supplier',
+                supplier_contact: part.supplier_contact,
+                supplier_email: part.supplier_email,
+                supplier_phone: part.supplier_phone,
+                stock_status: part.stock_quantity <= 0 ? 'Out of Stock' :
+                    part.stock_quantity <= part.minimum_stock_level ? 'Low Stock' : 'In Stock',
+                stock_value: (parseFloat(part.price) || 0) * (parseInt(part.stock_quantity) || 0),
+                created_at: part.created_at ? new Date(part.created_at).toLocaleString() : null,
+                updated_at: part.updated_at ? new Date(part.updated_at).toLocaleString() : null
+            }));
+
+        } catch (error) {
+            console.error('Error getting parts for export:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = PartsController;

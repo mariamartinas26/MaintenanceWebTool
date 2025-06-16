@@ -1,6 +1,7 @@
 const url = require('url');
 const AdminAppointmentsController = require('../controllers/adminAppointmentsController');
 const PartsController = require('../controllers/partsController');
+const SupplierController = require('../controllers/supplierController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
 
 function sendJSON(res, statusCode, data) {
@@ -37,6 +38,54 @@ const requireAdminAccess = async (req, res, next) => {
         return sendJSON(res, 401, {
             success: false,
             message: 'Admin access required'
+        });
+    }
+};
+
+// Helper function pentru export complet
+const handleExportAll = async (req, res) => {
+    try {
+        const exportPromises = [
+            AdminAppointmentsController.getAppointmentsForExportData ? AdminAppointmentsController.getAppointmentsForExportData(req) : [],
+            PartsController.getPartsForExportData ? PartsController.getPartsForExportData(req) : [],
+            SupplierController.getSuppliersForExportData ? SupplierController.getSuppliersForExportData(req) : [],
+            SupplierController.getOrdersForExportData ? SupplierController.getOrdersForExportData(req) : []
+        ];
+
+        const [appointments, parts, suppliers, orders] = await Promise.allSettled(exportPromises);
+
+        const exportData = {
+            appointments: appointments.status === 'fulfilled' ? appointments.value : [],
+            parts: parts.status === 'fulfilled' ? parts.value : [],
+            suppliers: suppliers.status === 'fulfilled' ? suppliers.value : [],
+            orders: orders.status === 'fulfilled' ? orders.value : []
+        };
+
+        // Add metadata
+        const metadata = {
+            exported_at: new Date().toISOString(),
+            exported_by: req.admin?.email || 'admin',
+            total_records: Object.values(exportData).reduce((sum, arr) => sum + arr.length, 0),
+            summary: {
+                appointments_count: exportData.appointments.length,
+                parts_count: exportData.parts.length,
+                suppliers_count: exportData.suppliers.length,
+                orders_count: exportData.orders.length
+            }
+        };
+
+        return sendJSON(res, 200, {
+            success: true,
+            data: exportData,
+            metadata: metadata
+        });
+
+    } catch (error) {
+        console.error('Export all error:', error);
+        return sendJSON(res, 500, {
+            success: false,
+            message: 'Failed to export data',
+            error: error.message
         });
     }
 };
@@ -125,6 +174,53 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             const matches = path.match(/^\/admin\/api\/parts\/(\d+)$/);
             req.params = { id: matches[1] };
             return PartsController.getPartById(req, res);
+        }
+
+        // EXPORT ROUTES
+
+        // GET /admin/api/export/appointments - Export appointments data
+        if (path === '/admin/api/export/appointments' && method === 'GET') {
+            if (AdminAppointmentsController.getAppointmentsForExport) {
+                return AdminAppointmentsController.getAppointmentsForExport(req, res);
+            } else {
+                // Fallback to regular endpoint
+                return AdminAppointmentsController.getAppointmentsForAdmin(req, res);
+            }
+        }
+
+        // GET /admin/api/export/parts - Export parts data
+        if (path === '/admin/api/export/parts' && method === 'GET') {
+            if (PartsController.getPartsForExport) {
+                return PartsController.getPartsForExport(req, res);
+            } else {
+                // Fallback to regular endpoint
+                return PartsController.getAllParts(req, res);
+            }
+        }
+
+        // GET /admin/api/export/suppliers - Export suppliers data
+        if (path === '/admin/api/export/suppliers' && method === 'GET') {
+            if (SupplierController.getSuppliersForExport) {
+                return SupplierController.getSuppliersForExport(req, res);
+            } else {
+                // Fallback - try to call supplier API directly
+                return SupplierController.getAllSuppliers(req, res, req.query);
+            }
+        }
+
+        // GET /admin/api/export/orders - Export orders data
+        if (path === '/admin/api/export/orders' && method === 'GET') {
+            if (SupplierController.getOrdersForExport) {
+                return SupplierController.getOrdersForExport(req, res);
+            } else {
+                // Fallback - try to call orders API directly
+                return SupplierController.getAllOrders(req, res, req.query);
+            }
+        }
+
+        // GET /admin/api/export/all - Export all data in one call
+        if (path === '/admin/api/export/all' && method === 'GET') {
+            return handleExportAll(req, res);
         }
 
         return sendJSON(res, 404, {

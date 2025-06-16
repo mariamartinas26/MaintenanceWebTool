@@ -431,6 +431,61 @@ class AdminAppointmentsController {
             });
         }
     }
+    static async getAppointmentsForExport(req, res) {
+        try {
+            const result = await AdminAppointmentsController.getAppointmentsForExportData(req);
+
+            sendJSON(res, 200, {
+                success: true,
+                data: result,
+                total: result.length,
+                exported_at: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Export appointments error:', error);
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Failed to export appointments data'
+            });
+        }
+    }
+
+    static async getAppointmentsForExportData(req) {
+        try {
+
+            const appointments = await AdminAppointment.getAllForAdmin({});
+
+            return appointments.map(appointment => ({
+                id: appointment.id,
+                client_name: `${appointment.first_name || ''} ${appointment.last_name || ''}`.trim(),
+                client_email: appointment.email,
+                client_phone: appointment.phone,
+                appointment_date: appointment.appointment_date ? new Date(appointment.appointment_date).toLocaleString() : null,
+                status: appointment.status,
+                problem_description: appointment.problem_description,
+                admin_response: appointment.admin_response,
+                rejection_reason: appointment.rejection_reason,
+                retry_days: appointment.retry_days,
+                estimated_price: appointment.estimated_price ? parseFloat(appointment.estimated_price) : null,
+                warranty_info: appointment.warranty_info,
+                service_type: appointment.vehicle_type ?
+                    `${appointment.vehicle_type} ${appointment.brand || ''} ${appointment.model || ''}${appointment.year ? ` (${appointment.year})` : ''}`.trim() :
+                    'Unknown Service',
+                vehicle_type: appointment.vehicle_type,
+                vehicle_brand: appointment.brand,
+                vehicle_model: appointment.model,
+                vehicle_year: appointment.year,
+                is_electric: appointment.is_electric,
+                created_at: appointment.created_at ? new Date(appointment.created_at).toLocaleString() : null,
+                updated_at: appointment.updated_at ? new Date(appointment.updated_at).toLocaleString() : null
+            }));
+
+        } catch (error) {
+            console.error('Error getting appointments for export:', error);
+            throw error;
+        }
+    }
 }
+
 
 module.exports = AdminAppointmentsController;
