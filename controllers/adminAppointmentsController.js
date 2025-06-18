@@ -97,8 +97,7 @@ class AdminAppointmentsController {
                 });
             }
 
-            const appointment = await AdminAppointment.getByIdForAdmin(appointmentId); // ✅ Using AdminAppointment
-
+            const appointment = await AdminAppointment.getByIdForAdmin(appointmentId);
             if (!appointment) {
                 return sendJSON(res, 404, {
                     success: false,
@@ -107,7 +106,7 @@ class AdminAppointmentsController {
             }
 
             // Get appointment media files
-            const mediaFiles = await AdminAppointment.getAppointmentMedia(appointmentId); // ✅ Using AdminAppointment
+            const mediaFiles = await AdminAppointment.getAppointmentMedia(appointmentId);
 
             // Get appointment parts
             const appointmentParts = await AppointmentParts.getAppointmentParts(appointmentId);
