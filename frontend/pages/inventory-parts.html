@@ -28,6 +28,10 @@
                     <span class="icon"></span>
                     <span>Suppliers</span>
                 </a></li>
+                <li><a href="#" id="export-link">
+                    <span class="icon"></span>
+                    <span>Export Data</span>
+                </a></li>
             </ul>
         </nav>
         <div class="user-info">
@@ -57,7 +61,6 @@
 
         <div class="content">
             <section class="filters-section">
-                <h2 class="sr-only">Filter Options</h2>
                 <div class="filters-container">
                     <div class="filters-group">
                         <select id="categoryFilter">
@@ -73,8 +76,9 @@
                 </div>
             </section>
 
+
+
             <section class="parts-section">
-                <h2 class="sr-only">Parts Inventory</h2>
                 <div id="partsContainer" class="parts-grid">
                     <div class="loading">Loading parts...</div>
                 </div>
@@ -113,7 +117,7 @@
         </div>
         <div class="modal-body">
             <form id="stockUpdateForm">
-                <input type="hidden" id="updatePartId">
+                <input type="hidden" id="updatePartId" />
 
                 <div class="part-info" id="updatePartInfo">
                 </div>
@@ -122,7 +126,6 @@
                     <div class="form-group">
                         <label for="stockOperation">Operation:</label>
                         <select id="stockOperation" required>
-                            <option value="">Select operation</option>
                             <option value="add">Add Stock</option>
                             <option value="subtract">Remove Stock</option>
                             <option value="set">Set Exact Amount</option>

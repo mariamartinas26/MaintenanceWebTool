@@ -29,6 +29,10 @@
                     <span class="icon"></span>
                     <span>Suppliers</span>
                 </a></li>
+                <li><a href="#" id="export-link">
+                    <span class="icon"></span>
+                    <span>Export Data</span>
+                </a></li>
             </ul>
         </nav>
         <div class="user-info">
@@ -105,6 +109,12 @@
                         <p>Find and manage existing parts</p>
                     </a>
 
+                    <div class="action-card" onclick="showStockUpdateModal()">
+                        <i class="fas fa-warehouse"></i>
+                        <h3>Update Stock</h3>
+                        <p>Quick stock adjustments</p>
+                    </div>
+                </div>
             </section>
 
             <!-- Categories Overview -->
@@ -120,6 +130,57 @@
     </main>
 </div>
 
+<!-- Stock Update Modal -->
+<div id="stockUpdateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-warehouse"></i> Quick Stock Update</h3>
+            <span class="modal-close" onclick="hideStockUpdateModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="stockUpdateForm">
+                <div class="form-group">
+                    <label for="partSearch">Search Part:</label>
+                    <input type="text" id="partSearch" placeholder="Search by name or part number..." onkeyup="searchPartsForStock()">
+                    <div id="partSearchResults" class="search-results"></div>
+                </div>
+
+                <div id="selectedPartInfo" class="selected-part" style="display: none;">
+                    <h4 id="selectedPartName">Part Name</h4>
+                    <p>Current Stock: <span id="currentStock"></span></p>
+                    <p>Minimum Level: <span id="minLevel"></span></p>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="stockOperation">Operation:</label>
+                        <select id="stockOperation" required>
+                            <option value="">Select operation</option>
+                            <option value="add">Add Stock</option>
+                            <option value="subtract">Remove Stock</option>
+                            <option value="set">Set Exact Amount</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stockQuantity">Quantity:</label>
+                        <input type="number" id="stockQuantity" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="stockReason">Reason (optional):</label>
+                    <input type="text" id="stockReason" placeholder="e.g., Received shipment, Used for repair...">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="hideStockUpdateModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Update Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="loading-spinner">
