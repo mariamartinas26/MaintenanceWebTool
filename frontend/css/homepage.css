@@ -9,15 +9,9 @@ body {
     color: white;
     overflow-x: hidden;
 }
-/* Specific pentru tab-uri */
-.tabs-header .tab,
-.tab-button,
-.nav-tab {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-}
 
-/* Pentru butoane */
+
+/* font butoane */
 .btn,
 button,
 .add-btn,
@@ -26,15 +20,8 @@ button,
     font-weight: 500;
 }
 
-/* Pentru titluri și headere */
+/* font titlu */
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-}
-
-/* Pentru textele din pagină */
-.page-title,
-.section-title {
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
 }
@@ -60,7 +47,6 @@ h1, h2, h3, h4, h5, h6 {
     background-color:#050a2e;
 }
 
-/* Conținut principal */
 .main-content {
     height: 100vh;
     display: flex;
@@ -76,48 +62,3 @@ h1, h2, h3, h4, h5, h6 {
     color: white;
 }
 
-/* Detalii despre serviciu */
-.service-details {
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 50px 20px;
-    margin: 0 auto;
-    max-width: 900px;
-    text-align: center;
-    transition: opacity 1s ease, transform 1s ease;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.service-details.hidden {
-    opacity: 0;
-    transform: translateY(40px);
-}
-
-/* Buton programare */
-.appointment-btn {
-    text-align: center;
-    margin: 40px 0;
-    transition: opacity 1s ease, transform 1s ease;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.appointment-btn.hidden {
-    opacity: 0;
-    transform: translateY(40px);
-}
-
-.appointment-btn button {
-    padding: 15px 30px;
-    font-size: 18px;
-    background-color: #0c1446;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.appointment-btn button:hover {
-    background-color: #050a2e;
-}

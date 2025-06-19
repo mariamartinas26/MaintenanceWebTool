@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const AccountRequest = require('../models/AccountRequest');
 const jwt = require('jsonwebtoken');
 const { validateRegisterData } = require('../utils/validation');
 const { sendCreated, sendBadRequest, sendUnauthorized, sendServerError, sendSuccess } = require('../utils/response');
@@ -11,49 +12,63 @@ const generateToken = (userId) => {
     );
 };
 
-const register = async (req, res, body) => {
+const submitRegistrationRequest = async (req, res, body) => {
     try {
-        const { email, password, first_name, last_name, phone } = body;
+        const {
+            email,
+            password,
+            first_name,
+            last_name,
+            phone,
+            role,
+            company_name,
+            experience_years,
+            message
+        } = body;
 
-        const validation = validateRegisterData({ email, password, first_name, last_name, phone });
+        const validation = validateRegisterData({
+            email,
+            password,
+            first_name,
+            last_name,
+            phone
+        });
 
         if (!validation.isValid) {
             return sendBadRequest(res, 'Validation failed', validation.errors);
         }
 
-        // Check if email already exists
+        const existingRequest = await AccountRequest.findByEmail(email);
+        if (existingRequest) {
+            return sendBadRequest(res, 'A request with this email already exists');
+        }
+
         const existingUser = await User.findByEmail(email);
         if (existingUser) {
             return sendBadRequest(res, 'Email already registered');
         }
 
-        // Create user
-        const userData = {
+        const requestData = {
             email: email.toLowerCase().trim(),
-            password,
+            password_hash: password,
             first_name: first_name.trim(),
             last_name: last_name.trim(),
             phone: phone.trim(),
-            role: 'client'
+            role: role || 'client',
+            company_name: company_name ? company_name.trim() : null,
+            experience_years: experience_years ? parseInt(experience_years) : null,
+            message: message ? message.trim() : null,
+            status: 'pending'
         };
 
-        const newUser = await User.create(userData);
-        const token = generateToken(newUser.id);
+        await AccountRequest.create(requestData);
 
         sendCreated(res, {
-            user: {
-                id: newUser.id,
-                email: newUser.email,
-                first_name: newUser.first_name,
-                last_name: newUser.last_name,
-                phone: newUser.phone,
-                role: newUser.role
-            },
-            token: token
-        }, 'User registered successfully');
+            message: 'Registration request submitted successfully'
+        }, 'Your request has been submitted and is pending approval');
 
     } catch (error) {
-        sendServerError(res, 'Server error during registration');
+        sendServerError(res, 'Server error during registration request');
     }
 };
 
@@ -61,7 +76,6 @@ const login = async (req, res, body) => {
     try {
         const { email, password } = body;
 
-        // Basic validation
         if (!email || !password) {
             return sendBadRequest(res, 'Email and password are required');
         }
@@ -91,9 +105,11 @@ const login = async (req, res, body) => {
         }, 'Login successful');
 
     } catch (error) {
-        console.error('Login error:', error);
         sendServerError(res, 'Server error during login');
     }
 };
 
-module.exports = { register, login };
+module.exports = {
+    submitRegistrationRequest,
+    login
+};

@@ -1,25 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const loginForm = document.getElementById('loginForm');
     const messageElement = document.getElementById('mesaj');
     const closeButton = document.getElementById('closeButton');
 
-    //close button functionality
     closeButton.addEventListener('click', function() {
         window.location.href = '/';
     });
 
-    //login form submission
-    loginForm.addEventListener('submit', async function(e) {
+    document.getElementById('loginForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const formData = {
-            email: document.getElementById('email').value.trim(),
-            password: document.getElementById('password').value
-        };
-
-        if (!validateForm(formData)) {
-            return;
-        }
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
         try {
             const response = await fetch('/api/auth/login', {
@@ -27,25 +18,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ email, password })
             });
 
             const data = await response.json();
 
             if (data.success) {
-                //save jwt token+user data
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
-                showMessage('Login successful! Redirecting...', 'success');
-
-                setTimeout(() => {
-                    if (data.user.role === 'admin') {
+                switch(data.user.role) {
+                    case 'manager':
+                        window.location.href = '/manager/dashboard';
+                        break;
+                    case 'admin':
                         window.location.href = '/admin/dashboard';
-                    } else {
+                        break;
+                    case 'contabil':
+                        window.location.href = '/contabil/dashboard';
+                        break;
+                    case 'client':
+                    default:
                         window.location.href = '/client/dashboard';
-                    }
-                }, 2000);
+                        break;
+                }
             } else {
                 showMessage(data.message || 'Login failed', 'error');
             }
@@ -53,25 +49,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showMessage('Network error', 'error');
         }
     });
-
-    function validateForm(data) {
-        if (!data.email || !isValidEmail(data.email)) {
-            showMessage('Please enter a valid email', 'error');
-            return false;
-        }
-
-        if (!data.password || data.password.length < 1) {
-            showMessage('Password is required', 'error');
-            return false;
-        }
-
-        return true;
-    }
-
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
 
     function showMessage(message, type) {
         messageElement.textContent = message;
@@ -93,14 +70,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    //check if user is already logged in
     const token = localStorage.getItem('token');
     if (token) {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.role === 'admin') {
-            window.location.href = '/admin/dashboard';
-        } else {
-            window.location.href = '/client/dashboard';
+        switch(user.role) {
+            case 'manager':
+                window.location.href = '/manager/dashboard';
+                break;
+            case 'admin':
+                window.location.href = '/admin/dashboard';
+                break;
+            case 'contabil':
+                window.location.href = '/contabil/dashboard';
+                break;
+            default:
+                window.location.href = '/client/dashboard';
+                break;
         }
     }
 });

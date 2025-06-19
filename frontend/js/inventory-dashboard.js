@@ -70,27 +70,9 @@ function setupEventListeners() {
         });
     }
 
-    // Highlight current page
-    highlightCurrentPage();
 }
 
-function highlightCurrentPage() {
-    const currentPath = window.location.pathname;
-    const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
-
-    sidebarLinks.forEach(link => {
-        const linkPath = new URL(link.href).pathname;
-        if (currentPath === linkPath) {
-            link.parentElement.classList.add('active');
-        } else {
-            link.parentElement.classList.remove('active');
-        }
-    });
-}
-
-// Load all dashboard data
 async function loadDashboardData() {
-    showLoading(true);
 
     try {
         await Promise.all([
@@ -100,8 +82,6 @@ async function loadDashboardData() {
         ]);
     } catch (error) {
         showNotification('Error loading dashboard data', 'error');
-    } finally {
-        showLoading(false);
     }
 }
 
@@ -296,7 +276,6 @@ async function handleStockUpdate(e) {
     }
 
     try {
-        showLoading(true);
 
         const response = await fetch(`/inventory/api/parts/${selectedPartId}/stock`, {
             method: 'PUT',
@@ -320,15 +299,7 @@ async function handleStockUpdate(e) {
         }
     } catch (error) {
         showNotification('Error updating stock', 'error');
-    } finally {
-        showLoading(false);
     }
-}
-
-// Utility functions
-function showLoading(show) {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = show ? 'flex' : 'none';
 }
 
 function showNotification(message, type = 'info') {
@@ -421,10 +392,3 @@ function logout() {
         window.location.href = '/admin/login';
     }
 }
-
-function refreshDashboard() {
-    loadDashboardData();
-}
-
-// Auto-refresh every 5 minutes
-setInterval(refreshDashboard, 5 * 60 * 1000);
