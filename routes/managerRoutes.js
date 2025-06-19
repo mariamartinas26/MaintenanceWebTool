@@ -1,16 +1,46 @@
-const express = require('express');
-const router = express.Router();
-const managerController = require('../controllers/managerController');
-const { verifyToken, requireManager } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
-router.use(verifyToken);
-router.use(requireManager);
+function verifyToken(authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return { valid: false, error: 'No token provided' };
+    }
 
-router.get('/requests', managerController.getAccountRequests);
-router.get('/requests/stats', managerController.getDashboardStats);
-router.get('/requests/:id', managerController.getAccountRequestById);
-router.post('/requests/:id/approve', managerController.approveAccountRequest);
-router.post('/requests/:id/reject', managerController.rejectAccountRequest);
-router.delete('/requests/cleanup', managerController.cleanupOldRequests);
+    const token = authHeader.substring(7);
 
-module.exports = router;
+    try {
+        const secret = process.env.JWT_SECRET || 'fallback-secret-key';
+        const decoded = jwt.verify(token, secret);
+        return {
+            valid: true,
+            userId: decoded.userId || decoded.user_id,
+            user: decoded
+        };
+    } catch (error) {
+        return {
+            valid: false,
+            error: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
+        };
+    }
+}
+
+function requireAuth(req, res, next) {
+    const authResult = verifyToken(req.headers.authorization);
+
+    if (!authResult.valid) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: authResult.error
+        }));
+        return false;
+    }
+
+    req.userId = authResult.userId;
+    req.user = authResult.user;
+    return true;
+}
+
+module.exports = {
+    verifyToken,
+    requireAuth
+};

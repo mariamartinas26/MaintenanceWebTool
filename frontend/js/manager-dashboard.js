@@ -123,10 +123,16 @@ function createRequestCard(request) {
     card.querySelector('.request-date').textContent = `Requested: ${formatDate(request.created_at)}`;
     card.querySelector('.phone-value').textContent = request.phone;
 
-    // Role badge
+    // Role badge - afișează rolul asignat dacă există, altfel rolul cerut
     const roleBadge = card.querySelector('.role-badge');
-    roleBadge.textContent = request.role;
-    roleBadge.className = `role-badge role-${request.role}`;
+    if (request.status === 'approved' && request.assigned_role) {
+        roleBadge.textContent = `Assigned: ${request.assigned_role}`;
+        roleBadge.className = `role-badge role-${request.assigned_role}`;
+        roleBadge.title = `Originally requested: ${request.role}`;
+    } else {
+        roleBadge.textContent = `Requested: ${request.role}`;
+        roleBadge.className = `role-badge role-${request.role}`;
+    }
 
     // Status badge
     const statusBadge = card.querySelector('.status-badge');
@@ -225,7 +231,17 @@ function viewRequest(requestId) {
 
 function showApproveModal(requestId) {
     currentRequestId = requestId;
+
+    // Reset form fields
+    document.getElementById('assign-role').value = '';
     document.getElementById('approve-message').value = '';
+
+    // Optionally, pre-select the requested role
+    const request = allRequests.find(r => r.id === requestId);
+    if (request) {
+        document.getElementById('assign-role').value = request.role;
+    }
+
     showModal(approveModal);
 }
 
@@ -238,7 +254,14 @@ function showRejectModal(requestId) {
 async function confirmApproval() {
     if (!currentRequestId) return;
 
+    const assignedRole = document.getElementById('assign-role').value;
     const welcomeMessage = document.getElementById('approve-message').value.trim();
+
+    // Validare rol
+    if (!assignedRole) {
+        showNotification('Please select a role for the user', 'error');
+        return;
+    }
 
     try {
         const response = await fetch(`/api/manager/requests/${currentRequestId}/approve`, {
@@ -248,6 +271,7 @@ async function confirmApproval() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                assigned_role: assignedRole,  // Nou câmp
                 manager_message: welcomeMessage
             })
         });
@@ -255,7 +279,7 @@ async function confirmApproval() {
         const data = await response.json();
 
         if (data.success) {
-            showNotification('Request approved successfully!', 'success');
+            showNotification(`Request approved! User assigned role: ${assignedRole}`, 'success');
             closeAllModals();
             loadRequests();
         } else {
@@ -317,9 +341,14 @@ function closeAllModals() {
         modal.style.display = 'none';
     });
     document.body.style.overflow = 'auto';
+
+    // Reset form fields
+    document.getElementById('assign-role').value = '';
+    document.getElementById('approve-message').value = '';
+    document.getElementById('reject-message').value = '';
+
     currentRequestId = null;
 }
-
 // Logout handler
 function handleLogout() {
     if (confirm('Are you sure you want to logout?')) {
