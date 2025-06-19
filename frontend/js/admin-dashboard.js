@@ -19,7 +19,6 @@ class AdminDashboard {
     }
 
     bindEvents() {
-        // Filter functionality
         const statusFilter = document.getElementById('status-filter');
 
         statusFilter.addEventListener('change', () => {
