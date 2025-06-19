@@ -2,15 +2,37 @@ let suppliers = [];
 let orders = [];
 let parts = [];
 
-// Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
+    //verific daca e autentificat
+    if (!checkAuthentication()) {
+        return;
+    }
+
     setupEventListeners();
     initializeData().then(() => {
         showTab('suppliers');
     });
 });
 
-// Setup event listeners
+function checkAuthentication() {
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (!token) {
+        alert('You need to login first');
+        window.location.href = '/login';
+        return false;
+    }
+
+    if (user.role !== 'admin' && user.role !== 'manager') {
+        alert('Access denied. Admin or manager role required.');
+        window.location.href = '/homepage';
+        return false;
+    }
+
+    return true;
+}
+
 function setupEventListeners() {
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -88,11 +110,22 @@ function showTab(tabName) {
     }
 }
 
-// API Integration
 async function loadSuppliersFromAPI() {
     try {
         showLoading('suppliers-list');
-        const response = await fetch('/api/suppliers');
+        const token = localStorage.getItem('token');
+
+        const response = await fetch('/api/suppliers', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -115,37 +148,40 @@ async function loadSuppliersFromAPI() {
 async function loadPartsFromAPI() {
     try {
         console.log('Loading parts from API...');
-        const response = await fetch('/api/parts');
+        const token = localStorage.getItem('token');
+
+        const response = await fetch('/api/parts', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const result = await response.json();
-        console.log('Parts API response:', result);
 
         if (result.success) {
             parts = result.data;
-            console.log('Parts loaded successfully:', parts);
-            console.log('Number of parts:', parts.length);
-
-            // Debug: afișează primele câteva părți
-            if (parts.length > 0) {
-                console.log('First part example:', parts[0]);
-            }
         } else {
             throw new Error(result.message || 'Failed to load parts');
         }
     } catch (error) {
-        console.error('Error loading parts from API:', error);
         showNotification('Error loading parts from API: ' + error.message, 'error');
-        // Nu lăsa aplicația să crașeze - setează parts ca array gol
         parts = [];
     }
 }
 
 async function saveSupplierToAPI(supplierData) {
     try {
+        const token = localStorage.getItem('token');
         const isUpdate = supplierData.id;
         const url = isUpdate ? `/api/suppliers/${supplierData.id}` : '/api/suppliers';
         const method = isUpdate ? 'PUT' : 'POST';
@@ -153,10 +189,16 @@ async function saveSupplierToAPI(supplierData) {
         const response = await fetch(url, {
             method: method,
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(supplierData)
         });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
 
         const result = await response.json();
 
@@ -171,11 +213,23 @@ async function saveSupplierToAPI(supplierData) {
     }
 }
 
+
 async function deleteSupplierFromAPI(id) {
     try {
+        const token = localStorage.getItem('token');
+
         const response = await fetch(`/api/suppliers/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
 
         const result = await response.json();
 
@@ -193,7 +247,19 @@ async function deleteSupplierFromAPI(id) {
 async function loadOrdersFromAPI() {
     try {
         showLoading('orders-list');
-        const response = await fetch('/api/orders');
+        const token = localStorage.getItem('token');
+
+        const response = await fetch('/api/orders', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -203,15 +269,6 @@ async function loadOrdersFromAPI() {
 
         if (result.success) {
             orders = result.data;
-            console.log('=== ORDERS DEBUG ===');
-            console.log('All orders from API:', orders);
-
-            if (orders && orders.length > 0) {
-                console.log('First order complete structure:');
-                console.log(JSON.stringify(orders[0], null, 2));
-            }
-            console.log('=== END DEBUG ===');
-
             loadOrders();
         } else {
             throw new Error(result.message || 'Failed to load orders');
@@ -224,13 +281,21 @@ async function loadOrdersFromAPI() {
 
 async function saveOrderToAPI(orderData) {
     try {
+        const token = localStorage.getItem('token');
+
         const response = await fetch('/api/orders', {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(orderData)
         });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
 
         const result = await response.json();
 
@@ -242,6 +307,46 @@ async function saveOrderToAPI(orderData) {
         }
     } catch (error) {
         showNotification('Error saving order: ' + error.message, 'error');
+    }
+}
+
+
+async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
+    try {
+        const token = localStorage.getItem('token');
+
+        const body = {
+            status: status
+        };
+
+        if (actualDeliveryDate) {
+            body.actual_delivery_date = actualDeliveryDate;
+        }
+
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (response.status === 401) {
+            handleAuthError();
+            return;
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification(result.message, 'success');
+            await loadOrdersFromAPI();
+        } else {
+            throw new Error(result.message || 'Failed to update order status');
+        }
+    } catch (error) {
+        showNotification('Error updating order status: ' + error.message, 'error');
     }
 }
 
@@ -271,15 +376,7 @@ function saveOrder() {
         const quantity = parseInt(item.querySelector('.quantity')?.value);
         const unitPrice = parseFloat(item.querySelector('.unit-price')?.value);
 
-        console.log('Processing item:', {
-            partSelectValue: partSelect?.value,
-            quantity,
-            unitPrice,
-            partsArray: parts
-        });
-
         if (partSelect && partSelect.value && quantity && unitPrice) {
-            // Găsește partea selectată pentru a obține numele
             const selectedPart = parts.find(p => p.id === parseInt(partSelect.value));
 
             console.log('Selected part:', selectedPart);
@@ -293,7 +390,6 @@ function saveOrder() {
                 });
             } else {
                 console.error('Part not found for ID:', partSelect.value);
-                // Fallback - folosește textul din option
                 const selectedOption = partSelect.options[partSelect.selectedIndex];
                 if (selectedOption) {
                     orderItems.push({
@@ -306,9 +402,6 @@ function saveOrder() {
             }
         }
     });
-
-    console.log('=== SAVING ORDER ===');
-    console.log('Final order items being sent:', orderItems);
 
     if (orderItems.length === 0) {
         showNotification('Please add at least one order item', 'error');
@@ -325,41 +418,8 @@ function saveOrder() {
         expected_delivery_date: expectedDelivery.toISOString().split('T')[0]
     };
 
-    console.log('Order data structure:', orderData);
-
     saveOrderToAPI(orderData);
     closeOrderModal();
-}
-
-async function updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
-    try {
-        const body = {
-            status: status
-        };
-
-        if (actualDeliveryDate) {
-            body.actual_delivery_date = actualDeliveryDate;
-        }
-
-        const response = await fetch(`/api/orders/${orderId}/status`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showNotification(result.message, 'success');
-            await loadOrdersFromAPI();
-        } else {
-            throw new Error(result.message || 'Failed to update order status');
-        }
-    } catch (error) {
-        showNotification('Error updating order status: ' + error.message, 'error');
-    }
 }
 
 // Display functions

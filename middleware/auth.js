@@ -1,125 +1,98 @@
-
-const User = require('../models/User');
-const { sendUnauthorized, sendServerError, sendForbidden } = require('../utils/response');
-
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+function verifyToken(req, res, next) {
+    const authHeader = req.headers.authorization;
+    console.log('Verifying token, auth header:', authHeader);
 
-    console.log('Auth header:', authHeader); // Debug
-    console.log('Token extracted:', token ? token.substring(0, 20) + '...' : 'None'); // Debug
-
-    if (!token) {
-        console.log('No token provided');
-        return res.status(401).json({
-            success: false,
-            message: 'Access denied. No token provided.'
-        });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('No valid auth header');
+        const error = new Error('No token provided');
+        error.statusCode = 401;
+        return next(error);
     }
 
+    const token = authHeader.substring(7);
+    console.log('Token extracted:', token.substring(0, 20) + '...');
+
     try {
-        const secret = process.env.JWT_SECRET || 'fallback-secret-key';
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            console.log('JWT_SECRET not found');
+            const error = new Error('Server configuration error');
+            error.statusCode = 500;
+            return next(error);
+        }
+
         const decoded = jwt.verify(token, secret);
+        console.log('Token decoded successfully:', decoded);
 
-        console.log('Token decoded:', decoded); // Debug
-
+        // Compatibilitate cu token-ul generat în authController
         req.userId = decoded.userId || decoded.user_id;
-        req.user = decoded;
+        req.user = {
+            id: decoded.userId || decoded.user_id,
+            userId: decoded.userId || decoded.user_id
+        };
 
-        next();
+        console.log('Auth successful for user:', req.userId);
+        return next();
     } catch (error) {
-        console.log('Token verification failed:', error.message); // Debug
-
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                success: false,
-                message: 'Token expired. Please login again.'
-            });
-        }
-
-        return res.status(403).json({
-            success: false,
-            message: 'Invalid token.'
-        });
+        console.log('Token verification failed:', error.message);
+        const authError = new Error(error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token');
+        authError.statusCode = 401;
+        return next(authError);
     }
-};
+}
 
-module.exports = { authenticateToken };
-const verifyToken = async (req, res, next) => {
+async function requireAdmin(req, res, next) {
     try {
-        const authHeader = req.headers.authorization;
+        console.log('Checking admin role for user:', req.userId);
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return sendUnauthorized(res, 'Access token is required');
+        if (!req.userId) {
+            const error = new Error('User ID not found');
+            error.statusCode = 401;
+            return next(error);
         }
 
-        const token = authHeader.substring(7);
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId);
+        // Caută user-ul în baza de date pentru a verifica rolul
+        const user = await User.findById ? await User.findById(req.userId) : null;
 
         if (!user) {
-            return sendUnauthorized(res, 'Invalid token');
+            console.log('User not found in database');
+            const error = new Error('User not found');
+            error.statusCode = 401;
+            return next(error);
         }
 
-        // Verifică dacă contul este activ
-        if (user.status !== 'active') {
-            return sendUnauthorized(res, 'Account is not active');
+        console.log('User role:', user.role);
+
+        if (user.role !== 'admin' && user.role !== 'manager') {
+            console.log('User is not admin or manager');
+            const error = new Error('Admin access required');
+            error.statusCode = 403;
+            return next(error);
         }
 
-        req.user = user;
-        next();
+        req.user = {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            role: user.role
+        };
+
+        console.log('Admin access granted for:', user.email);
+        return next();
 
     } catch (error) {
-        if (error.name === 'JsonWebTokenError') {
-            return sendUnauthorized(res, 'Invalid token');
-        }
-
-        if (error.name === 'TokenExpiredError') {
-            return sendUnauthorized(res, 'Token expired');
-        }
-
-        sendServerError(res, 'Server error');
+        console.error('Error checking admin role:', error);
+        const adminError = new Error('Failed to verify admin status');
+        adminError.statusCode = 500;
+        return next(adminError);
     }
-};
-
-const requireAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
-        return sendForbidden(res, 'Admin access required');
-    }
-    next();
-};
-
-const requireManager = (req, res, next) => {
-    if (req.user.role !== 'manager') {
-        return sendForbidden(res, 'Manager access required');
-    }
-    next();
-};
-
-const requireRole = (role) => {
-    return (req, res, next) => {
-        if (req.user.role !== role) {
-            return sendForbidden(res, `${role} access required`);
-        }
-        next();
-    };
-};
-
-const requireAnyRole = (allowedRoles) => {
-    return (req, res, next) => {
-        if (!allowedRoles.includes(req.user.role)) {
-            return sendForbidden(res, `Access denied. Required roles: ${allowedRoles.join(', ')}`);
-        }
-        next();
-    };
-};
+}
 
 module.exports = {
     verifyToken,
-    requireAdmin,
-    requireManager,
-    requireRole,
-    requireAnyRole
+    requireAdmin
 };

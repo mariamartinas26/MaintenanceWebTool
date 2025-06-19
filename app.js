@@ -22,7 +22,6 @@ const server = http.createServer(async (req, res) => {
     const pathname = parsedUrl.pathname;
     const method = req.method;
 
-    // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Token');
@@ -38,15 +37,12 @@ const server = http.createServer(async (req, res) => {
             return adminRoutes(req, res);
         }
 
+        // Inventory routes
         if (pathname.startsWith('/inventory')) {
             return inventoryRoutes(req, res);
         }
 
-        if (pathname.startsWith('/api/')) {
-            await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
-        }
-
-        else if (pathname === '/' || pathname === '/homepage') {
+        if (pathname === '/' || pathname === '/homepage') {
             await serveFile(res, 'frontend/pages/homepage.html', 'text/html');
         }
         else if (pathname === '/register') {
@@ -55,16 +51,8 @@ const server = http.createServer(async (req, res) => {
         else if (pathname === '/login') {
             await serveFile(res, 'frontend/pages/login.html', 'text/html');
         }
-        else if (pathname.startsWith('/css/')) {
-            await serveFile(res, `frontend${pathname}`, 'text/css');
-        }
-        else if (pathname.startsWith('/js/')) {
-            await serveFile(res, `frontend${pathname}`, 'application/javascript');
-        }
-        else if (pathname.startsWith('/images/') || pathname.startsWith('/assets/')) {
-            await serveFile(res, `frontend${pathname}`, getImageMimeType(pathname));
-        }
         else if (pathname === '/suppliers') {
+            console.log('Serving suppliers page...');
             await serveFile(res, 'frontend/pages/suppliers.html', 'text/html');
         }
         else if (pathname === '/client/dashboard' || pathname === '/dashboard') {
@@ -75,6 +63,22 @@ const server = http.createServer(async (req, res) => {
         }
         else if (pathname === '/schedule') {
             await serveFile(res, 'frontend/pages/schedule.html', 'text/html');
+        }
+
+        //fisierele statice
+        else if (pathname.startsWith('/css/')) {
+            await serveFile(res, `frontend${pathname}`, 'text/css');
+        }
+        else if (pathname.startsWith('/js/')) {
+            await serveFile(res, `frontend${pathname}`, 'application/javascript');
+        }
+        else if (pathname.startsWith('/images/') || pathname.startsWith('/assets/')) {
+            await serveFile(res, `frontend${pathname}`, getImageMimeType(pathname));
+        }
+
+        //api routes
+        else if (pathname.startsWith('/api/')) {
+            await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
         }
         else {
             res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -93,7 +97,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             try {
                 const body = await getRequestBody(req);
                 await authController.register(req, res, body);
-            } catch (error) {;
+            } catch (error) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: false,
@@ -116,8 +120,8 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         else if (pathname === '/api/auth/login' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
-                req.body = body;  // Această linie trebuie să existe
-                await authController.login(req, res);  // Fără al 3-lea parametru
+                req.body = body;
+                await authController.login(req, res);
             } catch (error) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
@@ -127,53 +131,49 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             }
         }
         else if (pathname.startsWith('/api/manager')) {
-            // Aplică autentificarea pentru toate rutele de manager
-            authenticateToken(req, res, async () => {
-                const managerController = require('./controllers/managerController');
+            const { requireAuth } = require('./utils/authUtils');
 
-                if (pathname === '/api/manager/requests' && method === 'GET') {
-                    req.query = queryParams || {};
-                    await managerController.getAccountRequests(req, res);
-                }
-                else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
-                    req.params = { id: pathname.split('/')[4] };
-                    const body = await getRequestBody(req);
-                    req.body = body;
-                    await managerController.approveAccountRequest(req, res);
-                }
-                else if (pathname.match(/^\/api\/manager\/requests\/\d+\/reject$/) && method === 'POST') {
-                    req.params = { id: pathname.split('/')[4] };
-                    const body = await getRequestBody(req);
-                    req.body = body;
-                    await managerController.rejectAccountRequest(req, res);
-                }
-                else {
-                    res.writeHead(404, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, message: 'Manager API route not found' }));
-                }
-            });
+            if (!requireAuth(req, res)) {
+                return;
+            }
+
+            if (pathname === '/api/manager/requests' && method === 'GET') {
+                req.query = queryParams || {};
+                await managerController.getAccountRequests(req, res);
+            }
+            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
+                req.params = { id: pathname.split('/')[4] };
+                const body = await getRequestBody(req);
+                req.body = body;
+                await managerController.approveAccountRequest(req, res);
+            }
+            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/reject$/) && method === 'POST') {
+                req.params = { id: pathname.split('/')[4] };
+                const body = await getRequestBody(req);
+                req.body = body;
+                await managerController.rejectAccountRequest(req, res);
+            }
+            else {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, message: 'Manager API route not found' }));
+            }
         }
-
         else if (pathname.startsWith('/api/appointments')) {
             await handleAppointmentRoutes(req, res);
         }
-
         else if (pathname.startsWith('/api/calendar')) {
             await handleCalendarRoutes(req, res);
         }
-
         else if (pathname.startsWith('/api/vehicles')) {
             await handleVehicleRoutes(req, res);
         }
         else if (pathname.startsWith('/api/suppliers') || pathname.startsWith('/api/orders') || pathname.startsWith('/api/parts')) {
             await handleSupplierRoutes(req, res);
         }
-
         else {
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, message: 'API route not found' }));
         }
-
 
     } catch (error) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
