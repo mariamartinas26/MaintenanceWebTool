@@ -5,11 +5,23 @@ const { validateRegisterData } = require('../utils/validation');
 const { sendCreated, sendBadRequest, sendUnauthorized, sendServerError, sendSuccess } = require('../utils/response');
 
 const generateToken = (userId) => {
-    return jwt.sign(
-        { userId: userId },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRE || '7d' }
-    );
+    console.log('Generating token for user:', userId); // Debug
+
+    const payload = {
+        userId: userId,
+        user_id: userId,  // Adaugă ambele variante pentru compatibilitate
+        iat: Math.floor(Date.now() / 1000)
+    };
+
+    const secret = process.env.JWT_SECRET || 'fallback-secret-key';
+    const options = {
+        expiresIn: '30d'  // Token valid 30 zile
+    };
+
+    const token = jwt.sign(payload, secret, options);
+    console.log('Token generated:', token.substring(0, 20) + '...'); // Debug
+
+    return token;
 };
 
 const submitRegistrationRequest = async (req, res, body) => {
@@ -75,6 +87,7 @@ const submitRegistrationRequest = async (req, res, body) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        console.log('Login attempt for:', email); // Debug
 
         if (!email || !password) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -86,6 +99,8 @@ const login = async (req, res) => {
         }
 
         const user = await User.findByEmail(email);
+        console.log('User found:', user ? 'Yes' : 'No'); // Debug
+        console.log('User role from DB:', user?.role); // Debug
 
         if (!user) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -110,8 +125,7 @@ const login = async (req, res) => {
 
         const token = generateToken(user.id);
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+        const responseData = {
             success: true,
             token: token,
             user: {
@@ -121,9 +135,15 @@ const login = async (req, res) => {
                 last_name: user.last_name,
                 role: user.role
             }
-        }));
+        };
+
+        console.log('Sending response with role:', user.role); // Debug
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(responseData));
 
     } catch (error) {
+        console.error('Login error:', error); // Debug
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,

@@ -63,7 +63,7 @@ class AccountRequest {
                 SELECT
                     id, email, first_name, last_name, phone, role,
                     message, status, created_at, processed_at,
-                    manager_message, approved_user_id
+                    manager_message, approved_user_id, assigned_role
                 FROM "AccountRequests"
                 ORDER BY created_at DESC
             `;
@@ -81,26 +81,32 @@ class AccountRequest {
             const values = [status];
             let paramCount = 1;
 
-            if (additionalData.manager_message) {  // Changed from admin_message
+            if (additionalData.manager_message) {
                 paramCount++;
-                query += `, manager_message = $${paramCount}`;  // Fixed: Added $
+                query += `, manager_message = $${paramCount}`;
                 values.push(additionalData.manager_message);
             }
 
             if (additionalData.processed_at) {
                 paramCount++;
-                query += `, processed_at = $${paramCount}`;     // Fixed: Added $
+                query += `, processed_at = $${paramCount}`;
                 values.push(additionalData.processed_at);
             }
 
             if (additionalData.approved_user_id) {
                 paramCount++;
-                query += `, approved_user_id = $${paramCount}`;  // Fixed: Added $
+                query += `, approved_user_id = $${paramCount}`;
                 values.push(additionalData.approved_user_id);
             }
 
+            if (additionalData.assigned_role) {  // ✅ Nou câmp
+                paramCount++;
+                query += `, assigned_role = $${paramCount}`;
+                values.push(additionalData.assigned_role);
+            }
+
             paramCount++;
-            query += ` WHERE id = $${paramCount}`;               // Fixed: Added $
+            query += ` WHERE id = $${paramCount}`;
             values.push(id);
 
             const result = await pool.query(query, values);

@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const querystring = require('querystring');
 require('dotenv').config();
+const { authenticateToken } = require('./middleware/auth');
 
 const authController = require('./controllers/authController');
 const { handleAppointmentRoutes } = require('./routes/appointmentRoutes');
@@ -126,28 +127,31 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             }
         }
         else if (pathname.startsWith('/api/manager')) {
-            const managerController = require('./controllers/managerController');
+            // Aplică autentificarea pentru toate rutele de manager
+            authenticateToken(req, res, async () => {
+                const managerController = require('./controllers/managerController');
 
-            if (pathname === '/api/manager/requests' && method === 'GET') {
-                req.query = queryParams || {};
-                await managerController.getAccountRequests(req, res);
-            }
-            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
-                req.params = { id: pathname.split('/')[4] };
-                const body = await getRequestBody(req);
-                req.body = body;
-                await managerController.approveAccountRequest(req, res);
-            }
-            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/reject$/) && method === 'POST') {
-                req.params = { id: pathname.split('/')[4] };
-                const body = await getRequestBody(req);
-                req.body = body;
-                await managerController.rejectAccountRequest(req, res);
-            }
-            else {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Manager API route not found' }));
-            }
+                if (pathname === '/api/manager/requests' && method === 'GET') {
+                    req.query = queryParams || {};
+                    await managerController.getAccountRequests(req, res);
+                }
+                else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
+                    req.params = { id: pathname.split('/')[4] };
+                    const body = await getRequestBody(req);
+                    req.body = body;
+                    await managerController.approveAccountRequest(req, res);
+                }
+                else if (pathname.match(/^\/api\/manager\/requests\/\d+\/reject$/) && method === 'POST') {
+                    req.params = { id: pathname.split('/')[4] };
+                    const body = await getRequestBody(req);
+                    req.body = body;
+                    await managerController.rejectAccountRequest(req, res);
+                }
+                else {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, message: 'Manager API route not found' }));
+                }
+            });
         }
 
         else if (pathname.startsWith('/api/appointments')) {
