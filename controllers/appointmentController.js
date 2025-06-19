@@ -2,7 +2,60 @@ const { pool } = require('../database/db');
 const AppointmentModel = require('../models/appointmentModel');
 const CalendarModel = require('../models/calendarModel');
 const { getUserIdFromToken } = require('../utils/authUtils');
-const { sendSuccess, sendError, sendCreated } = require('../utils/response');
+
+// Funcții helper pentru răspunsuri HTTP native
+function sendJSON(res, statusCode, data) {
+    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+}
+
+function sendSuccess(res, data, message) {
+    sendJSON(res, 200, {
+        success: true,
+        message: message,
+        ...data
+    });
+}
+
+function sendError(res, statusCode, message) {
+    sendJSON(res, statusCode, {
+        success: false,
+        message: message
+    });
+}
+
+function sendCreated(res, data, message) {
+    sendJSON(res, 201, {
+        success: true,
+        message: message,
+        ...data
+    });
+}
+
+// Funcție pentru a extrage body-ul din request
+async function getRequestBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+        req.on('end', () => {
+            try {
+                if (!body.trim()) {
+                    resolve({});
+                    return;
+                }
+                const parsed = JSON.parse(body);
+                resolve(parsed);
+            } catch (error) {
+                reject(new Error('Invalid JSON in request body'));
+            }
+        });
+        req.on('error', (error) => {
+            reject(error);
+        });
+    });
+}
 
 class AppointmentController {
     /**
@@ -10,14 +63,19 @@ class AppointmentController {
      */
     static async getAppointments(req, res) {
         try {
+            console.log('Getting appointments for user...');
+
             const authHeader = req.headers.authorization;
             const userId = getUserIdFromToken(authHeader);
 
             if (!userId) {
+                console.log('No valid user ID from token');
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
+            console.log('User ID:', userId);
             const appointments = await AppointmentModel.getUserAppointments(userId);
+            console.log('Retrieved appointments:', appointments.length);
 
             //format data for response
             const formattedAppointments = appointments.map(row => ({
@@ -42,48 +100,70 @@ class AppointmentController {
             sendSuccess(res, { appointments: formattedAppointments }, 'Appointments loaded successfully');
 
         } catch (error) {
-            sendError(res, 500, 'Error getting appointments');
+            console.error('Error in getAppointments:', error);
+            sendError(res, 500, 'Error getting appointments: ' + error.message);
         }
     }
 
     /**
-     * POST /api/appointments - creates a new appointment
+     * POST /api/appointments - creates a new appointment (original method)
      */
-    static async createAppointment(req, res, body) {
+    static async createAppointment(req, res) {
         try {
+            console.log('Creating new appointment...');
+
+            const body = await getRequestBody(req);
+            console.log('Request body received:', body);
+
             const authHeader = req.headers.authorization;
             const userId = getUserIdFromToken(authHeader);
 
             if (!userId) {
+                console.log('No user ID found, sending 401');
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
+            console.log('User ID for new appointment:', userId);
             const { date, time, description, vehicleId } = body;
+            console.log('Appointment data:', { date, time, description, vehicleId });
 
             //data validation
+            console.log('Starting data validation...');
             AppointmentController.validateAppointmentData(date, time, description);
+            console.log('Data validation passed');
 
+            console.log('Creating valid date time...');
             const appointmentDateTime = AppointmentController.createValidDateTime(date, time);
+            console.log('Valid date time created:', appointmentDateTime);
 
+            console.log('Validating appointment rules...');
             await AppointmentController.validateAppointmentRules(userId, appointmentDateTime, date, time);
+            console.log('Appointment rules validation passed');
 
             const client = await pool.connect();
+            console.log('Database connection acquired');
 
             try {
                 await client.query('BEGIN');
+                console.log('Transaction started');
 
                 //insert appointment
+                console.log('Creating appointment in database...');
                 const newAppointment = await AppointmentModel.createAppointment(
                     userId,
                     vehicleId,
                     appointmentDateTime,
                     description
                 );
+                console.log('Appointment created in database:', newAppointment.id);
 
                 //updates calendar
+                console.log('Updating calendar...');
                 await CalendarModel.updateSlotAppointments(date, time, 1);
+                console.log('Calendar updated');
 
                 //add to appointment history
+                console.log('Adding to appointment history...');
                 await AppointmentModel.addAppointmentHistory(
                     client,
                     newAppointment.id,
@@ -92,8 +172,10 @@ class AppointmentController {
                     'pending',
                     'Appointment created'
                 );
+                console.log('Appointment history added');
 
                 await client.query('COMMIT');
+                console.log('Transaction committed');
 
                 const response = {
                     id: newAppointment.id,
@@ -104,25 +186,133 @@ class AppointmentController {
                     createdAt: newAppointment.created_at
                 };
 
+                console.log('Sending success response...');
                 sendCreated(res, { appointment: response }, 'Appointment created successfully!');
+                console.log('Success response sent');
 
             } catch (error) {
+                console.log('Error in transaction, rolling back:', error.message);
                 await client.query('ROLLBACK');
                 throw error;
             } finally {
+                console.log('Releasing database connection');
                 client.release();
             }
 
         } catch (error) {
-            sendError(res, 500, 'Error creating appointment');
+            console.error('Error in createAppointment:', error);
+            console.error('Error stack:', error.stack);
+            sendError(res, 500, 'Error creating appointment: ' + error.message);
         }
     }
 
     /**
-     * PUT /api/appointments/:id - updates appointment status
+     * POST /api/appointments - creates a new appointment (with body already extracted)
      */
-    static async updateAppointment(req, res, appointmentId, body) {
+    static async createAppointmentWithBody(req, res, body) {
         try {
+            console.log('Creating new appointment with extracted body...');
+            console.log('Request body received:', body);
+
+            const authHeader = req.headers.authorization;
+            const userId = getUserIdFromToken(authHeader);
+
+            if (!userId) {
+                console.log('No user ID found, sending 401');
+                return sendError(res, 401, 'Invalid or missing token');
+            }
+
+            console.log('User ID for new appointment:', userId);
+            const { date, time, description, vehicleId } = body;
+            console.log('Appointment data:', { date, time, description, vehicleId });
+
+            //data validation
+            console.log('Starting data validation...');
+            AppointmentController.validateAppointmentData(date, time, description);
+            console.log('Data validation passed');
+
+            console.log('Creating valid date time...');
+            const appointmentDateTime = AppointmentController.createValidDateTime(date, time);
+            console.log('Valid date time created:', appointmentDateTime);
+
+            console.log('Validating appointment rules...');
+            await AppointmentController.validateAppointmentRules(userId, appointmentDateTime, date, time);
+            console.log('Appointment rules validation passed');
+
+            const client = await pool.connect();
+            console.log('Database connection acquired');
+
+            try {
+                await client.query('BEGIN');
+                console.log('Transaction started');
+
+                //insert appointment
+                console.log('Creating appointment in database...');
+                const newAppointment = await AppointmentModel.createAppointment(
+                    userId,
+                    vehicleId,
+                    appointmentDateTime,
+                    description
+                );
+                console.log('Appointment created in database:', newAppointment.id);
+
+                //updates calendar
+                console.log('Updating calendar...');
+                await CalendarModel.updateSlotAppointments(date, time, 1);
+                console.log('Calendar updated');
+
+                //add to appointment history
+                console.log('Adding to appointment history...');
+                await AppointmentModel.addAppointmentHistory(
+                    client,
+                    newAppointment.id,
+                    userId,
+                    'created',
+                    'pending',
+                    'Appointment created'
+                );
+                console.log('Appointment history added');
+
+                await client.query('COMMIT');
+                console.log('Transaction committed');
+
+                const response = {
+                    id: newAppointment.id,
+                    date: newAppointment.appointment_date.toISOString().split('T')[0],
+                    time: newAppointment.appointment_date.toTimeString().slice(0, 5),
+                    status: newAppointment.status,
+                    description: newAppointment.problem_description,
+                    createdAt: newAppointment.created_at
+                };
+
+                console.log('Sending success response...');
+                sendCreated(res, { appointment: response }, 'Appointment created successfully!');
+                console.log('Success response sent');
+
+            } catch (error) {
+                console.log('Error in transaction, rolling back:', error.message);
+                await client.query('ROLLBACK');
+                throw error;
+            } finally {
+                console.log('Releasing database connection');
+                client.release();
+            }
+
+        } catch (error) {
+            console.error('Error in createAppointmentWithBody:', error);
+            console.error('Error stack:', error.stack);
+            sendError(res, 500, 'Error creating appointment: ' + error.message);
+        }
+    }
+
+    /**
+     * PUT /api/appointments/:id - updates appointment status (original method)
+     */
+    static async updateAppointment(req, res, appointmentId) {
+        try {
+            console.log('Updating appointment:', appointmentId);
+
+            const body = await getRequestBody(req);
             const authHeader = req.headers.authorization;
             const userId = getUserIdFromToken(authHeader);
 
@@ -184,7 +374,81 @@ class AppointmentController {
             }
 
         } catch (error) {
-            sendError(res, 500, 'Error updating appointment');
+            console.error('Error in updateAppointment:', error);
+            sendError(res, 500, 'Error updating appointment: ' + error.message);
+        }
+    }
+
+    /**
+     * PUT /api/appointments/:id - updates appointment status (with body already extracted)
+     */
+    static async updateAppointmentWithBody(req, res, appointmentId, body) {
+        try {
+            console.log('Updating appointment with extracted body:', appointmentId);
+
+            const authHeader = req.headers.authorization;
+            const userId = getUserIdFromToken(authHeader);
+
+            if (!userId) {
+                return sendError(res, 401, 'Invalid or missing token');
+            }
+
+            const { status } = body;
+
+            //only cancelling available for clients
+            if (status !== 'cancelled') {
+                return sendError(res, 400, 'You can only cancel the appointment');
+            }
+
+            //checks if appointment belongs to client
+            const appointment = await AppointmentModel.getAppointmentById(appointmentId, userId);
+
+            if (!appointment) {
+                return sendError(res, 404, 'Appointment not found');
+            }
+
+            AppointmentController.validateCancellation(appointment);
+
+            const client = await pool.connect();
+
+            try {
+                await client.query('BEGIN');
+
+                //updates appointment status
+                const updatedAppointment = await AppointmentModel.updateAppointmentStatus(appointmentId, 'cancelled');
+
+                //updates calendar
+                const appointmentDateTime = updatedAppointment.appointment_date;
+                const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
+                const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 5);
+
+                await CalendarModel.updateSlotAppointments(appointmentDateStr, appointmentTimeStr, -1);
+
+                //add to appointment history
+                await AppointmentModel.addAppointmentHistory(
+                    client,
+                    appointmentId,
+                    userId,
+                    'cancelled',
+                    'cancelled',
+                    'Appointment cancelled',
+                    appointment.status
+                );
+
+                await client.query('COMMIT');
+
+                sendSuccess(res, {}, 'Appointment cancelled successfully!');
+
+            } catch (error) {
+                await client.query('ROLLBACK');
+                throw error;
+            } finally {
+                client.release();
+            }
+
+        } catch (error) {
+            console.error('Error in updateAppointmentWithBody:', error);
+            sendError(res, 500, 'Error updating appointment: ' + error.message);
         }
     }
 
@@ -200,7 +464,6 @@ class AppointmentController {
             throw new Error('Description should be at least 10 characters long');
         }
     }
-
 
     static createValidDateTime(date, time) {
         if (!date || !time) {

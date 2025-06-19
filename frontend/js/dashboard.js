@@ -412,7 +412,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
 
         try {
-            showLoading(true);
 
             // Collect form data
             const formData = new FormData(e.target);
@@ -421,13 +420,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Validate required fields
             if (!appointmentData.date || !appointmentData.time || !appointmentData.description) {
                 showMessage('Please fill in all required fields', 'error');
-                showLoading(false);
                 return;
             }
 
             if (appointmentData.description.length < 10) {
                 showMessage('Description must contain at least 10 characters', 'error');
-                showLoading(false);
                 return;
             }
 
@@ -462,7 +459,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     await loadUserVehicles();
                 } else {
                     showMessage(vehicleResult.message || 'Error creating vehicle', 'error');
-                    showLoading(false);
                     return;
                 }
             }
@@ -497,22 +493,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage(data.message || 'Error creating appointment', 'error');
             }
 
-            showLoading(false);
 
         } catch (error) {
             console.error('Error creating appointment:', error);
             showMessage('Network error. Please try again.', 'error');
-            showLoading(false);
         }
     }
 
     async function loadAppointments() {
         try {
-            showLoading(true);
 
             const appointmentsContainer = document.getElementById('appointments-container');
             if (!appointmentsContainer) {
-                showLoading(false);
                 return;
             }
 
@@ -551,7 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             }
 
-            showLoading(false);
 
         } catch (error) {
             console.error('Error loading appointments:', error);
@@ -564,7 +555,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             }
-            showLoading(false);
         }
     }
 
@@ -680,7 +670,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            showLoading(true);
 
             const response = await fetch(`/api/appointments/${appointmentId}`, {
                 method: 'PUT',
@@ -700,12 +689,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage(data.message || 'Error cancelling appointment', 'error');
             }
 
-            showLoading(false);
 
         } catch (error) {
             console.error('Error cancelling appointment:', error);
             showMessage('Network error. Please try again.', 'error');
-            showLoading(false);
+
         }
     };
 
@@ -868,12 +856,7 @@ Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
         }
     }
 
-    function showLoading(show) {
-        const loading = document.getElementById('loading');
-        if (loading) {
-            loading.style.display = show ? 'flex' : 'none';
-        }
-    }
+
 
     function showMessage(message, type = 'info') {
         const toast = document.getElementById('message-toast');
