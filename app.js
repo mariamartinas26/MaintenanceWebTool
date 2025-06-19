@@ -131,10 +131,6 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
                 req.query = queryParams || {};
                 await managerController.getAccountRequests(req, res);
             }
-            else if (pathname.match(/^\/api\/manager\/requests\/\d+$/) && method === 'GET') {
-                req.params = { id: pathname.split('/')[4] };
-                await managerController.getAccountRequestById(req, res);
-            }
             else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
                 req.params = { id: pathname.split('/')[4] };
                 const body = await getRequestBody(req);

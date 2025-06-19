@@ -210,9 +210,9 @@ function viewRequest(requestId) {
         details.querySelector('.processed-date').textContent = formatDate(request.processed_at);
     }
 
-    if (request.admin_message) {
+    if (request.manager_message) {
         details.querySelector('.admin-message-item').style.display = 'flex';
-        details.querySelector('.admin-message').textContent = request.admin_message;
+        details.querySelector('.admin-message').textContent = request.manager_message;
     }
 
     const modalBody = document.getElementById('request-details');
@@ -231,7 +231,6 @@ function showApproveModal(requestId) {
 
 function showRejectModal(requestId) {
     currentRequestId = requestId;
-    document.getElementById('rejection-reason').value = '';
     document.getElementById('reject-message').value = '';
     showModal(rejectModal);
 }
@@ -249,7 +248,7 @@ async function confirmApproval() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                admin_message: welcomeMessage
+                manager_message: welcomeMessage
             })
         });
 
@@ -272,13 +271,8 @@ async function confirmApproval() {
 async function confirmRejection() {
     if (!currentRequestId) return;
 
-    const rejectionReason = document.getElementById('rejection-reason').value;
     const rejectionMessage = document.getElementById('reject-message').value.trim();
 
-    if (!rejectionReason) {
-        showNotification('Please select a rejection reason', 'error');
-        return;
-    }
 
     if (!rejectionMessage) {
         showNotification('Please provide a message for the user', 'error');
@@ -293,8 +287,7 @@ async function confirmRejection() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                rejection_reason: rejectionReason,
-                admin_message: rejectionMessage
+                manager_message: rejectionMessage
             })
         });
 
