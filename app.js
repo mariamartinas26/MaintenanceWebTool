@@ -5,6 +5,7 @@ const path = require('path');
 const querystring = require('querystring');
 require('dotenv').config();
 const { authenticateToken } = require('./middleware/auth');
+const { accountantRoutes } = require('./routes/accountantRoutes');
 
 const authController = require('./controllers/authController');
 const { handleAppointmentRoutes } = require('./routes/appointmentRoutes');
@@ -61,6 +62,9 @@ const server = http.createServer(async (req, res) => {
         else if (pathname === '/manager/dashboard') {
             await serveFile(res, 'frontend/pages/manager-dashboard.html', 'text/html');
         }
+        else if (pathname === '/accountant/dashboard') {
+            await serveFile(res, 'frontend/pages/accountant-dashboard.html', 'text/html');
+        }
         else if (pathname === '/schedule') {
             await serveFile(res, 'frontend/pages/schedule.html', 'text/html');
         }
@@ -85,6 +89,7 @@ const server = http.createServer(async (req, res) => {
             res.end('Not Found');
         }
     } catch (error) {
+        console.error('Server error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'Internal server error' }));
     }
@@ -129,6 +134,17 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
                     message: 'Invalid JSON in request body'
                 }));
             }
+        }
+        // RUTELE ACCOUNTANT - CORECTATE
+        else if (pathname.startsWith('/api/accountant')) {
+            console.log('=== Handling accountant route ===');
+            console.log('Pathname:', pathname);
+            console.log('Method:', method);
+
+            // NU mai folosi requireAuth din utils/authUtils
+            // Rutele accountant își gestionează propria autentificare prin requireAccountant
+            req.query = queryParams || {};
+            return await accountantRoutes(req, res);
         }
         else if (pathname.startsWith('/api/manager')) {
             const { requireAuth } = require('./utils/authUtils');
@@ -176,6 +192,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         }
 
     } catch (error) {
+        console.error('API route error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
@@ -217,6 +234,7 @@ async function serveFile(res, filePath, contentType) {
         res.writeHead(200, { 'Content-Type': contentType });
         res.end(data);
     } catch (error) {
+        console.error('File serve error:', error);
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('File not found');
     }

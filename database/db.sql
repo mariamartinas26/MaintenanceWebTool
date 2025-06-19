@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS "Users" (
                                        "created_at" TIMESTAMP DEFAULT now(),
     "updated_at" TIMESTAMP DEFAULT now()
     );
-COMMENT ON COLUMN "Users"."role" IS 'ENUM: ''client'', ''admin'', ''manager'', ''contabil''';
+COMMENT ON COLUMN "Users"."role" IS 'ENUM: ''client'', ''admin'', ''manager'', ''accountant''';
 
 -- Vehicles Table
 CREATE TABLE IF NOT EXISTS"Vehicles" (

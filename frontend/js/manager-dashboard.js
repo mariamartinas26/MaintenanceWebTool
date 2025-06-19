@@ -1,4 +1,3 @@
-
 const requestsContainer = document.getElementById('requests-container');
 const statusFilter = document.getElementById('status-filter');
 const roleFilter = document.getElementById('role-filter');
@@ -22,6 +21,34 @@ let allRequests = [];
 let filteredRequests = [];
 let currentRequestId = null;
 
+// Funcție pentru redirecționarea în funcție de rol
+function redirectBasedOnRole(role) {
+    console.log('=== redirectBasedOnRole called ===');
+    console.log('Role:', role);
+
+    switch(role) {
+        case 'admin':
+            console.log('Redirecting to admin dashboard');
+            window.location.href = '/admin/dashboard';
+            break;
+        case 'manager':
+            console.log('User is manager - staying on manager dashboard');
+            // Utilizatorul este deja pe pagina corectă
+            break;
+        case 'accountant':
+            console.log('Redirecting to accountant dashboard');
+            window.location.href = '/accountant/dashboard';
+            break;
+        case 'client':
+            console.log('Redirecting to client dashboard');
+            window.location.href = '/client/dashboard';
+            break;
+        default:
+            console.log('Unknown role, redirecting to login');
+            window.location.href = '/login';
+    }
+}
+
 //initializare
 document.addEventListener('DOMContentLoaded', function() {
     checkManagerAuth();
@@ -30,17 +57,49 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStats();
 });
 
-//verif daca user e aurentificat ca manager
+//verif daca user e autentificat ca manager - FUNCȚIA CORECTATĂ
 function checkManagerAuth() {
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-    if (!token || user.role !== 'manager') {
+    console.log('=== checkManagerAuth called ===');
+    console.log('Token exists:', !!token);
+    console.log('User role:', user.role);
+    console.log('Current page:', window.location.pathname);
+
+    if (!token) {
+        console.log('No token, redirecting to login');
         window.location.href = '/login';
         return;
     }
-}
 
+    // SCHIMBAREA PRINCIPALĂ: în loc să verifici doar 'manager'
+    // verifică dacă utilizatorul are permisiunea să fie pe această pagină
+
+    // Doar admin și manager pot accesa manager dashboard
+    if (!['admin', 'manager'].includes(user.role)) {
+        console.log('User role not allowed for manager dashboard:', user.role);
+        console.log('Redirecting user to appropriate dashboard...');
+
+        // Redirecționează în funcție de rolul utilizatorului
+        switch(user.role) {
+            case 'accountant':
+                console.log('Redirecting accountant to accountant dashboard');
+                window.location.href = '/accountant/dashboard';
+                break;
+            case 'client':
+                console.log('Redirecting client to client dashboard');
+                window.location.href = '/client/dashboard';
+                break;
+            default:
+                console.log('Unknown role, redirecting to login');
+                window.location.href = '/login';
+        }
+        return;
+    }
+
+    console.log('Manager auth successful for role:', user.role);
+}
 
 async function loadRequests() {
     try {
@@ -95,7 +154,6 @@ function setupEventListeners() {
     document.getElementById('confirm-reject-btn').addEventListener('click', confirmRejection);
 }
 
-
 function renderRequests() {
     if (filteredRequests.length === 0) {
         requestsContainer.innerHTML = `
@@ -113,6 +171,7 @@ function renderRequests() {
         requestsContainer.appendChild(card);
     });
 }
+
 function createRequestCard(request) {
     const template = document.getElementById('request-card-template');
     const card = template.content.cloneNode(true);
@@ -228,7 +287,6 @@ function viewRequest(requestId) {
     showModal(viewModal);
 }
 
-
 function showApproveModal(requestId) {
     currentRequestId = requestId;
 
@@ -297,7 +355,6 @@ async function confirmRejection() {
 
     const rejectionMessage = document.getElementById('reject-message').value.trim();
 
-
     if (!rejectionMessage) {
         showNotification('Please provide a message for the user', 'error');
         return;
@@ -349,6 +406,7 @@ function closeAllModals() {
 
     currentRequestId = null;
 }
+
 // Logout handler
 function handleLogout() {
     if (confirm('Are you sure you want to logout?')) {
