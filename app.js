@@ -115,7 +115,8 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         else if (pathname === '/api/auth/login' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
-                await authController.login(req, res, body);
+                req.body = body;  // Această linie trebuie să existe
+                await authController.login(req, res);  // Fără al 3-lea parametru
             } catch (error) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({

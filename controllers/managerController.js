@@ -87,7 +87,7 @@ const approveAccountRequest = async (req, res) => {
 
         const userData = {
             email: request.email,
-            password: request.password_hash,
+            password_hash: request.password_hash,
             first_name: request.first_name,
             last_name: request.last_name,
             phone: request.phone,
