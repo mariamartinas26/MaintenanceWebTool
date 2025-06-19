@@ -4,24 +4,35 @@ const { sendSuccess, sendBadRequest, sendServerError, sendNotFound } = require('
 
 const getAccountRequests = async (req, res) => {
     try {
+        console.log('=== getAccountRequests called ===');
+        console.log('Query params:', req.query);
+
         const { status, role } = req.query;
         let requests;
 
         if (status || role) {
+            console.log('Using filters...');
             const filters = {};
             if (status && status !== 'all') filters.status = status;
             if (role && role !== 'all') filters.role = role;
+            console.log('Filters:', filters);
             requests = await AccountRequest.findByFilters(filters);
         } else {
+            console.log('Getting all requests...');
             requests = await AccountRequest.findAll();
         }
+
+        console.log('Requests found:', requests?.length || 0);
 
         sendSuccess(res, {
             requests: requests
         }, 'Account requests retrieved successfully');
 
     } catch (error) {
-        console.error('Error fetching account requests:', error);
+        console.error('=== ERROR in getAccountRequests ===');
+        console.error('Full error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         sendServerError(res, 'Failed to retrieve account requests');
     }
 };
@@ -53,7 +64,7 @@ const getAccountRequestById = async (req, res) => {
 const approveAccountRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { admin_message } = req.body;
+        const { manager_message } = req.body;  // Changed from admin_message
 
         if (!id || isNaN(id)) {
             return sendBadRequest(res, 'Invalid request ID');
@@ -76,7 +87,7 @@ const approveAccountRequest = async (req, res) => {
 
         const userData = {
             email: request.email,
-            password: request.password_hash,
+            password_hash: request.password_hash,
             first_name: request.first_name,
             last_name: request.last_name,
             phone: request.phone,
@@ -86,7 +97,7 @@ const approveAccountRequest = async (req, res) => {
         const newUser = await User.create(userData);
 
         const updateData = {
-            admin_message: admin_message || null,
+            manager_message: manager_message || null,  // Changed from admin_message
             processed_at: new Date(),
             approved_user_id: newUser.id
         };
@@ -113,18 +124,17 @@ const approveAccountRequest = async (req, res) => {
 const rejectAccountRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { rejection_reason, admin_message } = req.body;
+        const { manager_message } = req.body;  // Changed from admin_message, removed rejection_reason
+
+        console.log('Reject request - ID:', id);
+        console.log('Reject request - Body:', req.body);
 
         if (!id || isNaN(id)) {
             return sendBadRequest(res, 'Invalid request ID');
         }
 
-        if (!rejection_reason) {
-            return sendBadRequest(res, 'Rejection reason is required');
-        }
-
-        if (!admin_message || admin_message.trim().length === 0) {
-            return sendBadRequest(res, 'Admin message is required');
+        if (!manager_message || manager_message.trim().length === 0) {
+            return sendBadRequest(res, 'Manager message is required');
         }
 
         const request = await AccountRequest.findById(parseInt(id));
@@ -138,8 +148,7 @@ const rejectAccountRequest = async (req, res) => {
         }
 
         const updateData = {
-            rejection_reason: rejection_reason,
-            admin_message: admin_message.trim(),
+            manager_message: manager_message.trim(),  // Changed from admin_message
             processed_at: new Date()
         };
 

@@ -10,8 +10,8 @@ class AccountRequest {
             const query = `
                 INSERT INTO "AccountRequests" (
                     email, password_hash, first_name, last_name, phone,
-                    role, company_name, experience_years, message, status, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                    role, message, status, created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
                     RETURNING id
             `;
 
@@ -22,8 +22,6 @@ class AccountRequest {
                 requestData.last_name,
                 requestData.phone,
                 requestData.role,
-                requestData.company_name,
-                requestData.experience_years,
                 requestData.message,
                 requestData.status || 'pending'
             ];
@@ -64,8 +62,8 @@ class AccountRequest {
             const query = `
                 SELECT
                     id, email, first_name, last_name, phone, role,
-                    company_name, experience_years, message, status,
-                    created_at, processed_at, admin_message, rejection_reason
+                    message, status, created_at, processed_at,
+                    manager_message, approved_user_id
                 FROM "AccountRequests"
                 ORDER BY created_at DESC
             `;
@@ -77,73 +75,32 @@ class AccountRequest {
         }
     }
 
-    static async findByFilters(filters) {
-        try {
-            let query = `
-                SELECT
-                    id, email, first_name, last_name, phone, role,
-                    company_name, experience_years, message, status,
-                    created_at, processed_at, admin_message, rejection_reason
-                FROM "AccountRequests"
-                WHERE 1=1
-            `;
-            const values = [];
-            let paramCount = 0;
-
-            if (filters.status) {
-                paramCount++;
-                query += ` AND status = ${paramCount}`;
-                values.push(filters.status);
-            }
-
-            if (filters.role) {
-                paramCount++;
-                query += ` AND role = ${paramCount}`;
-                values.push(filters.role);
-            }
-
-            query += ' ORDER BY created_at DESC';
-
-            const result = await pool.query(query, values);
-            return result.rows;
-        } catch (error) {
-            console.error('Error finding filtered requests:', error);
-            throw error;
-        }
-    }
-
     static async updateStatus(id, status, additionalData = {}) {
         try {
             let query = 'UPDATE "AccountRequests" SET status = $1';
             const values = [status];
             let paramCount = 1;
 
-            if (additionalData.admin_message) {
+            if (additionalData.manager_message) {  // Changed from admin_message
                 paramCount++;
-                query += `, admin_message = ${paramCount}`;
-                values.push(additionalData.admin_message);
-            }
-
-            if (additionalData.rejection_reason) {
-                paramCount++;
-                query += `, rejection_reason = ${paramCount}`;
-                values.push(additionalData.rejection_reason);
+                query += `, manager_message = $${paramCount}`;  // Fixed: Added $
+                values.push(additionalData.manager_message);
             }
 
             if (additionalData.processed_at) {
                 paramCount++;
-                query += `, processed_at = ${paramCount}`;
+                query += `, processed_at = $${paramCount}`;     // Fixed: Added $
                 values.push(additionalData.processed_at);
             }
 
             if (additionalData.approved_user_id) {
                 paramCount++;
-                query += `, approved_user_id = ${paramCount}`;
+                query += `, approved_user_id = $${paramCount}`;  // Fixed: Added $
                 values.push(additionalData.approved_user_id);
             }
 
             paramCount++;
-            query += ` WHERE id = ${paramCount}`;
+            query += ` WHERE id = $${paramCount}`;               // Fixed: Added $
             values.push(id);
 
             const result = await pool.query(query, values);

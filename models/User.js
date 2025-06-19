@@ -4,8 +4,18 @@ const bcrypt = require('bcryptjs');
 class User {
     static async create(userData) {
         try {
-            const saltRounds = 12;
-            const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+            let hashedPassword;
+
+            if (userData.password_hash) {
+                // Dacă primești hash direct, folosește-l
+                hashedPassword = userData.password_hash;
+            } else if (userData.password) {
+                // Dacă primești parola în clar, hash-uiește-o
+                const saltRounds = 12;
+                hashedPassword = await bcrypt.hash(userData.password, saltRounds);
+            } else {
+                throw new Error('Password or password_hash required');
+            }
 
             const query = `
                 INSERT INTO "Users" (email, password_hash, first_name, last_name, phone, role)

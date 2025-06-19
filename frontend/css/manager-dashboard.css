@@ -121,11 +121,6 @@ h1, h2, h3, h4, h5, h6 {
     border: 1px solid #e9ecef;
     border-radius: 8px;
     padding: 25px;
-    transition: border-color 0.3s ease;
-}
-
-.request-card:hover {
-    border-color: #101c5a;
 }
 
 .request-header {
@@ -413,30 +408,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 16px;
 }
 
-/* Loading State */
-.loading-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 50px;
-    color: #6c757d;
-}
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #101c5a;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
 
 /* Notification */
 .notification {

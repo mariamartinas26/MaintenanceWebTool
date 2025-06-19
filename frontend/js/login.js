@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const password = document.getElementById('password').value;
 
         try {
+            console.log('Sending login request...');
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -21,9 +22,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ email, password })
             });
 
-            const data = await response.json();
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
+            // Verifică dacă response-ul e OK
+            if (!response.ok) {
+                console.log('Response not OK:', response.status, response.statusText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Citește răspunsul ca text mai întâi
+            const responseText = await response.text();
+            console.log('Raw response text:', responseText);
+
+            // Apoi încearcă să-l parsezi
+            let data;
+            try {
+                data = JSON.parse(responseText);
+                console.log('Parsed data:', data);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.error('Response text was:', responseText);
+                throw new Error('Invalid JSON response from server');
+            }
 
             if (data.success) {
+                console.log('Login successful, storing data...');
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
@@ -46,7 +70,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage(data.message || 'Login failed', 'error');
             }
         } catch (error) {
-            showMessage('Network error', 'error');
+            console.error('Login error:', error);
+            showMessage('Network error: ' + error.message, 'error');
         }
     });
 
@@ -72,20 +97,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const token = localStorage.getItem('token');
     if (token) {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        switch(user.role) {
-            case 'manager':
-                window.location.href = '/manager/dashboard';
-                break;
-            case 'admin':
-                window.location.href = '/admin/dashboard';
-                break;
-            case 'contabil':
-                window.location.href = '/contabil/dashboard';
-                break;
-            default:
-                window.location.href = '/client/dashboard';
-                break;
+        const userString = localStorage.getItem('user');
+        console.log('User string from localStorage:', userString);
+
+        if (userString) {
+            try {
+                const user = JSON.parse(userString);
+                console.log('Parsed user:', user);
+
+                switch(user.role) {
+                    case 'manager':
+                        window.location.href = '/manager/dashboard';
+                        break;
+                    case 'admin':
+                        window.location.href = '/admin/dashboard';
+                        break;
+                    case 'contabil':
+                        window.location.href = '/contabil/dashboard';
+                        break;
+                    default:
+                        window.location.href = '/client/dashboard';
+                        break;
+                }
+            } catch (parseError) {
+                console.error('Error parsing user from localStorage:', parseError);
+                // Șterge datele corupte
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                localStorage.clear();
+            }
         }
     }
 });

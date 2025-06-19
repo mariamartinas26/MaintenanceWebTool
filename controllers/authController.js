@@ -72,40 +72,63 @@ const submitRegistrationRequest = async (req, res, body) => {
     }
 };
 
-const login = async (req, res, body) => {
+const login = async (req, res) => {
     try {
-        const { email, password } = body;
+        const { email, password } = req.body;
 
         if (!email || !password) {
-            return sendBadRequest(res, 'Email and password are required');
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Email and password are required'
+            }));
+            return;
         }
 
         const user = await User.findByEmail(email);
+
         if (!user) {
-            return sendUnauthorized(res, 'Invalid credentials');
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Invalid credentials'
+            }));
+            return;
         }
 
-        const isValidPassword = await User.verifyPassword(password, user.password_hash);
+        const bcrypt = require('bcryptjs');
+        const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
         if (!isValidPassword) {
-            return sendUnauthorized(res, 'Invalid credentials');
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Invalid credentials'
+            }));
+            return;
         }
 
         const token = generateToken(user.id);
 
-        sendSuccess(res, {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: true,
+            token: token,
             user: {
                 id: user.id,
                 email: user.email,
                 first_name: user.first_name,
                 last_name: user.last_name,
-                phone: user.phone,
                 role: user.role
-            },
-            token: token
-        }, 'Login successful');
+            }
+        }));
 
     } catch (error) {
-        sendServerError(res, 'Server error during login');
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: 'Server error'
+        }));
     }
 };
 
