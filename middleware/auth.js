@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { sendUnauthorized, sendServerError } = require('../utils/response');
+const { sendUnauthorized, sendServerError, sendForbidden } = require('../utils/response');
 
 const verifyToken = async (req, res, next) => {
     try {
@@ -16,6 +16,11 @@ const verifyToken = async (req, res, next) => {
 
         if (!user) {
             return sendUnauthorized(res, 'Invalid token');
+        }
+
+        // Verifică dacă contul este activ
+        if (user.status !== 'active') {
+            return sendUnauthorized(res, 'Account is not active');
         }
 
         req.user = user;
@@ -36,9 +41,40 @@ const verifyToken = async (req, res, next) => {
 
 const requireAdmin = (req, res, next) => {
     if (req.user.role !== 'admin') {
-        return sendUnauthorized(res, 'Admin access required');
+        return sendForbidden(res, 'Admin access required');
     }
     next();
 };
 
-module.exports = { verifyToken, requireAdmin };
+const requireManager = (req, res, next) => {
+    if (req.user.role !== 'manager') {
+        return sendForbidden(res, 'Manager access required');
+    }
+    next();
+};
+
+const requireRole = (role) => {
+    return (req, res, next) => {
+        if (req.user.role !== role) {
+            return sendForbidden(res, `${role} access required`);
+        }
+        next();
+    };
+};
+
+const requireAnyRole = (allowedRoles) => {
+    return (req, res, next) => {
+        if (!allowedRoles.includes(req.user.role)) {
+            return sendForbidden(res, `Access denied. Required roles: ${allowedRoles.join(', ')}`);
+        }
+        next();
+    };
+};
+
+module.exports = {
+    verifyToken,
+    requireAdmin,
+    requireManager,
+    requireRole,
+    requireAnyRole
+};

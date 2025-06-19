@@ -18,7 +18,6 @@ const runMiddleware = (req, res, fn) => {
     });
 };
 
-// Copiază exact aceeași logică ca în adminRoutes
 const requireAdminAccess = async (req, res, next) => {
     try {
         await runMiddleware(req, res, verifyToken);
@@ -34,7 +33,6 @@ const requireAdminAccess = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Admin access denied:', error.message);
-        // ← Adaugă răspuns de eroare ca în adminRoutes
         return sendJSON(res, 401, {
             success: false,
             message: 'Admin access required'
@@ -77,15 +75,9 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getCategories(req, res);
         }
 
-
         // GET /inventory/api/parts/statistics - Get inventory statistics
         if (path === '/inventory/api/parts/statistics' && method === 'GET') {
             return InventoryController.getInventoryStats(req, res);
-        }
-
-        // GET /inventory/api/parts/search?q=searchTerm - Search parts
-        if (path === '/inventory/api/parts/search' && method === 'GET') {
-            return InventoryController.searchParts(req, res);
         }
 
         // GET /inventory/api/parts/category/:category - Get parts by category
@@ -102,50 +94,7 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getPartById(req, res);
         }
 
-        // POST /inventory/api/parts - Add new part
-        if (path === '/inventory/api/parts' && method === 'POST') {
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
-            });
 
-            req.on('end', () => {
-                try {
-                    req.body = JSON.parse(body);
-                    return InventoryController.addPart(req, res);
-                } catch (error) {
-                    return sendJSON(res, 400, {
-                        success: false,
-                        message: 'Invalid JSON in request body'
-                    });
-                }
-            });
-            return;
-        }
-
-        // PUT /inventory/api/parts/:id - Update part
-        if (path.match(/^\/inventory\/api\/parts\/(\d+)$/) && method === 'PUT') {
-            const matches = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
-            req.params = { id: matches[1] };
-
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
-            });
-
-            req.on('end', () => {
-                try {
-                    req.body = JSON.parse(body);
-                    return InventoryController.updatePart(req, res);
-                } catch (error) {
-                    return sendJSON(res, 400, {
-                        success: false,
-                        message: 'Invalid JSON in request body'
-                    });
-                }
-            });
-            return;
-        }
 
         // DELETE /inventory/api/parts/:id - Delete part
         if (path.match(/^\/inventory\/api\/parts\/(\d+)$/) && method === 'DELETE') {
@@ -154,29 +103,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.deletePart(req, res);
         }
 
-        // PUT /inventory/api/parts/:id/stock - Update stock quantity
-        if (path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/) && method === 'PUT') {
-            const matches = path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/);
-            req.params = { id: matches[1] };
-
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
-            });
-
-            req.on('end', () => {
-                try {
-                    req.body = JSON.parse(body);
-                    return InventoryController.updateStock(req, res);
-                } catch (error) {
-                    return sendJSON(res, 400, {
-                        success: false,
-                        message: 'Invalid JSON in request body'
-                    });
-                }
-            });
-            return;
-        }
 
         return sendJSON(res, 404, {
             success: false,
@@ -249,36 +175,6 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
         }
     }
 
-
-    // Add/Edit part page
-    if (path === '/inventory/parts/add' || path.match(/^\/inventory\/parts\/edit\/(\d+)$/)) {
-        if (method === 'GET') {
-            try {
-                const addEditPagePath = pathModule.join(__dirname, '../frontend/pages/inventory-part-form.html');
-
-                if (!fs.existsSync(addEditPagePath)) {
-                    return sendJSON(res, 404, {
-                        success: false,
-                        message: 'Part form page not found'
-                    });
-                }
-
-                const html = fs.readFileSync(addEditPagePath, 'utf8');
-
-                res.writeHead(200, {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-cache'
-                });
-                res.end(html);
-                return;
-            } catch (error) {
-                return sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error loading part form page'
-                });
-            }
-        }
-    }
 
     // Serve static files for inventory (CSS, JS, images)
     if (path.startsWith('/css/') || path.startsWith('/js/')) {

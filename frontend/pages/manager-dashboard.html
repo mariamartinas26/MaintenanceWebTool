@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard - Repair Queens</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/manager-dashboard.css">
+</head>
+
+<!--Template request card-->
+<template id="request-card-template">
+    <div class="request-card">
+        <div class="request-header">
+            <div class="request-info">
+                <h4 class="request-name"></h4>
+                <div class="request-email"></div>
+                <div class="request-date"></div>
+            </div>
+            <div class="role-badge"></div>
+        </div>
+
+        <div class="request-details">
+            <div class="detail-row">
+                <span class="detail-label">Phone:</span>
+                <span class="detail-value phone-value"></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value">
+                    <span class="status-badge"></span>
+                </span>
+            </div>
+            <div class="detail-row company-row" style="display: none;">
+                <span class="detail-label">Company:</span>
+                <span class="detail-value company-value"></span>
+            </div>
+            <div class="detail-row experience-row" style="display: none;">
+                <span class="detail-label">Experience:</span>
+                <span class="detail-value experience-value"></span>
+            </div>
+        </div>
+
+        <div class="request-message" style="display: none;">
+            <p class="message-text"></p>
+        </div>
+
+        <div class="request-actions">
+            <button class="action-btn view-btn">View Details</button>
+            <button class="action-btn approve-btn">Approve</button>
+            <button class="action-btn reject-btn">Reject</button>
+        </div>
+    </div>
+</template>
+
+<!-- Template detalii-->
+<template id="request-details-template">
+    <div class="detail-section">
+        <h3>Personal Information</h3>
+        <div class="detail-item">
+            <div class="detail-label">Full Name</div>
+            <div class="detail-value full-name"></div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Email</div>
+            <div class="detail-value email-value"></div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Phone</div>
+            <div class="detail-value phone-value"></div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Requested Role</div>
+            <div class="detail-value role-value"></div>
+        </div>
+        <div class="detail-item company-item" style="display: none;">
+            <div class="detail-label">Company</div>
+            <div class="detail-value company-value"></div>
+        </div>
+        <div class="detail-item experience-item" style="display: none;">
+            <div class="detail-label">Experience</div>
+            <div class="detail-value experience-value"></div>
+        </div>
+    </div>
+
+    <div class="detail-section message-section" style="display: none;">
+        <h3>Request Message</h3>
+        <div class="detail-item">
+            <div class="detail-value message-text"></div>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h3>Request Details</h3>
+        <div class="detail-item">
+            <div class="detail-label">Status</div>
+            <div class="detail-value">
+                <span class="status-badge"></span>
+            </div>
+        </div>
+        <div class="detail-item">
+            <div class="detail-label">Request Date</div>
+            <div class="detail-value request-date"></div>
+        </div>
+        <div class="detail-item processed-item" style="display: none;">
+            <div class="detail-label">Processed Date</div>
+            <div class="detail-value processed-date"></div>
+        </div>
+        <div class="detail-item admin-message-item" style="display: none;">
+            <div class="detail-label">Admin Message</div>
+            <div class="detail-value admin-message"></div>
+        </div>
+    </div>
+</template>
+
+
+<body>
+<div class="manager-container">
+    <!-- Header -->
+    <header class="manager-header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Manager Dashboard</h1>
+                <p>Manage account registration requests</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="pending-count">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="approved-count">0</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="rejected-count">0</div>
+                    <div class="stat-label">Rejected</div>
+                </div>
+            </div>
+            <div class="manager-actions">
+                <button class="logout-btn" id="logout-btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Requests Section -->
+    <section class="requests-section">
+        <div class="requests-grid" id="requests-container">
+            <!-- Request cards will be populated here -->
+        </div>
+    </section>
+</div>
+
+<!-- View Request Modal -->
+<div class="modal" id="view-request-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Request Details</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body" id="request-details">
+            <!-- Request details will be populated here -->
+        </div>
+    </div>
+</div>
+
+<!-- Approve Request Modal -->
+<div class="modal" id="approve-request-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Approve Request</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Welcome Message (Optional)</label>
+                <textarea id="approve-message" placeholder="Write a welcome message for the new user..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-btn close-modal">Cancel</button>
+                <button class="approve-btn" id="confirm-approve-btn">Approve Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Request Modal -->
+<div class="modal" id="reject-request-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Reject Request</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Rejection Reason</label>
+                <select id="rejection-reason">
+                    <option value="">Select a reason</option>
+                    <option value="incomplete">Incomplete information</option>
+                    <option value="invalid">Invalid credentials</option>
+                    <option value="duplicate">Duplicate account</option>
+                    <option value="policy">Policy violation</option>
+                    <option value="other">Other reason</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Message to User</label>
+                <textarea id="reject-message" placeholder="Explain why the request was rejected..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="cancel-btn close-modal">Cancel</button>
+                <button class="reject-btn" id="confirm-reject-btn">Reject Request</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification -->
+<div class="notification" id="notification">
+    <span id="notification-message"></span>
+    <button class="notification-close" id="notification-close">&times;</button>
+</div>
+
+<script src="/js/manager-dashboard.js"></script>
+</body>
+</html>

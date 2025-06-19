@@ -11,6 +11,7 @@ const { handleCalendarRoutes } = require('./routes/calendarRoutes');
 const { handleVehicleRoutes } = require('./routes/vehicleRoutes');
 const adminRoutes = require('./routes/adminRoute');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const managerController = require('./controllers/managerController');
 const { handleSupplierRoutes } = require('./routes/supplierRoutes');
 
 const PORT = process.env.PORT || 3000;
@@ -32,7 +33,6 @@ const server = http.createServer(async (req, res) => {
     }
 
     try {
-        // Admin routes
         if (pathname.startsWith('/admin')) {
             return adminRoutes(req, res);
         }
@@ -69,6 +69,9 @@ const server = http.createServer(async (req, res) => {
         else if (pathname === '/client/dashboard' || pathname === '/dashboard') {
             await serveFile(res, 'frontend/pages/dashboard.html', 'text/html');
         }
+        else if (pathname === '/manager/dashboard') {
+            await serveFile(res, 'frontend/pages/manager-dashboard.html', 'text/html');
+        }
         else if (pathname === '/schedule') {
             await serveFile(res, 'frontend/pages/schedule.html', 'text/html');
         }
@@ -77,7 +80,6 @@ const server = http.createServer(async (req, res) => {
             res.end('Not Found');
         }
     } catch (error) {
-        console.error('Server error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'Internal server error' }));
     }
@@ -98,6 +100,18 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
                 }));
             }
         }
+        else if (pathname === '/api/auth/register-request' && method === 'POST') {
+            try {
+                const body = await getRequestBody(req);
+                await authController.submitRegistrationRequest(req, res, body);
+            } catch (error) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Invalid JSON in request body'
+                }));
+            }
+        }
         else if (pathname === '/api/auth/login' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
@@ -110,18 +124,43 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
                 }));
             }
         }
+        else if (pathname.startsWith('/api/manager')) {
+            const managerController = require('./controllers/managerController');
 
-        // Appointments routes - folosește rutele dedicate
+            if (pathname === '/api/manager/requests' && method === 'GET') {
+                req.query = queryParams || {};
+                await managerController.getAccountRequests(req, res);
+            }
+            else if (pathname.match(/^\/api\/manager\/requests\/\d+$/) && method === 'GET') {
+                req.params = { id: pathname.split('/')[4] };
+                await managerController.getAccountRequestById(req, res);
+            }
+            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
+                req.params = { id: pathname.split('/')[4] };
+                const body = await getRequestBody(req);
+                req.body = body;
+                await managerController.approveAccountRequest(req, res);
+            }
+            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/reject$/) && method === 'POST') {
+                req.params = { id: pathname.split('/')[4] };
+                const body = await getRequestBody(req);
+                req.body = body;
+                await managerController.rejectAccountRequest(req, res);
+            }
+            else {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, message: 'Manager API route not found' }));
+            }
+        }
+
         else if (pathname.startsWith('/api/appointments')) {
             await handleAppointmentRoutes(req, res);
         }
 
-        // Calendar routes - folosește rutele dedicate
         else if (pathname.startsWith('/api/calendar')) {
             await handleCalendarRoutes(req, res);
         }
 
-        // Vehicles routes - folosește rutele dedicate
         else if (pathname.startsWith('/api/vehicles')) {
             await handleVehicleRoutes(req, res);
         }
@@ -136,7 +175,6 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
 
 
     } catch (error) {
-        console.error('API Route error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
@@ -157,23 +195,16 @@ async function getRequestBody(req) {
             try {
                 // Check if body is empty
                 if (!body.trim()) {
-                    console.log('[DEBUG] Empty request body');
                     resolve({});
                     return;
                 }
-
-                console.log('[DEBUG] Raw request body:', body);
                 const parsed = JSON.parse(body);
-                console.log('[DEBUG] Parsed request body:', parsed);
                 resolve(parsed);
             } catch (error) {
-                console.error('[ERROR] JSON parse error:', error);
-                console.error('[ERROR] Raw body that failed:', body);
                 reject(new Error('Invalid JSON in request body'));
             }
         });
         req.on('error', (error) => {
-            console.error('[ERROR] Request error:', error);
             reject(error);
         });
     });
@@ -185,7 +216,6 @@ async function serveFile(res, filePath, contentType) {
         res.writeHead(200, { 'Content-Type': contentType });
         res.end(data);
     } catch (error) {
-        console.error('File serve error:', error);
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         res.end('File not found');
     }

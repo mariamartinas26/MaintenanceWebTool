@@ -15,7 +15,11 @@ document.addEventListener('DOMContentLoaded', function() {
             last_name: document.getElementById('nume').value.trim(),
             email: document.getElementById('email').value.trim(),
             phone: document.getElementById('telefon').value.trim(),
-            password: document.getElementById('parola').value
+            password: document.getElementById('parola').value,
+            role: document.getElementById('rol')?.value || 'client',
+            company_name: document.getElementById('companie')?.value?.trim() || null,
+            experience_years: document.getElementById('experienta')?.value || null,
+            message: document.getElementById('mesaj_cerere')?.value?.trim() || null
         };
 
         if (!validateForm(formData)) {
@@ -23,7 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const response = await fetch('/api/auth/register', {
+            //fac request la manager ptr register
+            const response = await fetch('/api/auth/register-request', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -34,19 +39,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
+                showMessage('Registration request submitted successfully! The manager will approve your request in 1 day', 'success');
 
-                showMessage('Registration successful! Redirecting...', 'success');
+                registerForm.reset();
 
+                //redirectam la homepage
                 setTimeout(() => {
-                    window.location.href = '/client/dashboard';
-                }, 2000);
+                    window.location.href = '/homepage';
+                }, 3000);
             } else {
                 if (data.errors && Array.isArray(data.errors)) {
                     showMessage(data.errors.join(', '), 'error');
                 } else {
-                    showMessage(data.message || 'Registration failed', 'error');
+                    showMessage(data.message || 'Registration request failed', 'error');
                 }
             }
         } catch (error) {
@@ -59,27 +64,22 @@ document.addEventListener('DOMContentLoaded', function() {
             showMessage('First name must be at least 2 characters', 'error');
             return false;
         }
-
         if (!data.last_name || data.last_name.length < 2) {
             showMessage('Last name must be at least 2 characters', 'error');
             return false;
         }
-
         if (!data.email || !isValidEmail(data.email)) {
             showMessage('Please enter a valid email', 'error');
             return false;
         }
-
         if (!data.phone || !data.phone.match(/^0\d{9}$/)) {
             showMessage('Phone number must have format 07xxxxxxxx', 'error');
             return false;
         }
-
         if (!data.password || data.password.length < 6) {
             showMessage('Password must be at least 6 characters', 'error');
             return false;
         }
-
         return true;
     }
 
@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showMessage(message, type) {
         messageElement.textContent = message;
-
         if (type === 'success') {
             messageElement.style.color = 'green';
         } else if (type === 'error') {
@@ -98,13 +97,11 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             messageElement.style.color = 'blue';
         }
-
         messageElement.style.display = 'block';
-
         if (type !== 'info') {
             setTimeout(() => {
                 messageElement.style.display = 'none';
-            }, 5000);
+            }, 8000);
         }
     }
 });
