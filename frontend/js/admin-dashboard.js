@@ -26,41 +26,26 @@ class AdminDashboard {
             this.loadAppointments();
         });
 
-        // Logout functionality
+
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', this.handleLogout.bind(this));
-        } else {
-            console.error('Logout button not found!');
         }
     }
 
     setupModals() {
-        // Close modal events
         const closeModalBtns = document.querySelectorAll('.close-modal');
         closeModalBtns.forEach(btn => {
             btn.addEventListener('click', this.closeModal.bind(this));
         });
 
-        // Close modal when clicking outside
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeModal();
-                }
-            });
-        });
 
-        // Cancel edit button
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
         cancelEditBtn.addEventListener('click', this.closeModal.bind(this));
 
-        // Form submission
         const appointmentForm = document.getElementById('appointment-form');
         appointmentForm.addEventListener('submit', this.handleStatusUpdate.bind(this));
 
-        // Status radio button changes
         const statusRadios = document.querySelectorAll('input[name="status"]');
         statusRadios.forEach(radio => {
             radio.addEventListener('change', this.handleStatusChange.bind(this));
@@ -101,7 +86,7 @@ class AdminDashboard {
             return;
         }
 
-        // Show dropdown on click/focus
+        // Show dropdown on click
         partsSearchInput.addEventListener('click', () => {
             this.showPartsDropdown();
         });
@@ -173,10 +158,6 @@ class AdminDashboard {
     renderPartsDropdown(parts) {
         const dropdown = document.getElementById('parts-dropdown');
 
-        if (parts.length === 0) {
-            dropdown.innerHTML = '<div class="part-option">No parts found</div>';
-            return;
-        }
 
         dropdown.innerHTML = parts.map(part => `
             <div class="part-option" data-part-id="${part.id}">
@@ -925,7 +906,6 @@ class AdminDashboard {
 
     handleLogout() {
         if (confirm('Are you sure you want to log out?')) {
-            // Clear stored authentication data
             localStorage.removeItem('token');
             localStorage.removeItem('user');
 
