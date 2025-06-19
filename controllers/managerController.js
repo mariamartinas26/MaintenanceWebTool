@@ -64,10 +64,20 @@ const getAccountRequestById = async (req, res) => {
 const approveAccountRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { manager_message } = req.body;  // Changed from admin_message
+        const { manager_message, assigned_role } = req.body;
 
         if (!id || isNaN(id)) {
             return sendBadRequest(res, 'Invalid request ID');
+        }
+
+        if (!assigned_role) {
+            return sendBadRequest(res, 'Assigned role is required');
+        }
+
+        // Validează rolul
+        const validRoles = ['client', 'admin', 'accountant'];
+        if (!validRoles.includes(assigned_role)) {
+            return sendBadRequest(res, 'Invalid role. Must be client, admin, or accountant');
         }
 
         const request = await AccountRequest.findById(parseInt(id));
@@ -91,15 +101,16 @@ const approveAccountRequest = async (req, res) => {
             first_name: request.first_name,
             last_name: request.last_name,
             phone: request.phone,
-            role: request.role
+            role: assigned_role  // Folosește rolul ales de manager
         };
 
         const newUser = await User.create(userData);
 
         const updateData = {
-            manager_message: manager_message || null,  // Changed from admin_message
+            manager_message: manager_message || null,
             processed_at: new Date(),
-            approved_user_id: newUser.id
+            approved_user_id: newUser.id,
+            assigned_role: assigned_role  // ✅ Salvează rolul asignat în request
         };
 
         await AccountRequest.updateStatus(parseInt(id), 'approved', updateData);
@@ -113,7 +124,7 @@ const approveAccountRequest = async (req, res) => {
                 last_name: newUser.last_name,
                 role: newUser.role
             }
-        }, 'Account created and request approved');
+        }, `Account created with role: ${assigned_role}`);
 
     } catch (error) {
         console.error('Error approving account request:', error);

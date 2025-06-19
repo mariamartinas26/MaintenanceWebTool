@@ -173,7 +173,17 @@
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label>Welcome Message (Optional)</label>
+                <label for="assign-role">Assign Role *</label>
+                <select id="assign-role" required>
+                    <option value="">Select a role</option>
+                    <option value="client">Client</option>
+                    <option value="admin">Admin</option>
+                    <option value="accountant">Accountant</option>
+                </select>
+                <small class="field-hint">Choose the role for this user (may be different from requested role)</small>
+            </div>
+            <div class="form-group">
+                <label for="approve-message">Welcome Message (Optional)</label>
                 <textarea id="approve-message" placeholder="Write a welcome message for the new user..."></textarea>
             </div>
             <div class="modal-actions">

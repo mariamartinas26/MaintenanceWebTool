@@ -47,27 +47,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (data.success) {
-                console.log('Login successful, storing data...');
+                console.log('Login successful, user data:', data.user);
+                console.log('User role:', data.user.role);
+
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
 
+                // Verifică rolul din răspuns
                 switch(data.user.role) {
                     case 'manager':
+                        console.log('Redirecting to manager dashboard');
                         window.location.href = '/manager/dashboard';
                         break;
                     case 'admin':
+                        console.log('Redirecting to admin dashboard');
                         window.location.href = '/admin/dashboard';
                         break;
-                    case 'contabil':
-                        window.location.href = '/contabil/dashboard';
+                    case 'accountant':
+                        console.log('Redirecting to accountant dashboard');
+                        window.location.href = '/accountant/dashboard';
                         break;
                     case 'client':
                     default:
+                        console.log('Redirecting to client dashboard');
                         window.location.href = '/client/dashboard';
                         break;
                 }
-            } else {
-                showMessage(data.message || 'Login failed', 'error');
             }
         } catch (error) {
             console.error('Login error:', error);
