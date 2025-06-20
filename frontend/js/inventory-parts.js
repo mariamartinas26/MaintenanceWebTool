@@ -7,24 +7,29 @@ let selectedParts = new Set();
 let deletePartId = null;
 let updatePartId = null;
 
+const SecurityUtils = window.SecurityUtils;
+
 function getAuthHeaders() {
     const token = localStorage.getItem('token');
+    if (!SecurityUtils.validateToken(token)) {
+        window.location.href = '/admin/login';
+        return null;
+    }
     return {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${SecurityUtils.sanitizeInput(token)}`
     };
 }
 
 function checkAuthentication() {
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (!SecurityUtils.validateToken(token)) {
         window.location.href = '/admin/login';
         return false;
     }
     return true;
 }
 
-// Initialize page when DOM loads
 document.addEventListener('DOMContentLoaded', function() {
     if (!checkAuthentication()) {
         return;
@@ -33,21 +38,15 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePage();
     setupEventListeners();
     loadParts();
-    loadCategories();
     loadAdminInfo();
     highlightCurrentPage();
 });
 
-// Setup event listeners
 function setupEventListeners() {
-    // Filters only (no search)
-    document.getElementById('categoryFilter').addEventListener('change', applyFilters);
     document.getElementById('stockFilter').addEventListener('change', applyFilters);
 
-    // Stock update form
     document.getElementById('stockUpdateForm').addEventListener('submit', handleStockUpdate);
 
-    // Modal close events
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('click', function(e) {
             if (e.target === this) {
@@ -56,18 +55,10 @@ function setupEventListeners() {
         });
     });
 
-    // ESC key to close modals
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            hideAllModals();
-        }
-    });
 
-    // Navigation functionality
     setupNavigationListeners();
 }
 
-// Setup navigation listeners
 function setupNavigationListeners() {
     const providersLink = document.getElementById('providers-link');
     if (providersLink) {
@@ -85,7 +76,6 @@ function setupNavigationListeners() {
         });
     }
 
-    // Logout functionality
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function() {
@@ -94,107 +84,65 @@ function setupNavigationListeners() {
     }
 }
 
-// Load admin info
 async function loadAdminInfo() {
     try {
-        const adminName = localStorage.getItem('adminName') || 'Admin';
-        document.getElementById('admin-name').textContent = adminName;
+        const adminName = SecurityUtils.getCurrentUserName() || 'Admin';
+        const nameElement = document.getElementById('admin-name');
+        if (nameElement) {
+            nameElement.textContent = SecurityUtils.sanitizeInput(adminName);
+        }
     } catch (error) {
-        document.getElementById('admin-name').textContent = 'Admin';
+        const nameElement = document.getElementById('admin-name');
+        if (nameElement) {
+            nameElement.textContent = 'Admin';
+        }
     }
 }
 
-// Logout function
 function logout() {
-    if (confirm('Are you sure you want to logout?')) {
+    if (confirm('Are you sure you want to log out?')) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        localStorage.removeItem('adminName');
-        window.location.href = '/admin/login';
+        window.location.href = '/homepage';
     }
 }
 
-// Initialize page settings
 function initializePage() {
-    // Load saved items per page
     const savedItemsPerPage = localStorage.getItem('partsItemsPerPage');
     if (savedItemsPerPage) {
-        itemsPerPage = parseInt(savedItemsPerPage);
+        const parsed = parseInt(SecurityUtils.sanitizeInput(savedItemsPerPage));
+        if (!isNaN(parsed) && parsed > 0) {
+            itemsPerPage = parsed;
+        }
     }
 
-    // Set default stock filter to "in-stock"
     document.getElementById('stockFilter').value = 'in-stock';
 }
 
-// Load all parts
 async function loadParts() {
     try {
-        showLoading(true);
+        const headers = getAuthHeaders();
+        if (!headers) return;
 
-        const response = await fetch('/inventory/api/parts', {
-            headers: getAuthHeaders()
-        });
+        const response = await fetch('/inventory/api/parts', { headers });
         const data = await response.json();
 
-        if (data.success) {
-            allParts = data.parts;
+        if (data.success && Array.isArray(data.parts)) {
+            allParts = data.parts.map(part => SecurityUtils.sanitizeObject(part));
             applyFilters();
         } else {
-            throw new Error(data.message);
+            throw new Error(data.message || 'Failed to load parts');
         }
     } catch (error) {
-        showNotification('Error loading parts', 'error');
         displayEmptyState('Error loading parts. Please try again.');
-    } finally {
-        showLoading(false);
     }
 }
 
-// Load categories for filter dropdown
-async function loadCategories() {
-    try {
-        const response = await fetch('/inventory/api/parts/categories', {
-            headers: getAuthHeaders()
-        });
-        const data = await response.json();
-
-        if (data.success) {
-            populateCategoryFilter(data.categories);
-        }
-    } catch (error) {
-        console.error('Error loading categories:', error);
-    }
-}
-
-// Populate category filter dropdown
-function populateCategoryFilter(categories) {
-    const select = document.getElementById('categoryFilter');
-
-    // Clear existing options except "All Categories"
-    select.innerHTML = '<option value="all">All Categories</option>';
-
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        select.appendChild(option);
-    });
-}
-
-// Apply all filters and sorting (no search, sort by name ascending only)
 function applyFilters() {
-    const categoryFilter = document.getElementById('categoryFilter').value;
-    const stockFilter = document.getElementById('stockFilter').value;
+    const stockFilter = SecurityUtils.sanitizeInput(document.getElementById('stockFilter').value);
 
-    // Start with all parts
     filteredParts = [...allParts];
 
-    // Apply category filter
-    if (categoryFilter !== 'all') {
-        filteredParts = filteredParts.filter(part => part.category === categoryFilter);
-    }
-
-    // Apply stock filter (always filter, no "all" option)
     switch (stockFilter) {
         case 'in-stock':
             filteredParts = filteredParts.filter(part => part.stockQuantity > part.minimumStockLevel);
@@ -207,26 +155,27 @@ function applyFilters() {
             break;
     }
 
-    // Sort by name ascending only
     filteredParts.sort((a, b) => {
-        const aVal = a.name.toLowerCase();
-        const bVal = b.name.toLowerCase();
+        const aVal = String(a.name || '').toLowerCase();
+        const bVal = String(b.name || '').toLowerCase();
         if (aVal < bVal) return -1;
         if (aVal > bVal) return 1;
         return 0;
     });
 
-    // Reset to first page
     currentPage = 1;
 
-    // Update display
     displayParts();
     updatePagination();
 }
 
-// Display parts in horizontal list view only
 function displayParts() {
     const container = document.getElementById('partsContainer');
+    if (!container) return;
+
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
 
     if (filteredParts.length === 0) {
         displayEmptyState();
@@ -237,98 +186,188 @@ function displayParts() {
     const endIndex = startIndex + itemsPerPage;
     const pageItems = filteredParts.slice(startIndex, endIndex);
 
-    const html = pageItems.map(part => createPartCard(part)).join('');
-    container.innerHTML = html;
+    pageItems.forEach(part => {
+        const partCard = createPartCardElement(part);
+        container.appendChild(partCard);
+    });
 }
 
-function createPartCard(part) {
+// Create part card using DOM methods instead of innerHTML
+function createPartCardElement(part) {
     const stockStatus = getStockStatus(part);
     const stockClass = stockStatus.toLowerCase().replace(' ', '-');
 
-    return `
-        <div class="part-card ${stockClass}" data-part-id="${part.id}">
-            <div class="part-card-header">
-                <div class="part-title">
-                    <h3>${escapeHtml(part.name)}</h3>
-                    ${part.partNumber ? `<span class="part-number">${escapeHtml(part.partNumber)}</span>` : ''}
-                </div>
-                <div class="part-actions">
-                    <button class="action-btn" onclick="showPartDetails(${part.id})" title="View Details">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn stock" onclick="redirectToNewOrder(${part.id})" title="Order More Stock">
-                        <i class="fas fa-plus-circle"></i>
-                    </button>
-                    <button class="action-btn delete" onclick="showDeleteModal(${part.id})" title="Delete Part">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+    const partName = SecurityUtils.sanitizeInput(part.name || '');
+    const partNumber = SecurityUtils.sanitizeInput(part.partNumber || '');
+    const partId = parseInt(part.id);
+
+    if (isNaN(partId)) {
+        console.error('Invalid part ID:', part.id);
+        return document.createElement('div'); // Return empty div
+    }
+
+    // Create main card div
+    const partCard = document.createElement('div');
+    partCard.className = `part-card ${stockClass}`;
+    partCard.dataset.partId = partId;
+
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'part-card-header';
+
+    // Create title section
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'part-title';
+
+    const nameH3 = document.createElement('h3');
+    nameH3.textContent = partName;
+    titleDiv.appendChild(nameH3);
+
+    if (partNumber) {
+        const partNumberSpan = document.createElement('span');
+        partNumberSpan.className = 'part-number';
+        partNumberSpan.textContent = partNumber;
+        titleDiv.appendChild(partNumberSpan);
+    }
+
+    // Create actions section
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'part-actions';
+
+    // View details button
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'action-btn';
+    viewBtn.title = 'View Details';
+    viewBtn.addEventListener('click', () => showPartDetails(partId));
+
+    const viewIcon = document.createElement('i');
+    viewIcon.className = 'fas fa-eye';
+    viewBtn.appendChild(viewIcon);
+
+    // Order stock button
+    const orderBtn = document.createElement('button');
+    orderBtn.className = 'action-btn stock';
+    orderBtn.title = 'Order More Stock';
+    orderBtn.addEventListener('click', () => redirectToNewOrder(partId));
+
+    const orderIcon = document.createElement('i');
+    orderIcon.className = 'fas fa-plus-circle';
+    orderBtn.appendChild(orderIcon);
+
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'action-btn delete';
+    deleteBtn.title = 'Delete Part';
+    deleteBtn.addEventListener('click', () => showDeleteModal(partId));
+
+    const deleteIcon = document.createElement('i');
+    deleteIcon.className = 'fas fa-trash';
+    deleteBtn.appendChild(deleteIcon);
+
+    // Assemble everything
+    actionsDiv.appendChild(viewBtn);
+    actionsDiv.appendChild(orderBtn);
+    actionsDiv.appendChild(deleteBtn);
+
+    header.appendChild(titleDiv);
+    header.appendChild(actionsDiv);
+    partCard.appendChild(header);
+
+    return partCard;
 }
 
-// NEW FUNCTION: Redirect to suppliers page with pre-selected part
+// Redirect to suppliers page with pre-selected part
 function redirectToNewOrder(partId) {
     const part = allParts.find(p => p.id === partId);
     if (!part) {
-        showNotification('Part not found', 'error');
+        console.error('Part not found');
         return;
     }
 
-    // Store the selected part data in localStorage to be used by the suppliers page
     const partData = {
         id: part.id,
-        name: part.name,
-        partNumber: part.partNumber,
-        price: part.price,
-        category: part.category,
-        stockQuantity: part.stockQuantity,
-        minimumStockLevel: part.minimumStockLevel
+        name: SecurityUtils.sanitizeInput(part.name),
+        partNumber: SecurityUtils.sanitizeInput(part.partNumber),
+        price: parseFloat(part.price) || 0,
+        category: SecurityUtils.sanitizeInput(part.category),
+        stockQuantity: parseInt(part.stockQuantity) || 0,
+        minimumStockLevel: parseInt(part.minimumStockLevel) || 0
     };
 
     localStorage.setItem('preselectedPart', JSON.stringify(partData));
 
-    // Show a notification before redirecting
-    showNotification(`Redirecting to create order for: ${part.name}`, 'info');
-
-    // Redirect to suppliers page after a short delay
     setTimeout(() => {
-        window.location.href = '/suppliers?action=new-order&part=' + part.id;
+        window.location.href = '/suppliers?action=new-order&part=' + encodeURIComponent(part.id);
     }, 1000);
 }
 
 function getStockStatus(part) {
-    if (part.stockQuantity === 0) {
+    const stockQuantity = parseInt(part.stockQuantity) || 0;
+    const minimumStockLevel = parseInt(part.minimumStockLevel) || 0;
+
+    if (stockQuantity === 0) {
         return 'Out of Stock';
-    } else if (part.stockQuantity <= part.minimumStockLevel) {
+    } else if (stockQuantity <= minimumStockLevel) {
         return 'Low Stock';
     } else {
         return 'In Stock';
     }
 }
 
+// Display empty state using DOM methods
 function displayEmptyState(message = null) {
     const container = document.getElementById('partsContainer');
+    if (!container) return;
+
+    // Clear container
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
+
     const defaultMessage = 'No parts match your current filters.';
+    const safeMessage = SecurityUtils.sanitizeInput(message || defaultMessage);
 
-    container.innerHTML = `
-        <div class="empty-state">
-            <i class="fas fa-boxes"></i>
-            <h3>No Parts Found</h3>
-            <p>${message || defaultMessage}</p>
-            <button class="btn-secondary" onclick="clearAllFilters()">
-                <i class="fas fa-filter"></i> Clear All Filters
-            </button>
-        </div>
-    `;
+    // Create empty state div
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
 
-    document.getElementById('pagination').style.display = 'none';
+    // Icon
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-boxes';
+
+    // Title
+    const title = document.createElement('h3');
+    title.textContent = 'No Parts Found';
+
+    // Message
+    const messagePara = document.createElement('p');
+    messagePara.textContent = safeMessage;
+
+    // Clear filters button
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'btn-secondary';
+    clearBtn.addEventListener('click', clearAllFilters);
+
+    const clearIcon = document.createElement('i');
+    clearIcon.className = 'fas fa-filter';
+    clearBtn.appendChild(clearIcon);
+    clearBtn.appendChild(document.createTextNode(' Clear All Filters'));
+
+    emptyState.appendChild(icon);
+    emptyState.appendChild(title);
+    emptyState.appendChild(messagePara);
+    emptyState.appendChild(clearBtn);
+
+    container.appendChild(emptyState);
+
+    const pagination = document.getElementById('pagination');
+    if (pagination) {
+        pagination.style.display = 'none';
+    }
 }
 
 function clearAllFilters() {
-    document.getElementById('categoryFilter').value = 'all';
-    document.getElementById('stockFilter').value = 'in-stock'; // Default to in-stock instead of 'all'
+    document.getElementById('stockFilter').value = 'in-stock';
     applyFilters();
 }
 
@@ -338,6 +377,8 @@ function updatePagination() {
     const prevBtn = document.getElementById('prevPage');
     const nextBtn = document.getElementById('nextPage');
     const pageInfo = document.getElementById('pageInfo');
+
+    if (!pagination || !prevBtn || !nextBtn || !pageInfo) return;
 
     if (totalPages <= 1) {
         pagination.style.display = 'none';
@@ -360,129 +401,154 @@ function changePage(direction) {
         displayParts();
         updatePagination();
 
-        document.querySelector('.parts-section').scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
+        const partsSection = document.querySelector('.parts-section');
+        if (partsSection) {
+            partsSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     }
 }
 
 async function showPartDetails(partId) {
     try {
-        showLoading(true);
+        const headers = getAuthHeaders();
+        if (!headers) return;
 
-        const response = await fetch(`/inventory/api/parts/${partId}`, {
-            headers: getAuthHeaders()
-        });
+        const response = await fetch(`/inventory/api/parts/${encodeURIComponent(partId)}`, { headers });
         const data = await response.json();
 
-        if (data.success) {
-            displayPartDetails(data.part);
-            document.getElementById('partDetailsModal').style.display = 'flex';
+        if (data.success && data.part) {
+            const sanitizedPart = SecurityUtils.sanitizeObject(data.part);
+            displayPartDetails(sanitizedPart);
+            const modal = document.getElementById('partDetailsModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
         } else {
-            throw new Error(data.message);
+            throw new Error(data.message || 'Failed to load part details');
         }
     } catch (error) {
-        showNotification('Error loading part details', 'error');
-    } finally {
-        showLoading(false);
+        console.error('Error loading part details:', error);
     }
 }
 
+// Display part details using DOM methods
 function displayPartDetails(part) {
     const stockStatus = getStockStatus(part);
     const content = document.getElementById('partDetailsContent');
+    if (!content) return;
 
-    content.innerHTML = `
-        <div class="part-details-grid">
-            <div class="detail-section">
-                <h4>Basic Information</h4>
-                <div class="detail-row">
-                    <label>Name:</label>
-                    <span>${escapeHtml(part.name)}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Part Number:</label>
-                    <span>${part.partNumber ? escapeHtml(part.partNumber) : 'N/A'}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Category:</label>
-                    <span>${escapeHtml(part.category)}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Description:</label>
-                    <span>${part.description ? escapeHtml(part.description) : 'No description'}</span>
-                </div>
-            </div>
-            
-            <div class="detail-section">
-                <h4>Pricing & Stock</h4>
-                <div class="detail-row">
-                    <label>Price:</label>
-                    <span class="price-value">${formatCurrency(part.price)}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Current Stock:</label>
-                    <span class="stock-value ${stockStatus.toLowerCase().replace(' ', '-')}">${part.stockQuantity}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Minimum Level:</label>
-                    <span>${part.minimumStockLevel}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Stock Status:</label>
-                    <span class="stock-status ${stockStatus.toLowerCase().replace(' ', '-')}">${stockStatus}</span>
-                </div>
-            </div>
-            
-            ${part.supplier.name ? `
-                <div class="detail-section">
-                    <h4>Supplier Information</h4>
-                    <div class="detail-row">
-                        <label>Supplier:</label>
-                        <span>${escapeHtml(part.supplier.name)}</span>
-                    </div>
-                    ${part.supplier.contact ? `
-                        <div class="detail-row">
-                            <label>Contact:</label>
-                            <span>${escapeHtml(part.supplier.contact)}</span>
-                        </div>
-                    ` : ''}
-                    ${part.supplier.phone ? `
-                        <div class="detail-row">
-                            <label>Phone:</label>
-                            <span>${escapeHtml(part.supplier.phone)}</span>
-                        </div>
-                    ` : ''}
-                    ${part.supplier.email ? `
-                        <div class="detail-row">
-                            <label>Email:</label>
-                            <span>${escapeHtml(part.supplier.email)}</span>
-                        </div>
-                    ` : ''}
-                </div>
-            ` : ''}
-            
-            <div class="detail-section">
-                <h4>Audit Information</h4>
-                <div class="detail-row">
-                    <label>Created:</label>
-                    <span>${formatDate(part.createdAt)}</span>
-                </div>
-                <div class="detail-row">
-                    <label>Last Updated:</label>
-                    <span>${formatDate(part.updatedAt)}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="detail-actions">
-            <button class="btn-secondary" onclick="hidePartDetailsModal()">Close</button>
-            <button class="btn-primary" onclick="redirectToNewOrder(${part.id})">
-                <i class="fas fa-plus-circle"></i> Order More Stock
-            </button>
-        </div>
-    `;
+    // Clear content
+    while (content.firstChild) {
+        content.removeChild(content.firstChild);
+    }
+
+    // Create main grid
+    const grid = document.createElement('div');
+    grid.className = 'part-details-grid';
+
+    // Basic Information Section
+    const basicSection = createDetailSection('Basic Information', [
+        { label: 'Name', value: part.name || '' },
+        { label: 'Part Number', value: part.partNumber || 'N/A' },
+        { label: 'Category', value: part.category || '' },
+        { label: 'Description', value: part.description || 'No description' }
+    ]);
+
+    // Pricing & Stock Section
+    const stockSection = createDetailSection('Pricing & Stock', [
+        { label: 'Price', value: formatCurrency(part.price), className: 'price-value' },
+        { label: 'Current Stock', value: part.stockQuantity, className: `stock-value ${stockStatus.toLowerCase().replace(' ', '-')}` },
+        { label: 'Minimum Level', value: part.minimumStockLevel },
+        { label: 'Stock Status', value: stockStatus, className: `stock-status ${stockStatus.toLowerCase().replace(' ', '-')}` }
+    ]);
+
+    grid.appendChild(basicSection);
+    grid.appendChild(stockSection);
+
+    // Supplier Information Section (if exists)
+    if (part.supplier && part.supplier.name) {
+        const supplierData = [
+            { label: 'Supplier', value: part.supplier.name }
+        ];
+
+        if (part.supplier.contact) {
+            supplierData.push({ label: 'Contact', value: part.supplier.contact });
+        }
+        if (part.supplier.phone) {
+            supplierData.push({ label: 'Phone', value: part.supplier.phone });
+        }
+        if (part.supplier.email) {
+            supplierData.push({ label: 'Email', value: part.supplier.email });
+        }
+
+        const supplierSection = createDetailSection('Supplier Information', supplierData);
+        grid.appendChild(supplierSection);
+    }
+
+    // Audit Information Section
+    const auditSection = createDetailSection('Audit Information', [
+        { label: 'Created', value: formatDate(part.createdAt) },
+        { label: 'Last Updated', value: formatDate(part.updatedAt) }
+    ]);
+
+    grid.appendChild(auditSection);
+
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'detail-actions';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn-secondary';
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', hidePartDetailsModal);
+
+    const orderBtn = document.createElement('button');
+    orderBtn.className = 'btn-primary';
+    orderBtn.addEventListener('click', () => redirectToNewOrder(part.id));
+
+    const orderIcon = document.createElement('i');
+    orderIcon.className = 'fas fa-plus-circle';
+    orderBtn.appendChild(orderIcon);
+    orderBtn.appendChild(document.createTextNode(' Order More Stock'));
+
+    actions.appendChild(closeBtn);
+    actions.appendChild(orderBtn);
+
+    content.appendChild(grid);
+    content.appendChild(actions);
+}
+
+// Helper function to create detail sections
+function createDetailSection(title, rows) {
+    const section = document.createElement('div');
+    section.className = 'detail-section';
+
+    const titleH4 = document.createElement('h4');
+    titleH4.textContent = title;
+    section.appendChild(titleH4);
+
+    rows.forEach(row => {
+        const detailRow = document.createElement('div');
+        detailRow.className = 'detail-row';
+
+        const label = document.createElement('label');
+        label.textContent = row.label + ':';
+
+        const span = document.createElement('span');
+        span.textContent = SecurityUtils.sanitizeInput(String(row.value));
+        if (row.className) {
+            span.className = row.className;
+        }
+
+        detailRow.appendChild(label);
+        detailRow.appendChild(span);
+        section.appendChild(detailRow);
+    });
+
+    return section;
 }
 
 function showStockUpdateModal(partId) {
@@ -491,39 +557,81 @@ function showStockUpdateModal(partId) {
 
     updatePartId = partId;
 
-    document.getElementById('updatePartId').value = partId;
-    document.getElementById('updatePartInfo').innerHTML = `
-        <h4>${escapeHtml(part.name)}</h4>
-        <p>Part Number: ${part.partNumber ? escapeHtml(part.partNumber) : 'N/A'}</p>
-        <p>Current Stock: <strong>${part.stockQuantity}</strong></p>
-        <p>Minimum Level: ${part.minimumStockLevel}</p>
-    `;
+    const updatePartIdElement = document.getElementById('updatePartId');
+    const updatePartInfoElement = document.getElementById('updatePartInfo');
 
-    document.getElementById('stockUpdateForm').reset();
-    document.getElementById('updatePartId').value = partId;
+    if (updatePartIdElement) {
+        updatePartIdElement.value = partId;
+    }
 
-    document.getElementById('stockUpdateModal').style.display = 'flex';
+    if (updatePartInfoElement) {
+        // Clear and rebuild content safely
+        while (updatePartInfoElement.firstChild) {
+            updatePartInfoElement.removeChild(updatePartInfoElement.firstChild);
+        }
+
+        const title = document.createElement('h4');
+        title.textContent = SecurityUtils.sanitizeInput(part.name);
+
+        const partNumPara = document.createElement('p');
+        partNumPara.textContent = `Part Number: ${SecurityUtils.sanitizeInput(part.partNumber) || 'N/A'}`;
+
+        const stockPara = document.createElement('p');
+        const stockStrong = document.createElement('strong');
+        stockStrong.textContent = part.stockQuantity;
+        stockPara.appendChild(document.createTextNode('Current Stock: '));
+        stockPara.appendChild(stockStrong);
+
+        const minPara = document.createElement('p');
+        minPara.textContent = `Minimum Level: ${part.minimumStockLevel}`;
+
+        updatePartInfoElement.appendChild(title);
+        updatePartInfoElement.appendChild(partNumPara);
+        updatePartInfoElement.appendChild(stockPara);
+        updatePartInfoElement.appendChild(minPara);
+    }
+
+    const form = document.getElementById('stockUpdateForm');
+    if (form) {
+        form.reset();
+    }
+
+    if (updatePartIdElement) {
+        updatePartIdElement.value = partId;
+    }
+
+    const modal = document.getElementById('stockUpdateModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
 async function handleStockUpdate(e) {
     e.preventDefault();
 
-    const partId = document.getElementById('updatePartId').value;
-    const operation = document.getElementById('stockOperation').value;
-    const quantity = parseInt(document.getElementById('stockQuantity').value);
-    const reason = document.getElementById('stockReason').value.trim();
+    const partId = SecurityUtils.sanitizeInput(document.getElementById('updatePartId').value);
+    const operation = SecurityUtils.sanitizeInput(document.getElementById('stockOperation').value);
+    const quantityInput = document.getElementById('stockQuantity').value;
+    const reasonInput = document.getElementById('stockReason').value;
 
-    if (!quantity || quantity <= 0) {
-        showNotification('Please enter a valid quantity', 'error');
+    const quantity = parseInt(quantityInput);
+    const reason = SecurityUtils.sanitizeInput(reasonInput.trim());
+
+    if (!quantity || quantity <= 0 || isNaN(quantity)) {
+        return;
+    }
+
+    if (!['add', 'subtract', 'set'].includes(operation)) {
         return;
     }
 
     try {
-        showLoading(true);
+        const headers = getAuthHeaders();
+        if (!headers) return;
 
-        const response = await fetch(`/inventory/api/parts/${partId}/stock`, {
+        const response = await fetch(`/inventory/api/parts/${encodeURIComponent(partId)}/stock`, {
             method: 'PUT',
-            headers: getAuthHeaders(),
+            headers,
             body: JSON.stringify({
                 quantity,
                 operation,
@@ -534,17 +642,11 @@ async function handleStockUpdate(e) {
         const data = await response.json();
 
         if (data.success) {
-            showNotification(data.message, 'success');
             hideStockUpdateModal();
-            // Reload parts to reflect changes
             await loadParts();
-        } else {
-            showNotification(data.message, 'error');
         }
     } catch (error) {
-        showNotification('Error updating stock', 'error');
-    } finally {
-        showLoading(false);
+        console.error('Error updating stock:', error);
     }
 }
 
@@ -554,58 +656,97 @@ function showDeleteModal(partId) {
 
     deletePartId = partId;
 
-    document.getElementById('deletePartInfo').innerHTML = `
-        <h4>${escapeHtml(part.name)}</h4>
-        <p><strong>Part Number:</strong> ${part.partNumber ? escapeHtml(part.partNumber) : 'N/A'}</p>
-        <p><strong>Category:</strong> ${escapeHtml(part.category)}</p>
-        <p><strong>Current Stock:</strong> ${part.stockQuantity}</p>
-        <p><strong>Price:</strong> ${formatCurrency(part.price)}</p>
-    `;
+    const deletePartInfoElement = document.getElementById('deletePartInfo');
+    if (deletePartInfoElement) {
+        // Clear and rebuild content safely
+        while (deletePartInfoElement.firstChild) {
+            deletePartInfoElement.removeChild(deletePartInfoElement.firstChild);
+        }
 
-    document.getElementById('deleteModal').style.display = 'flex';
+        const title = document.createElement('h4');
+        title.textContent = SecurityUtils.sanitizeInput(part.name);
+
+        const partNumPara = document.createElement('p');
+        const partNumStrong = document.createElement('strong');
+        partNumStrong.textContent = 'Part Number:';
+        partNumPara.appendChild(partNumStrong);
+        partNumPara.appendChild(document.createTextNode(' ' + (SecurityUtils.sanitizeInput(part.partNumber) || 'N/A')));
+
+        const categoryPara = document.createElement('p');
+        const categoryStrong = document.createElement('strong');
+        categoryStrong.textContent = 'Category:';
+        categoryPara.appendChild(categoryStrong);
+        categoryPara.appendChild(document.createTextNode(' ' + SecurityUtils.sanitizeInput(part.category)));
+
+        const stockPara = document.createElement('p');
+        const stockStrong = document.createElement('strong');
+        stockStrong.textContent = 'Current Stock:';
+        stockPara.appendChild(stockStrong);
+        stockPara.appendChild(document.createTextNode(' ' + part.stockQuantity));
+
+        const pricePara = document.createElement('p');
+        const priceStrong = document.createElement('strong');
+        priceStrong.textContent = 'Price:';
+        pricePara.appendChild(priceStrong);
+        pricePara.appendChild(document.createTextNode(' ' + formatCurrency(part.price)));
+
+        deletePartInfoElement.appendChild(title);
+        deletePartInfoElement.appendChild(partNumPara);
+        deletePartInfoElement.appendChild(categoryPara);
+        deletePartInfoElement.appendChild(stockPara);
+        deletePartInfoElement.appendChild(pricePara);
+    }
+
+    const modal = document.getElementById('deleteModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
-// Confirm part deletion
 async function confirmDelete() {
     if (!deletePartId) return;
 
     try {
-        showLoading(true);
+        const headers = getAuthHeaders();
+        if (!headers) return;
 
-        const response = await fetch(`/inventory/api/parts/${deletePartId}`, {
+        const response = await fetch(`/inventory/api/parts/${encodeURIComponent(deletePartId)}`, {
             method: 'DELETE',
-            headers: getAuthHeaders()
+            headers
         });
 
         const data = await response.json();
 
         if (data.success) {
-            showNotification(data.message, 'success');
             hideDeleteModal();
-            // Reload parts to reflect changes
             await loadParts();
-        } else {
-            showNotification(data.message, 'error');
         }
     } catch (error) {
-        showNotification('Error deleting part', 'error');
-    } finally {
-        showLoading(false);
+        console.error('Error deleting part:', error);
     }
 }
 
 // Modal management functions
 function hidePartDetailsModal() {
-    document.getElementById('partDetailsModal').style.display = 'none';
+    const modal = document.getElementById('partDetailsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 function hideStockUpdateModal() {
-    document.getElementById('stockUpdateModal').style.display = 'none';
+    const modal = document.getElementById('stockUpdateModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
     updatePartId = null;
 }
 
 function hideDeleteModal() {
-    document.getElementById('deleteModal').style.display = 'none';
+    const modal = document.getElementById('deleteModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
     deletePartId = null;
 }
 
@@ -617,115 +758,34 @@ function hideAllModals() {
     deletePartId = null;
 }
 
-function showLoading(show) {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.display = show ? 'flex' : 'none';
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas fa-${getNotificationIcon(type)}"></i>
-            <span>${escapeHtml(message)}</span>
-        </div>
-    `;
-
-    if (!document.getElementById('notificationStyles')) {
-        const styles = document.createElement('style');
-        styles.id = 'notificationStyles';
-        styles.textContent = `
-            .notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 1rem 1.5rem;
-                border-radius: 8px;
-                color: white;
-                font-weight: 500;
-                z-index: 10000;
-                animation: slideInRight 0.3s ease;
-                min-width: 300px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            }
-            
-            .notification-success { background: #28a745; }
-            .notification-error { background: #dc3545; }
-            .notification-warning { background: #ffc107; }
-            .notification-info { background: #17a2b8; }
-            
-            .notification-content {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-            
-            @keyframes slideInRight {
-                from {
-                    opacity: 0;
-                    transform: translateX(100%);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-        `;
-        document.head.appendChild(styles);
-    }
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideInRight 0.3s ease reverse';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 5000);
-}
-
-function getNotificationIcon(type) {
-    const icons = {
-        success: 'check-circle',
-        error: 'exclamation-circle',
-        warning: 'exclamation-triangle',
-        info: 'info-circle'
-    };
-    return icons[type] || 'info-circle';
-}
-
-function escapeHtml(text) {
-    if (typeof text !== 'string') return text;
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 function formatCurrency(amount) {
+    const numAmount = parseFloat(amount) || 0;
     return new Intl.NumberFormat('ro-RO', {
         style: 'currency',
         currency: 'RON'
-    }).format(amount);
+    }).format(numAmount);
 }
 
 function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('ro-RO', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    if (!dateString) return 'N/A';
+    try {
+        return new Date(dateString).toLocaleDateString('ro-RO', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        return 'Invalid Date';
+    }
 }
 
 function refreshParts() {
     loadParts();
 }
 
-// Auto-refresh every 5 minutes
+
 setInterval(refreshParts, 5 * 60 * 1000);
 
 function highlightCurrentPage() {
@@ -733,13 +793,17 @@ function highlightCurrentPage() {
     const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
 
     sidebarLinks.forEach(link => {
-        const linkPath = new URL(link.href).pathname;
-        if (currentPath.startsWith('/inventory') && linkPath === '/inventory/dashboard') {
-            link.parentElement.classList.add('active');
-        } else if (currentPath === linkPath) {
-            link.parentElement.classList.add('active');
-        } else {
-            link.parentElement.classList.remove('active');
+        try {
+            const linkPath = new URL(link.href).pathname;
+            if (currentPath.startsWith('/inventory') && linkPath === '/inventory/dashboard') {
+                link.parentElement.classList.add('active');
+            } else if (currentPath === linkPath) {
+                link.parentElement.classList.add('active');
+            } else {
+                link.parentElement.classList.remove('active');
+            }
+        } catch (error) {
+            console.error('Error processing sidebar link:', error);
         }
     });
 }

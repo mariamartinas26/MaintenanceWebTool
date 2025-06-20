@@ -165,11 +165,9 @@ class AdminDashboard {
                     description: part.description || '',
                     supplierName: part.supplier_name || 'Unknown'
                 }));
-            } else {
-                this.showError('Error loading parts: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
-            this.showError('Error loading parts data');
+            // Silent error handling
         }
     }
 
@@ -381,11 +379,8 @@ class AdminDashboard {
 
     async loadAppointments() {
         try {
-            this.showLoading();
-
             const token = localStorage.getItem('token');
             if (!token) {
-                this.showError('You are not authenticated. Redirecting to login...');
                 setTimeout(() => window.location.href = '/login', 2000);
                 return;
             }
@@ -405,7 +400,6 @@ class AdminDashboard {
             const data = await response.json();
 
             if (response.status === 401) {
-                this.showError('Session expired. Redirecting to login...');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 setTimeout(() => window.location.href = '/login', 2000);
@@ -415,13 +409,9 @@ class AdminDashboard {
             if (data.success) {
                 this.appointments = data.appointments.map(appointment => this.sanitizeObject(appointment));
                 this.renderAppointments();
-            } else {
-                this.showError('Error loading appointments: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
-            this.showError('Connection error. Please try again.');
-        } finally {
-            this.hideLoading();
+            // Silent error handling
         }
     }
 
@@ -521,11 +511,9 @@ class AdminDashboard {
             if (data.success) {
                 this.displayAppointmentDetails(this.sanitizeObject(data.appointment));
                 this.openModal('view-appointment-modal');
-            } else {
-                this.showError('Error loading details: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
-            this.showError('Connection error.');
+            // Silent error handling
         }
     }
 
@@ -666,11 +654,9 @@ class AdminDashboard {
             if (data.success) {
                 this.populateManageForm(this.sanitizeObject(data.appointment));
                 this.openModal('edit-appointment-modal');
-            } else {
-                this.showError('Error loading details: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
-            this.showError('Connection error.');
+            // Silent error handling
         }
     }
 
@@ -761,11 +747,9 @@ class AdminDashboard {
                 updateData.warranty = parseInt(document.getElementById('warranty').value);
 
                 if (!updateData.estimatedPrice || updateData.estimatedPrice <= 0) {
-                    this.showError('Estimated price is required for approval');
                     return;
                 }
                 if (!updateData.warranty || updateData.warranty < 0) {
-                    this.showError('Warranty is required for approval');
                     return;
                 }
 
@@ -782,7 +766,6 @@ class AdminDashboard {
                 updateData.rejectionReason = this.sanitizeInput(document.getElementById('rejection-reason').value);
 
                 if (!updateData.rejectionReason || !updateData.rejectionReason.trim()) {
-                    this.showError('Rejection reason is required');
                     return;
                 }
             }
@@ -804,15 +787,12 @@ class AdminDashboard {
             }
 
             if (data.success) {
-                this.showSuccess(this.sanitizeInput(data.message));
                 this.closeModal();
                 this.loadAppointments();
-            } else {
-                this.showError('Update error: ' + this.sanitizeInput(data.message));
             }
 
         } catch (error) {
-            this.showError('Connection error.');
+            // Silent error handling
         }
     }
 
@@ -858,69 +838,6 @@ class AdminDashboard {
         return statusTexts[status] || status;
     }
 
-    showLoading() {
-        const container = document.getElementById('appointments-container');
-        container.innerHTML = '';
-
-        const loadingDiv = this.createSafeElement('div', 'loading-spinner');
-        const spinner = this.createSafeElement('div', 'spinner');
-        const p = this.createSafeElement('p', '', 'Loading appointments...');
-
-        loadingDiv.appendChild(spinner);
-        loadingDiv.appendChild(p);
-        container.appendChild(loadingDiv);
-    }
-
-    hideLoading() {
-        // Loading will be hidden when appointments are rendered
-    }
-
-    showError(message) {
-        this.showNotification(this.sanitizeInput(message), 'error');
-    }
-
-    showSuccess(message) {
-        this.showNotification(this.sanitizeInput(message), 'success');
-    }
-
-    showNotification(message, type = 'info') {
-        const existingNotifications = document.querySelectorAll('.notification');
-        existingNotifications.forEach(notification => {
-            notification.remove();
-        });
-
-        const notification = this.createSafeElement('div', `notification notification-${type}`);
-
-        const messageSpan = this.createSafeElement('span', 'notification-message', message);
-        const closeBtn = this.createSafeElement('button', 'notification-close', '×');
-
-        notification.appendChild(messageSpan);
-        notification.appendChild(closeBtn);
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 100);
-
-        setTimeout(() => {
-            this.hideNotification(notification);
-        }, 5000);
-
-        closeBtn.addEventListener('click', () => {
-            this.hideNotification(notification);
-        });
-    }
-
-    hideNotification(notification) {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }
-
     handleLogout() {
         if (confirm('Are you sure you want to log out?')) {
             localStorage.removeItem('token');
@@ -930,7 +847,6 @@ class AdminDashboard {
     }
 
     handleAuthError() {
-        this.showError('Session expired. Redirecting to login...');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setTimeout(() => {

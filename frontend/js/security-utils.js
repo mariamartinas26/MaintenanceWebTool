@@ -125,30 +125,7 @@ function getCurrentUserName() {
     }
 }
 
-function logout() {
-    try {
-        if (typeof localStorage !== 'undefined') {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('userPreferences');
-            localStorage.removeItem('sessionData');
-        }
 
-        if (typeof window !== 'undefined') {
-            const loginUrl = '/login';
-            if (loginUrl.startsWith('/') || loginUrl.startsWith(window.location.origin)) {
-                window.location.href = loginUrl;
-            } else {
-                window.location.href = '/login';
-            }
-        }
-    } catch (error) {
-        console.error('Error during logout:', error);
-        if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-        }
-    }
-}
 
 if (typeof window !== 'undefined') {
     window.SecurityUtils = {
@@ -158,7 +135,6 @@ if (typeof window !== 'undefined') {
         validateToken,
         safeDecodeJWT,
         getCurrentUserRole,
-        getCurrentUserName,
-        logout
+        getCurrentUserName
     };
 }
