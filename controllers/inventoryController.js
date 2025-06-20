@@ -1,25 +1,65 @@
 const InventoryModel = require('../models/inventoryModel');
+const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+
+function validateInput(input) {
+    if (typeof input !== 'string') return input;
+    return sanitizeInput(input);
+}
+
+function validateNumber(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseFloat(input);
+    if (isNaN(num) || num < min || num > max) return 0;
+    return num;
+}
+
+function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseInt(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function validateCategory(category) {
+    if (!category || typeof category !== 'string') return null;
+    const cleanCategory = sanitizeInput(category.trim());
+    if (cleanCategory.length > 100 || cleanCategory.length < 1) return null;
+    if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanCategory)) return null;
+    return cleanCategory;
+}
+
+function validateSortField(sortBy) {
+    const validFields = ['name', 'part_number', 'category', 'price', 'stock_quantity', 'created_at', 'updated_at'];
+    return validFields.includes(sortBy) ? sortBy : null;
+}
+
+function validateSortOrder(sortOrder) {
+    return ['asc', 'desc'].includes(sortOrder) ? sortOrder : 'asc';
+}
 
 function sendJSON(res, statusCode, data) {
+    setSecurityHeaders(res);
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
 }
 
 class InventoryController {
-    // GET /inventory/api/parts - Get all parts
     static async getAllParts(req, res) {
         try {
-            const { category, low_stock, search, sort_by, sort_order } = req.query;
+            setSecurityHeaders(res);
+
+            const category = validateCategory(req.query.category);
+            const lowStock = req.query.low_stock === 'true';
+            const search = validateInput(req.query.search);
+            const sortBy = validateSortField(req.query.sort_by);
+            const sortOrder = validateSortOrder(req.query.sort_order);
 
             let parts;
 
-            // Filter by category if specified
             if (category && category !== 'all') {
                 const result = await InventoryModel.getPartsByCategory(category);
                 if (!result.success) {
                     return sendJSON(res, 500, {
                         success: false,
-                        message: result.error
+                        message: validateInput(result.error)
                     });
                 }
                 parts = result.data;
@@ -28,36 +68,39 @@ class InventoryController {
                 if (!result.success) {
                     return sendJSON(res, 500, {
                         success: false,
-                        message: result.error
+                        message: validateInput(result.error)
                     });
                 }
                 parts = result.data;
             }
 
-            // Filter by low stock if specified
-            if (low_stock === 'true') {
+            if (lowStock) {
                 parts = parts.filter(part => part.is_low_stock === true);
             }
 
-            // Apply search filter
             if (search && search.trim()) {
                 const searchTerm = search.toLowerCase().trim();
+                if (searchTerm.length > 100) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: 'Search term too long'
+                    });
+                }
+
                 parts = parts.filter(part =>
-                    part.name.toLowerCase().includes(searchTerm) ||
-                    part.part_number.toLowerCase().includes(searchTerm) ||
+                    (part.name && part.name.toLowerCase().includes(searchTerm)) ||
+                    (part.part_number && part.part_number.toLowerCase().includes(searchTerm)) ||
                     (part.description && part.description.toLowerCase().includes(searchTerm)) ||
                     (part.supplier_name && part.supplier_name.toLowerCase().includes(searchTerm))
                 );
             }
 
-            // Sort parts
-            if (sort_by) {
-                const sortField = sort_by;
-                const order = sort_order === 'desc' ? -1 : 1;
+            if (sortBy) {
+                const order = sortOrder === 'desc' ? -1 : 1;
 
                 parts.sort((a, b) => {
-                    let aVal = a[sortField];
-                    let bVal = b[sortField];
+                    let aVal = a[sortBy];
+                    let bVal = b[sortBy];
 
                     if (typeof aVal === 'string') {
                         aVal = aVal.toLowerCase();
@@ -70,23 +113,22 @@ class InventoryController {
                 });
             }
 
-            // Format parts for frontend
             const formattedParts = parts.map(part => ({
                 id: part.id,
-                name: part.name,
-                description: part.description,
-                partNumber: part.part_number,
-                category: part.category,
-                price: parseFloat(part.price),
-                stockQuantity: part.stock_quantity,
-                minimumStockLevel: part.minimum_stock_level,
-                isLowStock: part.is_low_stock,
+                name: validateInput(part.name),
+                description: validateInput(part.description),
+                partNumber: validateInput(part.part_number),
+                category: validateInput(part.category),
+                price: validateNumber(part.price, 0, 1000000),
+                stockQuantity: validateInteger(part.stock_quantity, 0, 100000),
+                minimumStockLevel: validateInteger(part.minimum_stock_level, 0, 10000),
+                isLowStock: Boolean(part.is_low_stock),
                 supplier: {
                     id: part.supplier_id,
-                    name: part.supplier_name,
-                    contact: part.supplier_contact,
-                    phone: part.supplier_phone,
-                    email: part.supplier_email
+                    name: validateInput(part.supplier_name),
+                    contact: validateInput(part.supplier_contact),
+                    phone: validateInput(part.supplier_phone),
+                    email: validateInput(part.supplier_email)
                 },
                 createdAt: part.created_at,
                 updatedAt: part.updated_at
@@ -108,12 +150,13 @@ class InventoryController {
         }
     }
 
-    // GET /inventory/api/parts/:id - Get single part details
     static async getPartById(req, res) {
         try {
-            const partId = parseInt(req.params.id);
+            setSecurityHeaders(res);
 
-            if (!partId || partId <= 0) {
+            const partId = validateInteger(req.params.id, 1);
+
+            if (!partId) {
                 return sendJSON(res, 400, {
                     success: false,
                     message: 'Invalid part ID'
@@ -125,29 +168,28 @@ class InventoryController {
             if (!result.success) {
                 return sendJSON(res, 404, {
                     success: false,
-                    message: result.error
+                    message: validateInput(result.error)
                 });
             }
 
             const part = result.data;
 
-            // Format part details
             const formattedPart = {
                 id: part.id,
-                name: part.name,
-                description: part.description,
-                partNumber: part.part_number,
-                category: part.category,
-                price: parseFloat(part.price),
-                stockQuantity: part.stock_quantity,
-                minimumStockLevel: part.minimum_stock_level,
-                isLowStock: part.is_low_stock,
+                name: validateInput(part.name),
+                description: validateInput(part.description),
+                partNumber: validateInput(part.part_number),
+                category: validateInput(part.category),
+                price: validateNumber(part.price, 0, 1000000),
+                stockQuantity: validateInteger(part.stock_quantity, 0, 100000),
+                minimumStockLevel: validateInteger(part.minimum_stock_level, 0, 10000),
+                isLowStock: Boolean(part.is_low_stock),
                 supplier: {
                     id: part.supplier_id,
-                    name: part.supplier_name,
-                    contact: part.supplier_contact,
-                    phone: part.supplier_phone,
-                    email: part.supplier_email
+                    name: validateInput(part.supplier_name),
+                    contact: validateInput(part.supplier_contact),
+                    phone: validateInput(part.supplier_phone),
+                    email: validateInput(part.supplier_email)
                 },
                 createdAt: part.created_at,
                 updatedAt: part.updated_at
@@ -168,13 +210,13 @@ class InventoryController {
         }
     }
 
-
-    // DELETE /inventory/api/parts/:id - Delete part
     static async deletePart(req, res) {
         try {
-            const partId = parseInt(req.params.id);
+            setSecurityHeaders(res);
 
-            if (!partId || partId <= 0) {
+            const partId = validateInteger(req.params.id, 1);
+
+            if (!partId) {
                 return sendJSON(res, 400, {
                     success: false,
                     message: 'Invalid part ID'
@@ -186,17 +228,17 @@ class InventoryController {
             if (!result.success) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: result.error
+                    message: validateInput(result.error)
                 });
             }
 
             sendJSON(res, 200, {
                 success: true,
-                message: result.message,
+                message: validateInput(result.message),
                 deletedPart: {
                     id: result.data.id,
-                    name: result.data.name,
-                    partNumber: result.data.part_number
+                    name: validateInput(result.data.name),
+                    partNumber: validateInput(result.data.part_number)
                 }
             });
 
@@ -209,38 +251,48 @@ class InventoryController {
         }
     }
 
-
-    // GET /inventory/api/parts/low-stock - Get parts with low stock
     static async getLowStockParts(req, res) {
         try {
+            setSecurityHeaders(res);
+
             const result = await InventoryModel.getLowStockParts();
 
             if (!result.success) {
                 return sendJSON(res, 500, {
                     success: false,
-                    message: result.error
+                    message: validateInput(result.error)
                 });
             }
 
-            // Format low stock parts
-            const formattedParts = result.data.map(part => ({
-                id: part.id,
-                name: part.name,
-                partNumber: part.part_number,
-                category: part.category,
-                price: parseFloat(part.price),
-                stockQuantity: part.stock_quantity,
-                minimumStockLevel: part.minimum_stock_level,
-                supplier: {
-                    id: part.supplier_id,
-                    name: part.supplier_name,
-                    contact: part.supplier_contact,
-                    phone: part.supplier_phone,
-                    email: part.supplier_email
-                },
-                urgency: part.stock_quantity === 0 ? 'critical' :
-                    part.stock_quantity <= Math.floor(part.minimum_stock_level / 2) ? 'high' : 'medium'
-            }));
+            const formattedParts = result.data.map(part => {
+                const stockQuantity = validateInteger(part.stock_quantity, 0, 100000);
+                const minimumLevel = validateInteger(part.minimum_stock_level, 0, 10000);
+
+                let urgency = 'medium';
+                if (stockQuantity === 0) {
+                    urgency = 'critical';
+                } else if (stockQuantity <= Math.floor(minimumLevel / 2)) {
+                    urgency = 'high';
+                }
+
+                return {
+                    id: part.id,
+                    name: validateInput(part.name),
+                    partNumber: validateInput(part.part_number),
+                    category: validateInput(part.category),
+                    price: validateNumber(part.price, 0, 1000000),
+                    stockQuantity: stockQuantity,
+                    minimumStockLevel: minimumLevel,
+                    supplier: {
+                        id: part.supplier_id,
+                        name: validateInput(part.supplier_name),
+                        contact: validateInput(part.supplier_contact),
+                        phone: validateInput(part.supplier_phone),
+                        email: validateInput(part.supplier_email)
+                    },
+                    urgency: urgency
+                };
+            });
 
             sendJSON(res, 200, {
                 success: true,
@@ -258,22 +310,29 @@ class InventoryController {
         }
     }
 
-    // GET /inventory/api/parts/categories - Get all categories
     static async getCategories(req, res) {
         try {
+            setSecurityHeaders(res);
+
             const result = await InventoryModel.getCategories();
 
             if (!result.success) {
                 return sendJSON(res, 500, {
                     success: false,
-                    message: result.error
+                    message: validateInput(result.error)
                 });
             }
+
+            const sanitizedCategories = result.data.map(category => ({
+                id: category.id,
+                name: validateInput(category.name),
+                count: validateInteger(category.count, 0, 100000)
+            }));
 
             sendJSON(res, 200, {
                 success: true,
                 message: 'Categories loaded successfully',
-                categories: result.data
+                categories: sanitizedCategories
             });
 
         } catch (error) {
@@ -285,15 +344,17 @@ class InventoryController {
         }
     }
 
-    // GET /inventory/api/parts/category/:category - Get parts by category
     static async getPartsByCategory(req, res) {
         try {
-            const category = decodeURIComponent(req.params.category);
+            setSecurityHeaders(res);
 
-            if (!category || !category.trim()) {
+            const categoryParam = decodeURIComponent(req.params.category);
+            const category = validateCategory(categoryParam);
+
+            if (!category) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Category is required'
+                    message: 'Invalid category name'
                 });
             }
 
@@ -302,24 +363,23 @@ class InventoryController {
             if (!result.success) {
                 return sendJSON(res, 500, {
                     success: false,
-                    message: result.error
+                    message: validateInput(result.error)
                 });
             }
 
-            // Format parts
             const formattedParts = result.data.map(part => ({
                 id: part.id,
-                name: part.name,
-                description: part.description,
-                partNumber: part.part_number,
-                category: part.category,
-                price: parseFloat(part.price),
-                stockQuantity: part.stock_quantity,
-                minimumStockLevel: part.minimum_stock_level,
-                isLowStock: part.is_low_stock,
+                name: validateInput(part.name),
+                description: validateInput(part.description),
+                partNumber: validateInput(part.part_number),
+                category: validateInput(part.category),
+                price: validateNumber(part.price, 0, 1000000),
+                stockQuantity: validateInteger(part.stock_quantity, 0, 100000),
+                minimumStockLevel: validateInteger(part.minimum_stock_level, 0, 10000),
+                isLowStock: Boolean(part.is_low_stock),
                 supplier: {
                     id: part.supplier_id,
-                    name: part.supplier_name
+                    name: validateInput(part.supplier_name)
                 }
             }));
 
@@ -339,29 +399,33 @@ class InventoryController {
             });
         }
     }
-    // GET /inventory/api/parts/statistics - Get inventory statistics
+
     static async getInventoryStats(req, res) {
         try {
+            setSecurityHeaders(res);
+
             const result = await InventoryModel.getInventoryStats();
 
             if (!result.success) {
                 return sendJSON(res, 500, {
                     success: false,
-                    message: result.error
+                    message: validateInput(result.error)
                 });
             }
 
             const stats = result.data;
 
-            // Format statistics
+            const totalParts = validateInteger(stats.total_parts, 0, 1000000);
+            const lowStockCount = validateInteger(stats.low_stock_count, 0, 1000000);
+
             const formattedStats = {
-                totalParts: parseInt(stats.total_parts) || 0,
-                lowStockCount: parseInt(stats.low_stock_count) || 0,
-                totalInventoryValue: parseFloat(stats.total_inventory_value) || 0,
-                totalCategories: parseInt(stats.total_categories) || 0,
-                averagePrice: parseFloat(stats.average_price) || 0,
-                lowStockPercentage: stats.total_parts > 0 ?
-                    ((stats.low_stock_count / stats.total_parts) * 100).toFixed(1) : '0.0'
+                totalParts: totalParts,
+                lowStockCount: lowStockCount,
+                totalInventoryValue: validateNumber(stats.total_inventory_value, 0, 100000000),
+                totalCategories: validateInteger(stats.total_categories, 0, 1000),
+                averagePrice: validateNumber(stats.average_price, 0, 1000000),
+                lowStockPercentage: totalParts > 0 ?
+                    Math.round(((lowStockCount / totalParts) * 100) * 10) / 10 : 0
             };
 
             sendJSON(res, 200, {
@@ -375,6 +439,125 @@ class InventoryController {
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error loading inventory statistics'
+            });
+        }
+    }
+
+    static async updatePartStock(req, res) {
+        try {
+            setSecurityHeaders(res);
+
+            const partId = validateInteger(req.params.id, 1);
+            const quantity = validateInteger(req.body.quantity, 0, 100000);
+            const operation = validateInput(req.body.operation);
+
+            if (!partId) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid part ID'
+                });
+            }
+
+            if (quantity === null) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid quantity'
+                });
+            }
+
+            if (!['add', 'subtract', 'set'].includes(operation)) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid operation. Use add, subtract, or set'
+                });
+            }
+
+            const result = await InventoryModel.updatePartStock(partId, quantity, operation);
+
+            if (!result.success) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: validateInput(result.error)
+                });
+            }
+
+            const updatedPart = {
+                id: result.data.id,
+                name: validateInput(result.data.name),
+                partNumber: validateInput(result.data.part_number),
+                stockQuantity: validateInteger(result.data.stock_quantity, 0, 100000),
+                minimumStockLevel: validateInteger(result.data.minimum_stock_level, 0, 10000),
+                isLowStock: Boolean(result.data.is_low_stock)
+            };
+
+            sendJSON(res, 200, {
+                success: true,
+                message: validateInput(result.message),
+                part: updatedPart
+            });
+
+        } catch (error) {
+            console.error('Error updating part stock:', error);
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error updating part stock'
+            });
+        }
+    }
+
+    static async searchParts(req, res) {
+        try {
+            setSecurityHeaders(res);
+
+            const searchTerm = validateInput(req.query.q);
+            const limit = Math.min(50, Math.max(1, validateInteger(req.query.limit, 1, 50) || 10));
+
+            if (!searchTerm || searchTerm.trim().length < 2) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Search term must be at least 2 characters long'
+                });
+            }
+
+            if (searchTerm.length > 100) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Search term too long'
+                });
+            }
+
+            const result = await InventoryModel.searchParts(searchTerm, limit);
+
+            if (!result.success) {
+                return sendJSON(res, 500, {
+                    success: false,
+                    message: validateInput(result.error)
+                });
+            }
+
+            const formattedParts = result.data.map(part => ({
+                id: part.id,
+                name: validateInput(part.name),
+                partNumber: validateInput(part.part_number),
+                category: validateInput(part.category),
+                price: validateNumber(part.price, 0, 1000000),
+                stockQuantity: validateInteger(part.stock_quantity, 0, 100000),
+                isLowStock: Boolean(part.is_low_stock)
+            }));
+
+            sendJSON(res, 200, {
+                success: true,
+                message: 'Search completed successfully',
+                parts: formattedParts,
+                total: formattedParts.length,
+                searchTerm: searchTerm
+            });
+
+        } catch (error) {
+            console.error('Error searching parts:', error);
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error searching parts'
             });
         }
     }

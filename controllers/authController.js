@@ -3,40 +3,122 @@ const AccountRequest = require('../models/AccountRequest');
 const jwt = require('jsonwebtoken');
 const { validateRegisterData } = require('../utils/validation');
 const { sendCreated, sendBadRequest, sendUnauthorized, sendServerError, sendSuccess } = require('../utils/response');
+const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+
+function validateInput(input) {
+    if (typeof input !== 'string') return input;
+    return sanitizeInput(input);
+}
+
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = sanitizeInput(email);
+    return emailRegex.test(cleanEmail) && !/<|>|script/i.test(cleanEmail) ? cleanEmail : null;
+}
+
+function validatePassword(password) {
+    if (!password || typeof password !== 'string') return null;
+    if (password.length < 6 || password.length > 128) return null;
+    if (/<script|javascript:|on\w+\s*=|data:/i.test(password)) return null;
+    return password;
+}
+
+function validateRole(role) {
+    const validRoles = ['client', 'mechanic', 'admin', 'manager', 'accountant'];
+    const cleanRole = sanitizeInput(role);
+    return validRoles.includes(cleanRole) ? cleanRole : 'client';
+}
+
+function validatePhoneNumber(phone) {
+    const cleanPhone = sanitizeInput(phone);
+    const romanianPhoneRegex = /^0\d{9}$/;
+    const internationalPhoneRegex = /^[\d\s\+\-\(\)]{10,15}$/;
+    return (romanianPhoneRegex.test(cleanPhone) || internationalPhoneRegex.test(cleanPhone)) && !/<|>|script/i.test(cleanPhone) ? cleanPhone : null;
+}
+
+function validateInteger(input, min = 0, max = 100) {
+    const num = parseInt(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function validateTextLength(text, minLength = 0, maxLength = 1000) {
+    if (!text || typeof text !== 'string') return null;
+    const cleanText = sanitizeInput(text.trim());
+    if (cleanText.length < minLength || cleanText.length > maxLength) return null;
+    if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanText)) return null;
+    return cleanText;
+}
+
+function getSecurityHeaders() {
+    return {
+        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self';",
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
+    };
+}
 
 const generateToken = (userId) => {
-    console.log('Generating token for user:', userId); // Debug
+    if (!userId || isNaN(userId) || userId <= 0) {
+        throw new Error('Invalid user ID for token generation');
+    }
 
     const payload = {
-        userId: userId,
-        user_id: userId,  // Adaugă ambele variante pentru compatibilitate
+        userId: parseInt(userId),
+        user_id: parseInt(userId),
         iat: Math.floor(Date.now() / 1000)
     };
 
-    const secret = process.env.JWT_SECRET || 'fallback-secret-key';
+    const secret = process.env.JWT_SECRET;
+    if (!secret || secret.length < 32) {
+        throw new Error('JWT secret not configured properly');
+    }
+
     const options = {
-        expiresIn: '30d'  // Token valid 30 zile
+        expiresIn: '30d',
+        issuer: 'your-app-name',
+        audience: 'your-app-users'
     };
 
-    const token = jwt.sign(payload, secret, options);
-    console.log('Token generated:', token.substring(0, 20) + '...'); // Debug
-
-    return token;
+    return jwt.sign(payload, secret, options);
 };
 
 const submitRegistrationRequest = async (req, res, body) => {
     try {
-        const {
-            email,
-            password,
-            first_name,
-            last_name,
-            phone,
-            role,
-            company_name,
-            experience_years,
-            message
-        } = body;
+        setSecurityHeaders(res);
+
+        const email = validateEmail(body.email);
+        const password = validatePassword(body.password);
+        const first_name = validateTextLength(body.first_name, 2, 50);
+        const last_name = validateTextLength(body.last_name, 2, 50);
+        const phone = validatePhoneNumber(body.phone);
+        const role = validateRole(body.role);
+        const company_name = body.company_name ? validateTextLength(body.company_name, 2, 100) : null;
+        const experience_years = body.experience_years ? validateInteger(body.experience_years, 0, 50) : null;
+        const message = body.message ? validateTextLength(body.message, 0, 500) : null;
+
+        if (!email) {
+            return sendBadRequest(res, 'Invalid email format');
+        }
+
+        if (!password) {
+            return sendBadRequest(res, 'Password must be 6-128 characters long');
+        }
+
+        if (!first_name) {
+            return sendBadRequest(res, 'First name must be 2-50 characters long');
+        }
+
+        if (!last_name) {
+            return sendBadRequest(res, 'Last name must be 2-50 characters long');
+        }
+
+        if (!phone) {
+            return sendBadRequest(res, 'Invalid phone number format');
+        }
 
         const validation = validateRegisterData({
             email,
@@ -60,16 +142,20 @@ const submitRegistrationRequest = async (req, res, body) => {
             return sendBadRequest(res, 'Email already registered');
         }
 
+        const bcrypt = require('bcryptjs');
+        const saltRounds = 12;
+        const password_hash = await bcrypt.hash(password, saltRounds);
+
         const requestData = {
-            email: email.toLowerCase().trim(),
-            password_hash: password,
-            first_name: first_name.trim(),
-            last_name: last_name.trim(),
-            phone: phone.trim(),
-            role: role || 'client',
-            company_name: company_name ? company_name.trim() : null,
-            experience_years: experience_years ? parseInt(experience_years) : null,
-            message: message ? message.trim() : null,
+            email: email.toLowerCase(),
+            password_hash: password_hash,
+            first_name: first_name,
+            last_name: last_name,
+            phone: phone,
+            role: role,
+            company_name: company_name,
+            experience_years: experience_years,
+            message: message,
             status: 'pending'
         };
 
@@ -80,30 +166,50 @@ const submitRegistrationRequest = async (req, res, body) => {
         }, 'Your request has been submitted and is pending approval');
 
     } catch (error) {
+        console.error('Registration request error:', error);
         sendServerError(res, 'Server error during registration request');
     }
 };
 
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        console.log('Login attempt for:', email); // Debug
+        setSecurityHeaders(res);
+
+        const email = validateEmail(req.body.email);
+        const password = validatePassword(req.body.password);
 
         if (!email || !password) {
-            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.writeHead(400, {
+                'Content-Type': 'application/json',
+                ...getSecurityHeaders()
+            });
             res.end(JSON.stringify({
                 success: false,
-                message: 'Email and password are required'
+                message: 'Valid email and password are required'
+            }));
+            return;
+        }
+
+        if (email.length > 254 || password.length > 128) {
+            res.writeHead(400, {
+                'Content-Type': 'application/json',
+                ...getSecurityHeaders()
+            });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Email or password too long'
             }));
             return;
         }
 
         const user = await User.findByEmail(email);
-        console.log('User found:', user ? 'Yes' : 'No'); // Debug
-        console.log('User role from DB:', user?.role); // Debug
 
         if (!user) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            res.writeHead(401, {
+                'Content-Type': 'application/json',
+                ...getSecurityHeaders()
+            });
             res.end(JSON.stringify({
                 success: false,
                 message: 'Invalid credentials'
@@ -115,10 +221,26 @@ const login = async (req, res) => {
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
         if (!isValidPassword) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            res.writeHead(401, {
+                'Content-Type': 'application/json',
+                ...getSecurityHeaders()
+            });
             res.end(JSON.stringify({
                 success: false,
                 message: 'Invalid credentials'
+            }));
+            return;
+        }
+
+        if (!user.id || user.id <= 0) {
+            res.writeHead(500, {
+                'Content-Type': 'application/json',
+                ...getSecurityHeaders()
+            });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'User account error'
             }));
             return;
         }
@@ -130,21 +252,26 @@ const login = async (req, res) => {
             token: token,
             user: {
                 id: user.id,
-                email: user.email,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                role: user.role
+                email: validateInput(user.email),
+                first_name: validateInput(user.first_name),
+                last_name: validateInput(user.last_name),
+                role: validateInput(user.role)
             }
         };
 
-        console.log('Sending response with role:', user.role); // Debug
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            ...getSecurityHeaders()
+        });
         res.end(JSON.stringify(responseData));
 
     } catch (error) {
-        console.error('Login error:', error); // Debug
-        res.writeHead(500, { 'Content-Type': 'application/json' });
+        console.error('Login error:', error);
+
+        res.writeHead(500, {
+            'Content-Type': 'application/json',
+            ...getSecurityHeaders()
+        });
         res.end(JSON.stringify({
             success: false,
             message: 'Server error'
@@ -152,7 +279,80 @@ const login = async (req, res) => {
     }
 };
 
+const logout = async (req, res) => {
+    try {
+        setSecurityHeaders(res);
+
+        res.writeHead(200, {
+            'Content-Type': 'application/json',
+            ...getSecurityHeaders()
+        });
+        res.end(JSON.stringify({
+            success: true,
+            message: 'Logout successful'
+        }));
+
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.writeHead(500, {
+            'Content-Type': 'application/json',
+            ...getSecurityHeaders()
+        });
+        res.end(JSON.stringify({
+            success: false,
+            message: 'Logout error'
+        }));
+    }
+};
+
+const changePassword = async (req, res) => {
+    try {
+        setSecurityHeaders(res);
+
+        const currentPassword = validatePassword(req.body.currentPassword);
+        const newPassword = validatePassword(req.body.newPassword);
+        const userId = parseInt(req.user?.id);
+
+        if (!currentPassword || !newPassword) {
+            return sendBadRequest(res, 'Valid current and new passwords are required');
+        }
+
+        if (!userId || userId <= 0) {
+            return sendUnauthorized(res, 'Invalid user session');
+        }
+
+        if (currentPassword === newPassword) {
+            return sendBadRequest(res, 'New password must be different from current password');
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return sendUnauthorized(res, 'User not found');
+        }
+
+        const bcrypt = require('bcryptjs');
+        const isValidCurrentPassword = await bcrypt.compare(currentPassword, user.password_hash);
+
+        if (!isValidCurrentPassword) {
+            return sendBadRequest(res, 'Current password is incorrect');
+        }
+
+        const saltRounds = 12;
+        const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
+
+        await User.updatePassword(userId, newPasswordHash);
+
+        sendSuccess(res, {}, 'Password changed successfully');
+
+    } catch (error) {
+        console.error('Change password error:', error);
+        sendServerError(res, 'Error changing password');
+    }
+};
+
 module.exports = {
     submitRegistrationRequest,
-    login
+    login,
+    logout,
+    changePassword
 };

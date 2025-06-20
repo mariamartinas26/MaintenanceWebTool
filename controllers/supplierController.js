@@ -1,450 +1,668 @@
 const SupplierModel = require('../models/supplierModel');
+const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+
+function validateInput(input) {
+    if (typeof input !== 'string') return input;
+    return sanitizeInput(input);
+}
+
+function validateNumber(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseFloat(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseInt(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const cleanEmail = sanitizeInput(email);
+    return emailRegex.test(cleanEmail) && !/<|>|script/i.test(cleanEmail) ? cleanEmail : null;
+}
+
+function validateTextLength(text, minLength = 0, maxLength = 1000) {
+    if (!text || typeof text !== 'string') return null;
+    const cleanText = sanitizeInput(text.trim());
+    if (cleanText.length < minLength || cleanText.length > maxLength) return null;
+    if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanText)) return null;
+    return cleanText;
+}
+
+function validateStatus(status) {
+    const validStatuses = ['ordered', 'confirmed', 'in_transit', 'delivered', 'cancelled'];
+    const cleanStatus = sanitizeInput(status);
+    return validStatuses.includes(cleanStatus) ? cleanStatus : null;
+}
+
+function sanitizeSupplier(supplier) {
+    if (!supplier) return null;
+
+    return {
+        id: supplier.id,
+        company_name: validateInput(supplier.company_name),
+        contact_person: validateInput(supplier.contact_person),
+        email: validateInput(supplier.email),
+        phone: validateInput(supplier.phone),
+        address: validateInput(supplier.address),
+        delivery_time_days: validateInteger(supplier.delivery_time_days, 1, 365),
+        total_parts_supplied: validateInteger(supplier.total_parts_supplied, 0, 1000000),
+        total_orders: validateInteger(supplier.total_orders, 0, 100000),
+        total_order_value: validateNumber(supplier.total_order_value, 0, 100000000),
+        last_order_date: supplier.last_order_date,
+        created_at: supplier.created_at
+    };
+}
+
+function sanitizeOrder(order) {
+    if (!order) return null;
+
+    return {
+        id: order.id,
+        supplier_id: order.supplier_id,
+        supplier_name: validateInput(order.supplier_name),
+        supplier_contact: validateInput(order.supplier_contact),
+        supplier_email: validateInput(order.supplier_email),
+        supplier_phone: validateInput(order.supplier_phone),
+        order_date: order.order_date,
+        expected_delivery_date: order.expected_delivery_date,
+        actual_delivery_date: order.actual_delivery_date,
+        status: validateInput(order.status),
+        total_amount: validateNumber(order.total_amount, 0, 100000000),
+        notes: validateInput(order.notes),
+        total_items: validateInteger(order.total_items, 0, 10000),
+        total_quantity: validateInteger(order.total_quantity, 0, 1000000)
+    };
+}
+
+function sendJSON(res, statusCode, data) {
+    setSecurityHeaders(res);
+    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+}
 
 class SupplierController {
 
     async getAllSuppliers(req, res, query = {}) {
         try {
-            const suppliers = await SupplierModel.getAllSuppliers(query);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: suppliers }));
+            setSecurityHeaders(res);
+
+            const sanitizedQuery = {};
+            if (query.search) {
+                const search = validateTextLength(query.search, 1, 100);
+                if (search) sanitizedQuery.search = search;
+            }
+            if (query.status) {
+                const status = validateInput(query.status);
+                if (status) sanitizedQuery.status = status;
+            }
+
+            const suppliers = await SupplierModel.getAllSuppliers(sanitizedQuery);
+            const sanitizedSuppliers = suppliers.map(sanitizeSupplier).filter(s => s !== null);
+
+            sendJSON(res, 200, {
+                success: true,
+                data: sanitizedSuppliers,
+                total: sanitizedSuppliers.length
+            });
 
         } catch (error) {
             console.error('Error getting suppliers:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching suppliers: ' + error.message }));
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error fetching suppliers: ' + validateInput(error.message)
+            });
         }
     }
 
-    // Get supplier by ID
     async getSupplierById(req, res, params) {
         try {
-            const { id } = params;
+            setSecurityHeaders(res);
+
+            const id = validateInteger(params.id, 1);
 
             if (!id) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Supplier ID is required' }));
-                return;
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Valid supplier ID is required'
+                });
             }
 
             const supplier = await SupplierModel.getSupplierById(id);
 
             if (!supplier) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Supplier not found' }));
-                return;
+                return sendJSON(res, 404, {
+                    success: false,
+                    message: 'Supplier not found'
+                });
             }
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: supplier }));
+            const sanitizedSupplier = sanitizeSupplier(supplier);
+
+            sendJSON(res, 200, {
+                success: true,
+                data: sanitizedSupplier
+            });
 
         } catch (error) {
             console.error('Error getting supplier by ID:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching supplier: ' + error.message }));
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error fetching supplier: ' + validateInput(error.message)
+            });
         }
     }
 
-    // Create new supplier
     async createSupplier(req, res, data) {
         try {
-            // Validate required fields
-            if (!data.name || !data.contact_person || !data.email) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+            setSecurityHeaders(res);
+
+            const name = validateTextLength(data.name, 2, 100);
+            const contactPerson = validateTextLength(data.contact_person, 2, 100);
+            const email = validateEmail(data.email);
+            const phone = validateTextLength(data.phone, 5, 20);
+            const address = validateTextLength(data.address, 0, 500);
+            const deliveryTime = validateInteger(data.delivery_time, 1, 365);
+
+            if (!name) {
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Name, contact person, and email are required'
-                }));
-                return;
+                    message: 'Company name is required (2-100 characters)'
+                });
             }
 
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(data.email)) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+            if (!contactPerson) {
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Please provide a valid email address'
-                }));
-                return;
+                    message: 'Contact person is required (2-100 characters)'
+                });
             }
 
-            // Validate delivery time
-            if (data.delivery_time && (isNaN(data.delivery_time) || data.delivery_time < 1)) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+            if (!email) {
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Delivery time must be a positive number'
-                }));
-                return;
+                    message: 'Valid email address is required'
+                });
             }
 
-            const supplier = await SupplierModel.createSupplier(data);
+            if (deliveryTime === null) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Delivery time must be a number between 1-365 days'
+                });
+            }
 
-            res.writeHead(201, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            const supplierData = {
+                name: name,
+                contact_person: contactPerson,
+                email: email,
+                phone: phone || null,
+                address: address || null,
+                delivery_time: deliveryTime
+            };
+
+            const supplier = await SupplierModel.createSupplier(supplierData);
+            const sanitizedSupplier = sanitizeSupplier(supplier);
+
+            sendJSON(res, 201, {
                 success: true,
-                data: supplier,
+                data: sanitizedSupplier,
                 message: 'Supplier created successfully'
-            }));
+            });
 
         } catch (error) {
+            console.error('Error creating supplier:', error);
+
             if (error.message.includes('email already exists')) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: error.message }));
+                sendJSON(res, 400, {
+                    success: false,
+                    message: 'A supplier with this email already exists'
+                });
             } else {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Error creating supplier: ' + error.message }));
+                sendJSON(res, 500, {
+                    success: false,
+                    message: 'Error creating supplier: ' + validateInput(error.message)
+                });
             }
         }
     }
 
-    // Update supplier
     async updateSupplier(req, res, data) {
         try {
-            const { id } = data;
+            setSecurityHeaders(res);
+
+            const id = validateInteger(data.id, 1);
 
             if (!id) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Supplier ID is required' }));
-                return;
-            }
-
-            // Email validation if email is provided
-            if (data.email) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(data.email)) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        success: false,
-                        message: 'Please provide a valid email address'
-                    }));
-                    return;
-                }
-            }
-
-            // Validate delivery time if provided
-            if (data.delivery_time && (isNaN(data.delivery_time) || data.delivery_time < 1)) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Delivery time must be a positive number'
-                }));
-                return;
+                    message: 'Valid supplier ID is required'
+                });
             }
 
-            const supplier = await SupplierModel.updateSupplier(id, data);
+            const updateData = {};
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            if (data.name) {
+                const name = validateTextLength(data.name, 2, 100);
+                if (name) updateData.name = name;
+            }
+
+            if (data.contact_person) {
+                const contactPerson = validateTextLength(data.contact_person, 2, 100);
+                if (contactPerson) updateData.contact_person = contactPerson;
+            }
+
+            if (data.email) {
+                const email = validateEmail(data.email);
+                if (!email) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: 'Valid email address is required'
+                    });
+                }
+                updateData.email = email;
+            }
+
+            if (data.phone) {
+                const phone = validateTextLength(data.phone, 5, 20);
+                if (phone) updateData.phone = phone;
+            }
+
+            if (data.address !== undefined) {
+                const address = validateTextLength(data.address, 0, 500);
+                updateData.address = address;
+            }
+
+            if (data.delivery_time) {
+                const deliveryTime = validateInteger(data.delivery_time, 1, 365);
+                if (deliveryTime === null) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: 'Delivery time must be between 1-365 days'
+                    });
+                }
+                updateData.delivery_time = deliveryTime;
+            }
+
+            if (Object.keys(updateData).length === 0) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'No valid fields to update'
+                });
+            }
+
+            const supplier = await SupplierModel.updateSupplier(id, updateData);
+            const sanitizedSupplier = sanitizeSupplier(supplier);
+
+            sendJSON(res, 200, {
                 success: true,
-                data: supplier,
+                data: sanitizedSupplier,
                 message: 'Supplier updated successfully'
-            }));
+            });
 
         } catch (error) {
             console.error('Error updating supplier:', error);
 
             if (error.message.includes('not found')) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: error.message }));
+                sendJSON(res, 404, {
+                    success: false,
+                    message: 'Supplier not found'
+                });
             } else if (error.message.includes('email already exists')) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: error.message }));
+                sendJSON(res, 400, {
+                    success: false,
+                    message: 'A supplier with this email already exists'
+                });
             } else {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Error updating supplier: ' + error.message }));
+                sendJSON(res, 500, {
+                    success: false,
+                    message: 'Error updating supplier: ' + validateInput(error.message)
+                });
             }
         }
     }
 
-    // Delete supplier
     async deleteSupplier(req, res, params) {
         try {
-            const { id } = params;
+            setSecurityHeaders(res);
+
+            const id = validateInteger(params.id, 1);
 
             if (!id) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Supplier ID is required' }));
-                return;
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Valid supplier ID is required'
+                });
             }
 
             await SupplierModel.deleteSupplier(id);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, message: 'Supplier deleted successfully' }));
+            sendJSON(res, 200, {
+                success: true,
+                message: 'Supplier deleted successfully'
+            });
 
         } catch (error) {
             console.error('Error deleting supplier:', error);
 
             if (error.message.includes('not found')) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: error.message }));
+                sendJSON(res, 404, {
+                    success: false,
+                    message: 'Supplier not found'
+                });
             } else if (error.message.includes('associated parts or orders')) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: error.message }));
+                sendJSON(res, 400, {
+                    success: false,
+                    message: 'Cannot delete supplier with associated parts or orders'
+                });
             } else {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Error deleting supplier: ' + error.message }));
+                sendJSON(res, 500, {
+                    success: false,
+                    message: 'Error deleting supplier: ' + validateInput(error.message)
+                });
             }
         }
     }
 
-
-
-
-    // Get all orders
     async getAllOrders(req, res, query = {}) {
         try {
-            const orders = await SupplierModel.getAllOrders(query);
+            setSecurityHeaders(res);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true, data: orders }));
+            const sanitizedQuery = {};
+            if (query.supplier_id) {
+                const supplierId = validateInteger(query.supplier_id, 1);
+                if (supplierId) sanitizedQuery.supplier_id = supplierId;
+            }
+            if (query.status) {
+                const status = validateStatus(query.status);
+                if (status) sanitizedQuery.status = status;
+            }
+
+            const orders = await SupplierModel.getAllOrders(sanitizedQuery);
+            const sanitizedOrders = orders.map(sanitizeOrder).filter(o => o !== null);
+
+            sendJSON(res, 200, {
+                success: true,
+                data: sanitizedOrders,
+                total: sanitizedOrders.length
+            });
 
         } catch (error) {
             console.error('Error getting orders:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching orders: ' + error.message }));
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error fetching orders: ' + validateInput(error.message)
+            });
         }
     }
+
     async getAllParts(req, res, query = {}) {
         try {
-            const parts = await SupplierModel.getAllParts(query);
+            setSecurityHeaders(res);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            const sanitizedQuery = {};
+            if (query.search) {
+                const search = validateTextLength(query.search, 1, 100);
+                if (search) sanitizedQuery.search = search;
+            }
+            if (query.category) {
+                const category = validateTextLength(query.category, 1, 50);
+                if (category) sanitizedQuery.category = category;
+            }
+
+            const parts = await SupplierModel.getAllParts(sanitizedQuery);
+
+            const sanitizedParts = parts.map(part => ({
+                id: part.id,
+                name: validateInput(part.name),
+                description: validateInput(part.description),
+                part_number: validateInput(part.part_number),
+                category: validateInput(part.category),
+                price: validateNumber(part.price, 0, 1000000),
+                stock_quantity: validateInteger(part.stock_quantity, 0, 100000),
+                supplier_name: validateInput(part.supplier_name)
+            })).filter(part => part.name);
+
+            sendJSON(res, 200, {
                 success: true,
-                data: parts,
-                message: 'Parts retrieved successfully'
-            }));
+                data: sanitizedParts,
+                message: 'Parts retrieved successfully',
+                total: sanitizedParts.length
+            });
 
         } catch (error) {
             console.error('Error getting parts:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 500, {
                 success: false,
-                message: 'Error fetching parts: ' + error.message
-            }));
+                message: 'Error fetching parts: ' + validateInput(error.message)
+            });
         }
     }
 
     async createOrder(req, res, data) {
         try {
-            console.log('=== CREATE ORDER CONTROLLER DEBUG ===');
-            console.log('Controller - Received data:', JSON.stringify(data, null, 2));
+            setSecurityHeaders(res);
 
-            // Validate required fields
-            if (!data.supplier_id || !data.items || !Array.isArray(data.items) || data.items.length === 0) {
-                console.log('Controller - Validation failed: missing required fields');
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+            console.log('=== CREATE ORDER CONTROLLER DEBUG ===');
+
+            const supplierId = validateInteger(data.supplier_id, 1);
+            const items = Array.isArray(data.items) ? data.items : [];
+
+            if (!supplierId) {
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Supplier ID and at least one item are required'
-                }));
-                return;
+                    message: 'Valid supplier ID is required'
+                });
             }
 
-            console.log('Controller - Basic validation passed');
+            if (!items || items.length === 0) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'At least one item is required'
+                });
+            }
 
-            // Validate supplier exists
-            const supplier = await SupplierModel.getSupplierById(data.supplier_id);
+            if (items.length > 100) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Maximum 100 items allowed per order'
+                });
+            }
+
+            const supplier = await SupplierModel.getSupplierById(supplierId);
             if (!supplier) {
-                console.log('Controller - Supplier not found:', data.supplier_id);
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+                return sendJSON(res, 400, {
                     success: false,
                     message: 'Supplier not found'
-                }));
-                return;
+                });
             }
 
-            console.log('Controller - Supplier found:', supplier.company_name);
+            const validatedItems = [];
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
 
-            // Validate order items
-            for (let i = 0; i < data.items.length; i++) {
-                const item = data.items[i];
-                console.log(`Controller - Validating item ${i + 1}:`, item);
+                const name = validateTextLength(item.name, 1, 100);
+                const quantity = validateInteger(item.quantity, 1, 10000);
+                const unitPrice = validateNumber(item.unit_price, 0, 100000);
 
-                if (!item.name || !item.quantity || !item.unit_price) {
-                    console.log(`Controller - Item ${i + 1} validation failed: missing fields`);
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
+                if (!name) {
+                    return sendJSON(res, 400, {
                         success: false,
-                        message: `Item ${i + 1}: name, quantity, and unit_price are required`
-                    }));
-                    return;
+                        message: `Item ${i + 1}: name is required (1-100 characters)`
+                    });
                 }
 
-                if (isNaN(item.quantity) || item.quantity < 1) {
-                    console.log(`Controller - Item ${i + 1} validation failed: invalid quantity`);
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
+                if (!quantity) {
+                    return sendJSON(res, 400, {
                         success: false,
-                        message: `Item ${i + 1}: quantity must be a positive number`
-                    }));
-                    return;
+                        message: `Item ${i + 1}: quantity must be between 1-10000`
+                    });
                 }
 
-                if (isNaN(item.unit_price) || item.unit_price < 0) {
-                    console.log(`Controller - Item ${i + 1} validation failed: invalid unit_price`);
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
+                if (unitPrice === null) {
+                    return sendJSON(res, 400, {
                         success: false,
-                        message: `Item ${i + 1}: unit_price must be a valid positive number`
-                    }));
-                    return;
+                        message: `Item ${i + 1}: unit_price must be a valid number`
+                    });
                 }
+
+                validatedItems.push({
+                    name: name,
+                    quantity: quantity,
+                    unit_price: unitPrice,
+                    description: validateTextLength(item.description, 0, 500) || ''
+                });
             }
 
-            console.log('Controller - All validations passed, calling SupplierModel.createOrder');
+            const orderData = {
+                supplier_id: supplierId,
+                items: validatedItems,
+                notes: validateTextLength(data.notes, 0, 1000) || null,
+                expected_delivery_date: data.expected_delivery_date || null
+            };
 
-            const order = await SupplierModel.createOrder(data);
+            const order = await SupplierModel.createOrder(orderData);
+            const sanitizedOrder = sanitizeOrder(order);
 
-            console.log('Controller - Order created successfully:', order.id);
-
-            res.writeHead(201, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 201, {
                 success: true,
-                data: order,
+                data: sanitizedOrder,
                 message: 'Order created successfully'
-            }));
+            });
 
         } catch (error) {
             console.error('Controller - Error creating order:', error);
-            console.error('Controller - Error stack:', error.stack);
 
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 500, {
                 success: false,
-                message: 'Error creating order: ' + error.message,
-                error: process.env.NODE_ENV === 'development' ? error.stack : undefined
-            }));
+                message: 'Error creating order: ' + validateInput(error.message)
+            });
         }
     }
 
     async updateOrderStatus(req, res, data) {
         try {
-            console.log('=== BACKEND DEBUG ===');
-            console.log('Controller - Request data:', JSON.stringify(data, null, 2));
+            setSecurityHeaders(res);
 
-            const { orderId, status, actual_delivery_date, notes } = data;
+            const orderId = validateInteger(data.orderId, 1);
+            const status = validateStatus(data.status);
+            const notes = validateTextLength(data.notes, 0, 1000);
 
-            console.log('Controller - Extracted values:');
-            console.log('  orderId:', orderId, 'Type:', typeof orderId);
-            console.log('  status:', status);
-            console.log('  actual_delivery_date:', actual_delivery_date);
-            console.log('  notes:', notes);
-
-            if (!orderId || !status) {
-                console.log('Controller - Missing required fields');
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+            if (!orderId) {
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Order ID and status are required'
-                }));
-                return;
+                    message: 'Valid order ID is required'
+                });
             }
 
-            // Validate status
-            const validStatuses = ['ordered', 'confirmed', 'in_transit', 'delivered', 'cancelled'];
-            if (!validStatuses.includes(status)) {
-                console.log('Controller - Invalid status:', status);
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+            if (!status) {
+                return sendJSON(res, 400, {
                     success: false,
-                    message: 'Invalid status. Valid statuses are: ' + validStatuses.join(', ')
-                }));
-                return;
+                    message: 'Valid status is required (ordered, confirmed, in_transit, delivered, cancelled)'
+                });
             }
 
-            console.log('Controller - Calling SupplierModel.updateOrderStatus...');
-
-            // POSIBILĂ PROBLEMĂ: Convertește orderId la număr pentru backend
-            const numericOrderId = parseInt(orderId);
-            if (isNaN(numericOrderId)) {
-                throw new Error(`Invalid order ID: ${orderId}`);
+            let actualDeliveryDate = null;
+            if (data.actual_delivery_date) {
+                const date = new Date(data.actual_delivery_date);
+                if (!isNaN(date.getTime())) {
+                    actualDeliveryDate = data.actual_delivery_date;
+                }
             }
-            console.log('Controller - Using numeric order ID:', numericOrderId);
 
-            const order = await SupplierModel.updateOrderStatus(numericOrderId, status, actual_delivery_date, notes);
+            const order = await SupplierModel.updateOrderStatus(orderId, status, actualDeliveryDate, notes);
+            const sanitizedOrder = sanitizeOrder(order);
 
-            console.log('Controller - Model returned:', order);
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 200, {
                 success: true,
-                data: order,
+                data: sanitizedOrder,
                 message: `Order status updated to ${status} successfully`
-            }));
+            });
 
         } catch (error) {
             console.error('Controller - Error updating order status:', error);
-            console.error('Controller - Error stack:', error.stack);
 
             if (error.message.includes('not found')) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: error.message }));
-            } else {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
+                sendJSON(res, 404, {
                     success: false,
-                    message: 'Error updating order status: ' + error.message,
-                    error: error.stack
-                }));
+                    message: 'Order not found'
+                });
+            } else {
+                sendJSON(res, 500, {
+                    success: false,
+                    message: 'Error updating order status: ' + validateInput(error.message)
+                });
             }
         }
     }
 
     async getOrdersBySupplier(req, res, params) {
         try {
-            const { supplierId } = params;
+            setSecurityHeaders(res);
+
+            const supplierId = validateInteger(params.supplierId, 1);
+            if (!supplierId) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Valid supplier ID is required'
+                });
+            }
+
             await this.getAllOrders(req, res, { supplier_id: supplierId });
         } catch (error) {
             console.error('Error in getOrdersBySupplier:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Error fetching orders by supplier: ' + error.message }));
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error fetching orders by supplier: ' + validateInput(error.message)
+            });
         }
     }
 
     async getSuppliersForExport(req, res) {
         try {
+            setSecurityHeaders(res);
+
             const result = await this.getSuppliersForExportData(req);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 200, {
                 success: true,
                 data: result,
                 total: result.length,
                 exported_at: new Date().toISOString()
-            }));
+            });
         } catch (error) {
             console.error('Export suppliers error:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 500, {
                 success: false,
                 message: 'Failed to export suppliers data'
-            }));
+            });
         }
     }
 
     async getSuppliersForExportData(req) {
         try {
-            // Folosește modelul SupplierModel existent
-            const suppliers = await SupplierModel.getAllSuppliers({}); // Obține toți furnizorii
+            const suppliers = await SupplierModel.getAllSuppliers({});
 
-            return suppliers.map(supplier => ({
-                id: supplier.id,
-                company_name: supplier.company_name,
-                contact_person: supplier.contact_person,
-                email: supplier.email,
-                phone: supplier.phone,
-                address: supplier.address,
-                delivery_time_days: parseInt(supplier.delivery_time_days) || 0,
-                total_parts_supplied: parseInt(supplier.total_parts_supplied) || 0,
-                total_orders: parseInt(supplier.total_orders) || 0,
-                total_order_value: parseFloat(supplier.total_order_value) || 0,
-                last_order_date: supplier.last_order_date ? new Date(supplier.last_order_date).toLocaleString() : null,
-                created_at: supplier.created_at ? new Date(supplier.created_at).toLocaleString() : null
-            }));
+            return suppliers.map(supplier => {
+                const sanitized = sanitizeSupplier(supplier);
+                return {
+                    id: sanitized.id,
+                    company_name: sanitized.company_name || 'Unknown Company',
+                    contact_person: sanitized.contact_person || 'Unknown Contact',
+                    email: sanitized.email || 'No Email',
+                    phone: sanitized.phone || 'No Phone',
+                    address: sanitized.address || 'No Address',
+                    delivery_time_days: sanitized.delivery_time_days || 0,
+                    total_parts_supplied: sanitized.total_parts_supplied || 0,
+                    total_orders: sanitized.total_orders || 0,
+                    total_order_value: sanitized.total_order_value || 0,
+                    last_order_date: supplier.last_order_date ? new Date(supplier.last_order_date).toLocaleString() : null,
+                    created_at: supplier.created_at ? new Date(supplier.created_at).toLocaleString() : null
+                };
+            });
 
         } catch (error) {
             console.error('Error getting suppliers for export:', error);
@@ -452,55 +670,70 @@ class SupplierController {
         }
     }
 
-    // Export methods for orders
     async getOrdersForExport(req, res) {
         try {
+            setSecurityHeaders(res);
+
             const result = await this.getOrdersForExportData(req);
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 200, {
                 success: true,
                 data: result,
                 total: result.length,
                 exported_at: new Date().toISOString()
-            }));
+            });
         } catch (error) {
             console.error('Export orders error:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            sendJSON(res, 500, {
                 success: false,
                 message: 'Failed to export orders data'
-            }));
+            });
         }
     }
 
     async getOrdersForExportData(req) {
         try {
-
             const orders = await SupplierModel.getAllOrders({});
 
-            return orders.map(order => ({
-                id: order.id,
-                supplier_name: order.supplier_name || 'Unknown Supplier',
-                supplier_contact: order.supplier_contact,
-                supplier_email: order.supplier_email,
-                supplier_phone: order.supplier_phone,
-                order_date: order.order_date ? new Date(order.order_date).toLocaleString() : null,
-                expected_delivery_date: order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleString() : null,
-                actual_delivery_date: order.actual_delivery_date ? new Date(order.actual_delivery_date).toLocaleString() : null,
-                status: order.status,
-                total_amount: parseFloat(order.total_amount) || 0,
-                notes: order.notes,
-                total_items: parseInt(order.total_items) || 0,
-                total_quantity: parseInt(order.total_quantity) || 0,
-                delivery_status: order.actual_delivery_date && order.expected_delivery_date
-                    ? (new Date(order.actual_delivery_date) > new Date(order.expected_delivery_date) ? 'Late' :
-                        new Date(order.actual_delivery_date) < new Date(order.expected_delivery_date) ? 'Early' : 'On Time')
-                    : 'Pending',
-                delivery_delay_days: order.actual_delivery_date && order.expected_delivery_date
-                    ? Math.ceil((new Date(order.actual_delivery_date) - new Date(order.expected_delivery_date)) / (1000 * 60 * 60 * 24))
-                    : null
-            }));
+            return orders.map(order => {
+                const sanitized = sanitizeOrder(order);
+
+                let deliveryStatus = 'Pending';
+                let deliveryDelayDays = null;
+
+                if (sanitized.actual_delivery_date && sanitized.expected_delivery_date) {
+                    const actualDate = new Date(sanitized.actual_delivery_date);
+                    const expectedDate = new Date(sanitized.expected_delivery_date);
+                    const diffTime = actualDate.getTime() - expectedDate.getTime();
+                    deliveryDelayDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (deliveryDelayDays > 0) {
+                        deliveryStatus = 'Late';
+                    } else if (deliveryDelayDays < 0) {
+                        deliveryStatus = 'Early';
+                    } else {
+                        deliveryStatus = 'On Time';
+                    }
+                }
+
+                return {
+                    id: sanitized.id,
+                    supplier_name: sanitized.supplier_name || 'Unknown Supplier',
+                    supplier_contact: sanitized.supplier_contact || '',
+                    supplier_email: sanitized.supplier_email || '',
+                    supplier_phone: sanitized.supplier_phone || '',
+                    order_date: order.order_date ? new Date(order.order_date).toLocaleString() : null,
+                    expected_delivery_date: order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleString() : null,
+                    actual_delivery_date: order.actual_delivery_date ? new Date(order.actual_delivery_date).toLocaleString() : null,
+                    status: sanitized.status || 'Unknown',
+                    total_amount: sanitized.total_amount || 0,
+                    notes: sanitized.notes || '',
+                    total_items: sanitized.total_items || 0,
+                    total_quantity: sanitized.total_quantity || 0,
+                    delivery_status: deliveryStatus,
+                    delivery_delay_days: deliveryDelayDays
+                };
+            });
 
         } catch (error) {
             console.error('Error getting orders for export:', error);

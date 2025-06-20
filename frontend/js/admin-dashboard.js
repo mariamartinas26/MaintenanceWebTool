@@ -9,6 +9,48 @@ class AdminDashboard {
         this.init();
     }
 
+    sanitizeInput(input) {
+        return window.SecurityUtils.sanitizeInput(input);
+    }
+
+    safeJsonParse(jsonString) {
+        return window.SecurityUtils.safeJsonParse(jsonString);
+    }
+
+    sanitizeObject(obj) {
+        return window.SecurityUtils.sanitizeObject(obj);
+    }
+
+    safeSetText(element, text) {
+        if (element && text !== null && text !== undefined) {
+            element.textContent = String(text);
+        }
+    }
+
+    safeSetHTML(element, html) {
+        if (element && html !== null && html !== undefined) {
+            const sanitized = this.sanitizeInput(String(html));
+            element.innerHTML = sanitized;
+        }
+    }
+
+    safeSetValue(element, value) {
+        if (element && value !== null && value !== undefined) {
+            element.value = this.sanitizeInput(String(value));
+        }
+    }
+
+    createSafeElement(tag, className = '', textContent = '') {
+        const element = document.createElement(tag);
+        if (className) {
+            element.className = this.sanitizeInput(className);
+        }
+        if (textContent) {
+            this.safeSetText(element, textContent);
+        }
+        return element;
+    }
+
     init() {
         this.bindEvents();
         this.loadAppointments();
@@ -20,47 +62,36 @@ class AdminDashboard {
 
     bindEvents() {
         const statusFilter = document.getElementById('status-filter');
-
         statusFilter.addEventListener('change', () => {
             this.currentFilters.status = statusFilter.value;
             this.loadAppointments();
         });
 
-        // Logout functionality
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', this.handleLogout.bind(this));
-        } else {
-            console.error('Logout button not found!');
         }
     }
 
     setupModals() {
-        // Close modal events
         const closeModalBtns = document.querySelectorAll('.close-modal');
         closeModalBtns.forEach(btn => {
             btn.addEventListener('click', this.closeModal.bind(this));
         });
 
-        // Close modal when clicking outside
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeModal();
-                }
+                if (e.target === modal) this.closeModal();
             });
         });
 
-        // Cancel edit button
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
         cancelEditBtn.addEventListener('click', this.closeModal.bind(this));
 
-        // Form submission
         const appointmentForm = document.getElementById('appointment-form');
         appointmentForm.addEventListener('submit', this.handleStatusUpdate.bind(this));
 
-        // Status radio button changes
         const statusRadios = document.querySelectorAll('input[name="status"]');
         statusRadios.forEach(radio => {
             radio.addEventListener('change', this.handleStatusChange.bind(this));
@@ -69,19 +100,15 @@ class AdminDashboard {
 
     setupNavigation() {
         const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
-
         sidebarLinks.forEach(link => {
             const iconElement = link.querySelector('.icon');
             if (iconElement) {
-                // Inventory navigation
                 if (iconElement.textContent.includes('Tool') || link.textContent.toLowerCase().includes('inventory')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         window.location.href = '/inventory/dashboard';
                     });
                 }
-
-                // Suppliers navigation
                 if (iconElement.textContent.includes('Store') || link.textContent.toLowerCase().includes('supplier')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
@@ -92,25 +119,15 @@ class AdminDashboard {
         });
     }
 
-    // Parts Selection Setup
     setupPartsSelection() {
         const partsSearchInput = document.getElementById('parts-search-input');
         const partsDropdown = document.getElementById('parts-dropdown');
 
-        if (!partsSearchInput || !partsDropdown) {
-            return;
-        }
+        if (!partsSearchInput || !partsDropdown) return;
 
-        // Show dropdown on click/focus
-        partsSearchInput.addEventListener('click', () => {
-            this.showPartsDropdown();
-        });
+        partsSearchInput.addEventListener('click', () => this.showPartsDropdown());
+        partsSearchInput.addEventListener('focus', () => this.showPartsDropdown());
 
-        partsSearchInput.addEventListener('focus', () => {
-            this.showPartsDropdown();
-        });
-
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.parts-search')) {
                 partsDropdown.classList.remove('show');
@@ -121,9 +138,7 @@ class AdminDashboard {
     async loadParts() {
         try {
             const token = localStorage.getItem('token');
-            if (!token) {
-                return;
-            }
+            if (!token) return;
 
             const response = await fetch('/admin/api/parts?available_only=true', {
                 headers: {
@@ -140,7 +155,7 @@ class AdminDashboard {
             }
 
             if (data.success) {
-                this.availableParts = data.parts.map(part => ({
+                this.availableParts = data.parts.map(part => this.sanitizeObject({
                     id: part.id,
                     name: part.name,
                     partNumber: part.part_number,
@@ -151,7 +166,7 @@ class AdminDashboard {
                     supplierName: part.supplier_name || 'Unknown'
                 }));
             } else {
-                this.showError('Error loading parts: ' + data.message);
+                this.showError('Error loading parts: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
             this.showError('Error loading parts data');
@@ -162,7 +177,8 @@ class AdminDashboard {
         const dropdown = document.getElementById('parts-dropdown');
 
         if (this.availableParts.length === 0) {
-            dropdown.innerHTML = '<div class="part-option">No parts available</div>';
+            this.safeSetText(dropdown, 'No parts available');
+            dropdown.className = 'part-option';
         } else {
             this.renderPartsDropdown(this.availableParts);
         }
@@ -174,22 +190,28 @@ class AdminDashboard {
         const dropdown = document.getElementById('parts-dropdown');
 
         if (parts.length === 0) {
-            dropdown.innerHTML = '<div class="part-option">No parts found</div>';
+            const option = this.createSafeElement('div', 'part-option', 'No parts found');
+            dropdown.innerHTML = '';
+            dropdown.appendChild(option);
             return;
         }
 
-        dropdown.innerHTML = parts.map(part => `
-            <div class="part-option" data-part-id="${part.id}">
-                <div class="part-name">${part.name}</div>
-                <div class="part-details">
-                    ${part.partNumber} | Stock: ${part.stockQuantity} | ${part.price.toFixed(2)} RON
-                    ${part.category ? ` | ${part.category}` : ''}
-                </div>
-            </div>
-        `).join('');
+        dropdown.innerHTML = '';
 
-        // Add click events for part selection
-        dropdown.querySelectorAll('.part-option[data-part-id]').forEach(option => {
+        parts.forEach(part => {
+            const option = this.createSafeElement('div', 'part-option');
+            option.dataset.partId = String(part.id);
+
+            const nameDiv = this.createSafeElement('div', 'part-name', part.name);
+            const detailsDiv = this.createSafeElement('div', 'part-details');
+
+            const detailsText = `${part.partNumber} | Stock: ${part.stockQuantity} | ${part.price.toFixed(2)} RON${part.category ? ` | ${part.category}` : ''}`;
+            this.safeSetText(detailsDiv, detailsText);
+
+            option.appendChild(nameDiv);
+            option.appendChild(detailsDiv);
+            dropdown.appendChild(option);
+
             option.addEventListener('click', (e) => {
                 const partId = parseInt(e.currentTarget.dataset.partId);
                 const selectedPart = parts.find(p => p.id === partId);
@@ -205,12 +227,11 @@ class AdminDashboard {
     addPartToSelection(part) {
         if (!part || !part.id) return;
 
-        // Check if part already selected
         const existingPart = this.selectedParts.find(p => p.id === part.id);
         if (existingPart) {
             existingPart.quantity += 1;
         } else {
-            this.selectedParts.push({
+            this.selectedParts.push(this.sanitizeObject({
                 id: part.id,
                 name: part.name,
                 partNumber: part.partNumber,
@@ -219,7 +240,7 @@ class AdminDashboard {
                 stockQuantity: part.stockQuantity,
                 description: part.description,
                 quantity: 1
-            });
+            }));
         }
 
         this.renderSelectedParts();
@@ -230,34 +251,61 @@ class AdminDashboard {
         const container = document.getElementById('selected-parts');
 
         if (this.selectedParts.length === 0) {
-            container.innerHTML = '<span>No parts selected</span>';
+            container.innerHTML = '';
+            const span = this.createSafeElement('span', '', 'No parts selected');
+            container.appendChild(span);
             container.classList.add('empty');
             return;
         }
 
         container.classList.remove('empty');
-        container.innerHTML = this.selectedParts.map(part => `
-            <div class="selected-part-item" data-part-id="${part.id}">
-                <div class="part-info">
-                    <div class="name">${part.name}</div>
-                    <div class="price">${part.partNumber} | ${part.price} RON each</div>
-                </div>
-                <div class="quantity-controls">
-                    <button type="button" class="quantity-btn decrease" data-part-id="${part.id}">-</button>
-                    <input type="number" class="quantity-input" value="${part.quantity}" 
-                           min="1" data-part-id="${part.id}">
-                    <button type="button" class="quantity-btn increase" data-part-id="${part.id}">+</button>
-                </div>
-                <button type="button" class="remove-part" data-part-id="${part.id}">Remove</button>
-            </div>
-        `).join('');
+        container.innerHTML = '';
 
-        // Bind events for quantity controls
+        this.selectedParts.forEach(part => {
+            const item = this.createSafeElement('div', 'selected-part-item');
+            item.dataset.partId = String(part.id);
+
+            const partInfo = this.createSafeElement('div', 'part-info');
+            const nameDiv = this.createSafeElement('div', 'name', part.name);
+            const priceDiv = this.createSafeElement('div', 'price', `${part.partNumber} | ${part.price} RON each`);
+            partInfo.appendChild(nameDiv);
+            partInfo.appendChild(priceDiv);
+
+            const quantityControls = this.createSafeElement('div', 'quantity-controls');
+
+            const decreaseBtn = this.createSafeElement('button', 'quantity-btn decrease', '-');
+            decreaseBtn.type = 'button';
+            decreaseBtn.dataset.partId = String(part.id);
+
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.className = 'quantity-input';
+            quantityInput.value = String(part.quantity);
+            quantityInput.min = '1';
+            quantityInput.dataset.partId = String(part.id);
+
+            const increaseBtn = this.createSafeElement('button', 'quantity-btn increase', '+');
+            increaseBtn.type = 'button';
+            increaseBtn.dataset.partId = String(part.id);
+
+            quantityControls.appendChild(decreaseBtn);
+            quantityControls.appendChild(quantityInput);
+            quantityControls.appendChild(increaseBtn);
+
+            const removeBtn = this.createSafeElement('button', 'remove-part', 'Remove');
+            removeBtn.type = 'button';
+            removeBtn.dataset.partId = String(part.id);
+
+            item.appendChild(partInfo);
+            item.appendChild(quantityControls);
+            item.appendChild(removeBtn);
+            container.appendChild(item);
+        });
+
         this.bindPartControlEvents();
     }
 
     bindPartControlEvents() {
-        // Quantity buttons
         document.querySelectorAll('.quantity-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const partId = parseInt(e.target.dataset.partId);
@@ -266,7 +314,6 @@ class AdminDashboard {
             });
         });
 
-        // Quantity inputs
         document.querySelectorAll('.quantity-input').forEach(input => {
             input.addEventListener('change', (e) => {
                 const partId = parseInt(e.target.dataset.partId);
@@ -275,7 +322,6 @@ class AdminDashboard {
             });
         });
 
-        // Remove buttons
         document.querySelectorAll('.remove-part').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const partId = parseInt(e.target.dataset.partId);
@@ -327,7 +373,7 @@ class AdminDashboard {
 
         if (total > 0) {
             totalElement.style.display = 'block';
-            amountElement.textContent = total.toFixed(2);
+            this.safeSetText(amountElement, total.toFixed(2));
         } else {
             totalElement.style.display = 'none';
         }
@@ -340,9 +386,7 @@ class AdminDashboard {
             const token = localStorage.getItem('token');
             if (!token) {
                 this.showError('You are not authenticated. Redirecting to login...');
-                setTimeout(() => {
-                    window.location.href = '/login';
-                }, 2000);
+                setTimeout(() => window.location.href = '/login', 2000);
                 return;
             }
 
@@ -364,17 +408,15 @@ class AdminDashboard {
                 this.showError('Session expired. Redirecting to login...');
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                setTimeout(() => {
-                    window.location.href = '/login';
-                }, 2000);
+                setTimeout(() => window.location.href = '/login', 2000);
                 return;
             }
 
             if (data.success) {
-                this.appointments = data.appointments;
+                this.appointments = data.appointments.map(appointment => this.sanitizeObject(appointment));
                 this.renderAppointments();
             } else {
-                this.showError('Error loading appointments: ' + data.message);
+                this.showError('Error loading appointments: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
             this.showError('Connection error. Please try again.');
@@ -387,19 +429,20 @@ class AdminDashboard {
         const container = document.getElementById('appointments-container');
 
         if (this.appointments.length === 0) {
-            container.innerHTML = `
-                <div class="no-appointments">
-                    <p>No appointments found for the selected filter.</p>
-                </div>
-            `;
+            container.innerHTML = '';
+            const noAppointments = this.createSafeElement('div', 'no-appointments');
+            const p = this.createSafeElement('p', '', 'No appointments found for the selected filter.');
+            noAppointments.appendChild(p);
+            container.appendChild(noAppointments);
             return;
         }
 
-        container.innerHTML = this.appointments.map(appointment =>
-            this.createAppointmentCard(appointment)
-        ).join('');
+        container.innerHTML = '';
+        this.appointments.forEach(appointment => {
+            const card = this.createAppointmentCard(appointment);
+            container.appendChild(card);
+        });
 
-        // Bind events for the new cards
         this.bindCardEvents();
     }
 
@@ -413,44 +456,45 @@ class AdminDashboard {
             minute: '2-digit'
         });
 
-        return `
-            <div class="appointment-card ${appointment.status}" data-id="${appointment.id}">
-                <div class="appointment-header">
-                    <span class="appointment-date">${formattedDate}</span>
-                    <span class="appointment-status status-${appointment.status}">
-                        ${this.getStatusText(appointment.status)}
-                    </span>
-                </div>
-                <div class="client-name">${appointment.clientName}</div>
-                <div class="service-type">${appointment.serviceType}</div>
-                <div class="appointment-description">
-                    ${appointment.problemDescription}
-                </div>
-                <div class="appointment-actions">
-                    <button class="view-btn" data-id="${appointment.id}">
-                        View Details
-                    </button>
-                    <button class="manage-btn" data-id="${appointment.id}">
-                        Manage
-                    </button>
-                </div>
-            </div>
-        `;
+        const card = this.createSafeElement('div', `appointment-card ${appointment.status}`);
+        card.dataset.id = String(appointment.id);
+
+        const header = this.createSafeElement('div', 'appointment-header');
+        const dateSpan = this.createSafeElement('span', 'appointment-date', formattedDate);
+        const statusSpan = this.createSafeElement('span', `appointment-status status-${appointment.status}`, this.getStatusText(appointment.status));
+        header.appendChild(dateSpan);
+        header.appendChild(statusSpan);
+
+        const clientName = this.createSafeElement('div', 'client-name', appointment.clientName);
+        const serviceType = this.createSafeElement('div', 'service-type', appointment.serviceType);
+        const description = this.createSafeElement('div', 'appointment-description', appointment.problemDescription);
+
+        const actions = this.createSafeElement('div', 'appointment-actions');
+        const viewBtn = this.createSafeElement('button', 'view-btn', 'View Details');
+        viewBtn.dataset.id = String(appointment.id);
+        const manageBtn = this.createSafeElement('button', 'manage-btn', 'Manage');
+        manageBtn.dataset.id = String(appointment.id);
+        actions.appendChild(viewBtn);
+        actions.appendChild(manageBtn);
+
+        card.appendChild(header);
+        card.appendChild(clientName);
+        card.appendChild(serviceType);
+        card.appendChild(description);
+        card.appendChild(actions);
+
+        return card;
     }
 
     bindCardEvents() {
-        // View buttons
-        const viewBtns = document.querySelectorAll('.view-btn');
-        viewBtns.forEach(btn => {
+        document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const appointmentId = e.target.dataset.id;
                 this.viewAppointmentDetails(appointmentId);
             });
         });
 
-        // Manage buttons
-        const manageBtns = document.querySelectorAll('.manage-btn');
-        manageBtns.forEach(btn => {
+        document.querySelectorAll('.manage-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const appointmentId = e.target.dataset.id;
                 this.openManageModal(appointmentId);
@@ -475,10 +519,10 @@ class AdminDashboard {
             }
 
             if (data.success) {
-                this.displayAppointmentDetails(data.appointment);
+                this.displayAppointmentDetails(this.sanitizeObject(data.appointment));
                 this.openModal('view-appointment-modal');
             } else {
-                this.showError('Error loading details: ' + data.message);
+                this.showError('Error loading details: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
             this.showError('Connection error.');
@@ -487,6 +531,7 @@ class AdminDashboard {
 
     displayAppointmentDetails(appointment) {
         const detailsContainer = document.getElementById('appointment-details');
+        detailsContainer.innerHTML = '';
 
         const appointmentDate = new Date(appointment.appointmentDate);
         const formattedDate = appointmentDate.toLocaleDateString('en-US', {
@@ -497,137 +542,109 @@ class AdminDashboard {
             minute: '2-digit'
         });
 
-        detailsContainer.innerHTML = `
-            <div class="detail-section">
-                <h3>Client Information</h3>
-                <div class="detail-item">
-                    <div class="detail-label">Name:</div>
-                    <div class="detail-value">${appointment.clientInfo.name}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Email:</div>
-                    <div class="detail-value">${appointment.clientInfo.email}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Phone:</div>
-                    <div class="detail-value">${appointment.clientInfo.phone || 'Not specified'}</div>
-                </div>
-            </div>
+        const clientSection = this.createDetailSection('Client Information', [
+            { label: 'Name', value: appointment.clientInfo.name },
+            { label: 'Email', value: appointment.clientInfo.email },
+            { label: 'Phone', value: appointment.clientInfo.phone || 'Not specified' }
+        ]);
 
-            <div class="detail-section">
-                <h3>Appointment Details</h3>
-                <div class="detail-item">
-                    <div class="detail-label">Date and Time:</div>
-                    <div class="detail-value">${formattedDate}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Status:</div>
-                    <div class="detail-value">
-                        <span class="appointment-status status-${appointment.status}">
-                            ${this.getStatusText(appointment.status)}
-                        </span>
-                    </div>
-                </div>
-            </div>
+        const appointmentSection = this.createDetailSection('Appointment Details', [
+            { label: 'Date and Time', value: formattedDate },
+            { label: 'Status', value: this.getStatusText(appointment.status), isStatus: true, status: appointment.status }
+        ]);
 
-            <div class="detail-section">
-                <h3>Vehicle Information</h3>
-                <div class="detail-item">
-                    <div class="detail-label">Type:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.type || 'Not specified'}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Brand and Model:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Year:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.year || 'Not specified'}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Electric:</div>
-                    <div class="detail-value">${appointment.vehicleInfo.isElectric ? 'Yes' : 'No'}</div>
-                </div>
-            </div>
+        const vehicleSection = this.createDetailSection('Vehicle Information', [
+            { label: 'Type', value: appointment.vehicleInfo.type || 'Not specified' },
+            { label: 'Brand and Model', value: `${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}` },
+            { label: 'Year', value: appointment.vehicleInfo.year || 'Not specified' },
+            { label: 'Electric', value: appointment.vehicleInfo.isElectric ? 'Yes' : 'No' }
+        ]);
 
-            <div class="detail-section">
-                <h3>Problem Description</h3>
-                <div class="detail-item">
-                    <div class="detail-value">${appointment.problemDescription}</div>
-                </div>
-            </div>
+        const problemSection = this.createDetailSection('Problem Description', [
+            { label: '', value: appointment.problemDescription, isDescription: true }
+        ]);
 
-            ${this.renderAdminResponseSection(appointment)}
+        detailsContainer.appendChild(clientSection);
+        detailsContainer.appendChild(appointmentSection);
+        detailsContainer.appendChild(vehicleSection);
+        detailsContainer.appendChild(problemSection);
 
-            ${this.renderRejectionSection(appointment)}
-
-            ${appointment.estimatedPrice ? `
-                <div class="detail-section">
-                    <h3>Approval Information</h3>
-                    <div class="detail-item">
-                        <div class="detail-label">Estimated Price:</div>
-                        <div class="detail-value">$${appointment.estimatedPrice}</div>
-                    </div>
-                    ${appointment.warrantyInfo ? `
-                        <div class="detail-item">
-                            <div class="detail-label">Warranty:</div>
-                            <div class="detail-value">${appointment.warrantyInfo}</div>
-                        </div>
-                    ` : ''}
-                </div>
-            ` : ''}
-
-            ${appointment.mediaFiles && appointment.mediaFiles.length > 0 ? `
-                <div class="detail-section">
-                    <h3>Attached Files</h3>
-                    <div class="attachments-list">
-                        ${appointment.mediaFiles.map(file => `
-                            <div class="attachment-item">
-                                <span>Attachment</span>
-                                <a href="${file.filePath}" target="_blank">${file.fileName}</a>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-        `;
-    }
-
-    renderAdminResponseSection(appointment) {
-        if (!appointment.adminResponse) {
-            return '';
+        if (appointment.adminResponse) {
+            const adminSection = this.createDetailSection('Admin Response', [
+                { label: '', value: appointment.adminResponse, isDescription: true }
+            ]);
+            detailsContainer.appendChild(adminSection);
         }
 
-        return `
-            <div class="detail-section">
-                <h3>Admin Response</h3>
-                <div class="detail-item">
-                    <div class="detail-value">${appointment.adminResponse}</div>
-                </div>
-            </div>
-        `;
-    }
-
-    renderRejectionSection(appointment) {
-        if (appointment.status !== 'rejected' || !appointment.rejectionReason) {
-            return '';
+        if (appointment.status === 'rejected' && appointment.rejectionReason) {
+            const rejectionItems = [{ label: 'Reason', value: appointment.rejectionReason }];
+            if (appointment.retryDays) {
+                rejectionItems.push({ label: 'Retry After', value: `${appointment.retryDays} days` });
+            }
+            const rejectionSection = this.createDetailSection('Rejection Details', rejectionItems);
+            detailsContainer.appendChild(rejectionSection);
         }
 
-        return `
-            <div class="detail-section">
-                <h3>Rejection Details</h3>
-                <div class="detail-item">
-                    <div class="detail-label">Reason:</div>
-                    <div class="detail-value">${appointment.rejectionReason}</div>
-                </div>
-                ${appointment.retryDays ? `
-                    <div class="detail-item">
-                        <div class="detail-label">Retry After:</div>
-                        <div class="detail-value">${appointment.retryDays} days</div>
-                    </div>
-                ` : ''}
-            </div>
-        `;
+        if (appointment.estimatedPrice) {
+            const approvalItems = [{ label: 'Estimated Price', value: `${appointment.estimatedPrice} RON` }];
+            if (appointment.warrantyInfo) {
+                approvalItems.push({ label: 'Warranty', value: appointment.warrantyInfo });
+            }
+            const approvalSection = this.createDetailSection('Approval Information', approvalItems);
+            detailsContainer.appendChild(approvalSection);
+        }
+
+        if (appointment.mediaFiles && appointment.mediaFiles.length > 0) {
+            const filesSection = this.createDetailSection('Attached Files', []);
+            const attachmentsList = this.createSafeElement('div', 'attachments-list');
+
+            appointment.mediaFiles.forEach(file => {
+                const attachmentItem = this.createSafeElement('div', 'attachment-item');
+                const span = this.createSafeElement('span', '', 'Attachment');
+                const link = document.createElement('a');
+                link.href = this.sanitizeInput(file.filePath);
+                link.target = '_blank';
+                this.safeSetText(link, file.fileName);
+
+                attachmentItem.appendChild(span);
+                attachmentItem.appendChild(link);
+                attachmentsList.appendChild(attachmentItem);
+            });
+
+            filesSection.appendChild(attachmentsList);
+            detailsContainer.appendChild(filesSection);
+        }
+    }
+
+    createDetailSection(title, items) {
+        const section = this.createSafeElement('div', 'detail-section');
+        const h3 = this.createSafeElement('h3', '', title);
+        section.appendChild(h3);
+
+        items.forEach(item => {
+            const detailItem = this.createSafeElement('div', 'detail-item');
+
+            if (item.isDescription) {
+                const valueDiv = this.createSafeElement('div', 'detail-value', item.value);
+                detailItem.appendChild(valueDiv);
+            } else if (item.isStatus) {
+                const labelDiv = this.createSafeElement('div', 'detail-label', item.label + ':');
+                const valueDiv = this.createSafeElement('div', 'detail-value');
+                const statusSpan = this.createSafeElement('span', `appointment-status status-${item.status}`, item.value);
+                valueDiv.appendChild(statusSpan);
+                detailItem.appendChild(labelDiv);
+                detailItem.appendChild(valueDiv);
+            } else if (item.label) {
+                const labelDiv = this.createSafeElement('div', 'detail-label', item.label + ':');
+                const valueDiv = this.createSafeElement('div', 'detail-value', item.value);
+                detailItem.appendChild(labelDiv);
+                detailItem.appendChild(valueDiv);
+            }
+
+            section.appendChild(detailItem);
+        });
+
+        return section;
     }
 
     async openManageModal(appointmentId) {
@@ -647,10 +664,10 @@ class AdminDashboard {
             }
 
             if (data.success) {
-                this.populateManageForm(data.appointment);
+                this.populateManageForm(this.sanitizeObject(data.appointment));
                 this.openModal('edit-appointment-modal');
             } else {
-                this.showError('Error loading details: ' + data.message);
+                this.showError('Error loading details: ' + this.sanitizeInput(data.message));
             }
         } catch (error) {
             this.showError('Connection error.');
@@ -658,9 +675,9 @@ class AdminDashboard {
     }
 
     populateManageForm(appointment) {
-        document.getElementById('appointment-id').value = appointment.id;
-        document.getElementById('client-name').value = appointment.clientInfo.name;
-        document.getElementById('service-type').value = `${appointment.vehicleInfo.type} ${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}`;
+        this.safeSetValue(document.getElementById('appointment-id'), appointment.id);
+        this.safeSetValue(document.getElementById('client-name'), appointment.clientInfo.name);
+        this.safeSetValue(document.getElementById('service-type'), `${appointment.vehicleInfo.type} ${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}`);
 
         const appointmentDate = new Date(appointment.appointmentDate);
         const formattedDate = appointmentDate.toLocaleDateString('en-US', {
@@ -670,39 +687,34 @@ class AdminDashboard {
             hour: '2-digit',
             minute: '2-digit'
         });
-        document.getElementById('appointment-date').value = formattedDate;
-        document.getElementById('client-message').value = appointment.problemDescription;
+        this.safeSetValue(document.getElementById('appointment-date'), formattedDate);
+        this.safeSetValue(document.getElementById('client-message'), appointment.problemDescription);
 
-        // Set current status
         const statusRadio = document.querySelector(`input[name="status"][value="${appointment.status}"]`);
         if (statusRadio) {
             statusRadio.checked = true;
             this.handleStatusChange({ target: statusRadio });
         }
 
-        // Populate existing values if available
         if (appointment.estimatedPrice) {
-            document.getElementById('estimated-price').value = appointment.estimatedPrice;
+            this.safeSetValue(document.getElementById('estimated-price'), appointment.estimatedPrice);
         }
         if (appointment.warrantyInfo) {
             const warrantyMatch = appointment.warrantyInfo.match(/(\d+)/);
             if (warrantyMatch) {
-                document.getElementById('warranty').value = warrantyMatch[1];
+                this.safeSetValue(document.getElementById('warranty'), warrantyMatch[1]);
             }
         }
-
-        // Separate admin response and rejection reason
         if (appointment.adminResponse) {
-            document.getElementById('admin-message').value = appointment.adminResponse;
+            this.safeSetValue(document.getElementById('admin-message'), appointment.adminResponse);
         }
         if (appointment.rejectionReason) {
-            document.getElementById('rejection-reason').value = appointment.rejectionReason;
+            this.safeSetValue(document.getElementById('rejection-reason'), appointment.rejectionReason);
         }
         if (appointment.retryDays) {
-            document.getElementById('retry-days').value = appointment.retryDays;
+            this.safeSetValue(document.getElementById('retry-days'), appointment.retryDays);
         }
 
-        // Reset selected parts
         this.selectedParts = [];
         this.renderSelectedParts();
         this.updatePartsTotal();
@@ -714,16 +726,13 @@ class AdminDashboard {
         const rejectionFields = document.getElementById('rejection-fields');
         const adminMessageField = document.getElementById('admin-message-field');
 
-        // Hide all conditional fields first
         approvalFields.style.display = 'none';
         rejectionFields.style.display = 'none';
 
-        // Admin message field is always visible for all statuses
         if (adminMessageField) {
             adminMessageField.style.display = 'block';
         }
 
-        // Show relevant fields based on status
         if (status === 'approved') {
             approvalFields.style.display = 'block';
         } else if (status === 'rejected') {
@@ -740,14 +749,11 @@ class AdminDashboard {
             const appointmentId = formData.get('appointment-id') || document.getElementById('appointment-id').value;
             const status = formData.get('status');
 
-            const updateData = {
-                status: status
-            };
+            const updateData = { status: status };
 
-            // Add admin response for ALL statuses
             const adminMessage = document.getElementById('admin-message').value;
             if (adminMessage.trim()) {
-                updateData.adminResponse = adminMessage;
+                updateData.adminResponse = this.sanitizeInput(adminMessage);
             }
 
             if (status === 'approved') {
@@ -763,7 +769,6 @@ class AdminDashboard {
                     return;
                 }
 
-                // Add selected parts to the update data
                 if (this.selectedParts.length > 0) {
                     updateData.selectedParts = this.selectedParts.map(part => ({
                         partId: part.id,
@@ -774,8 +779,7 @@ class AdminDashboard {
             }
 
             if (status === 'rejected') {
-                updateData.rejectionReason = document.getElementById('rejection-reason').value;
-                updateData.retryDays = parseInt(document.getElementById('retry-days').value) || 0;
+                updateData.rejectionReason = this.sanitizeInput(document.getElementById('rejection-reason').value);
 
                 if (!updateData.rejectionReason || !updateData.rejectionReason.trim()) {
                     this.showError('Rejection reason is required');
@@ -800,11 +804,11 @@ class AdminDashboard {
             }
 
             if (data.success) {
-                this.showSuccess(data.message);
+                this.showSuccess(this.sanitizeInput(data.message));
                 this.closeModal();
-                this.loadAppointments(); // Reload appointments
+                this.loadAppointments();
             } else {
-                this.showError('Update error: ' + data.message);
+                this.showError('Update error: ' + this.sanitizeInput(data.message));
             }
 
         } catch (error) {
@@ -825,18 +829,15 @@ class AdminDashboard {
         });
         document.body.style.overflow = 'auto';
 
-        // Reset forms
         const appointmentForm = document.getElementById('appointment-form');
         if (appointmentForm) {
             appointmentForm.reset();
         }
 
-        // Reset selected parts
         this.selectedParts = [];
         this.renderSelectedParts();
         this.updatePartsTotal();
 
-        // Hide conditional fields
         const approvalFields = document.getElementById('approval-fields');
         const rejectionFields = document.getElementById('rejection-fields');
         const adminMessageField = document.getElementById('admin-message-field');
@@ -859,12 +860,15 @@ class AdminDashboard {
 
     showLoading() {
         const container = document.getElementById('appointments-container');
-        container.innerHTML = `
-            <div class="loading-spinner">
-                <div class="spinner"></div>
-                <p>Loading appointments...</p>
-            </div>
-        `;
+        container.innerHTML = '';
+
+        const loadingDiv = this.createSafeElement('div', 'loading-spinner');
+        const spinner = this.createSafeElement('div', 'spinner');
+        const p = this.createSafeElement('p', '', 'Loading appointments...');
+
+        loadingDiv.appendChild(spinner);
+        loadingDiv.appendChild(p);
+        container.appendChild(loadingDiv);
     }
 
     hideLoading() {
@@ -872,43 +876,37 @@ class AdminDashboard {
     }
 
     showError(message) {
-        this.showNotification(message, 'error');
+        this.showNotification(this.sanitizeInput(message), 'error');
     }
 
     showSuccess(message) {
-        this.showNotification(message, 'success');
+        this.showNotification(this.sanitizeInput(message), 'success');
     }
 
     showNotification(message, type = 'info') {
-        // Remove any existing notifications first
         const existingNotifications = document.querySelectorAll('.notification');
         existingNotifications.forEach(notification => {
             notification.remove();
         });
 
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <span class="notification-message">${message}</span>
-            <button class="notification-close">&times;</button>
-        `;
+        const notification = this.createSafeElement('div', `notification notification-${type}`);
 
-        // Add to page
+        const messageSpan = this.createSafeElement('span', 'notification-message', message);
+        const closeBtn = this.createSafeElement('button', 'notification-close', '×');
+
+        notification.appendChild(messageSpan);
+        notification.appendChild(closeBtn);
+
         document.body.appendChild(notification);
 
-        // Show notification
         setTimeout(() => {
             notification.classList.add('show');
         }, 100);
 
-        // Auto hide after 5 seconds
         setTimeout(() => {
             this.hideNotification(notification);
         }, 5000);
 
-        // Close button event
-        const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => {
             this.hideNotification(notification);
         });
@@ -925,10 +923,8 @@ class AdminDashboard {
 
     handleLogout() {
         if (confirm('Are you sure you want to log out?')) {
-            // Clear stored authentication data
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-
             window.location.href = '/homepage';
         }
     }
