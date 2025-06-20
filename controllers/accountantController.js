@@ -39,6 +39,7 @@ const getDashboard = async (req, res) => {
         }, 'Accountant dashboard data retrieved successfully');
 
     } catch (error) {
+        console.error('Error in getDashboard:', error);
         sendServerError(res, 'Failed to retrieve dashboard data');
     }
 };

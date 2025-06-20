@@ -1,6 +1,7 @@
 const db = require('../database/db');
 
 const AccountantModel = {
+    // Dashboard statistics
     async getDashboardStats() {
         try {
             // Get total suppliers
