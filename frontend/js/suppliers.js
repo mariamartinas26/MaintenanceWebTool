@@ -195,7 +195,6 @@ class OrderManager {
 
     saveOrder() {
         const supplierIdElement = document.getElementById('orderSupplier');
-        const notesElement = document.getElementById('orderNotes');
 
         if (!supplierIdElement) {
             this.showNotification('Order form elements not found', 'error');
@@ -209,7 +208,6 @@ class OrderManager {
         }
 
         const supplier = this.suppliers.find(s => s.id === parseInt(supplierId));
-        const notes = notesElement?.value || '';
 
         const orderItems = [];
         document.querySelectorAll('.order-item').forEach(item => {
@@ -241,7 +239,6 @@ class OrderManager {
         const orderData = {
             supplier_id: parseInt(supplierId),
             items: orderItems,
-            notes: notes,
             expected_delivery_date: expectedDelivery.toISOString().split('T')[0]
         };
 
@@ -261,11 +258,9 @@ class OrderManager {
         ordersList.innerHTML = this.orders.map(order => {
             const totalAmount = parseFloat(order.total_amount || 0);
 
-            // Încearcă să găsești numele produsului din orice câmp disponibil
             let productName = 'Order Items';
             let quantity = 1;
 
-            // Verifică în toate câmpurile posibile pentru nume
             for (const key of Object.keys(order)) {
                 const value = order[key];
                 if (typeof value === 'string' && value.length > 2 &&
@@ -277,7 +272,6 @@ class OrderManager {
                 }
             }
 
-            // Verifică în toate câmpurile posibile pentru cantitate
             for (const key of Object.keys(order)) {
                 const value = order[key];
                 if (typeof value === 'number' && value > 0 && value < 1000 && !key.includes('amount') && !key.includes('id')) {
@@ -303,7 +297,7 @@ class OrderManager {
                     </div>
                     <div class="order-total">Total: RON ${totalAmount.toFixed(2)}</div>
                     <div class="order-date">Ordered: ${this.formatDate(order.order_date)}</div>
-                    ${order.expected_delivery_date ? `<div class="order-date">Est. Delivery: ${this.formatDate(order.expected_delivery_date)}</div>` : ''}
+                    ${order.expected_delivery_date ? `<div class="order-date">Delivery: ${this.formatDate(order.expected_delivery_date)}</div>` : ''}
                     <div class="order-actions">
                         ${order.status !== 'delivered' ? `<button class="btn btn-sm primary-btn" onclick="orderManager.updateOrderStatus('${order.id}')">Update Status</button>` : ''}
                     </div>

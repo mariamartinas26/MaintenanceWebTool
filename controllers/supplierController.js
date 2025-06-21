@@ -18,12 +18,6 @@ function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
     return num;
 }
 
-function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const cleanEmail = sanitizeInput(email);
-    return emailRegex.test(cleanEmail) && !/<|>|script/i.test(cleanEmail) ? cleanEmail : null;
-}
-
 function validateTextLength(text, minLength = 0, maxLength = 1000) {
     if (!text || typeof text !== 'string') return null;
     const cleanText = sanitizeInput(text.trim());
@@ -84,6 +78,7 @@ function sendJSON(res, statusCode, data) {
 
 class SupplierController {
 
+    // GET /api/suppliers
     async getAllSuppliers(req, res, query = {}) {
         try {
             setSecurityHeaders(res);
@@ -104,7 +99,6 @@ class SupplierController {
             });
 
         } catch (error) {
-            console.error('Error getting suppliers:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error fetching suppliers: ' + validateInput(error.message)
@@ -112,254 +106,6 @@ class SupplierController {
         }
     }
 
-    async getSupplierById(req, res, params) {
-        try {
-            setSecurityHeaders(res);
-
-            const id = validateInteger(params.id, 1);
-
-            if (!id) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Valid supplier ID is required'
-                });
-            }
-
-            const supplier = await SupplierModel.getSupplierById(id);
-
-            if (!supplier) {
-                return sendJSON(res, 404, {
-                    success: false,
-                    message: 'Supplier not found'
-                });
-            }
-
-            const sanitizedSupplier = sanitizeSupplier(supplier);
-
-            sendJSON(res, 200, {
-                success: true,
-                data: sanitizedSupplier
-            });
-
-        } catch (error) {
-            console.error('Error getting supplier by ID:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Error fetching supplier: ' + validateInput(error.message)
-            });
-        }
-    }
-
-    async createSupplier(req, res, data) {
-        try {
-            setSecurityHeaders(res);
-
-            const name = validateTextLength(data.name, 2, 100);
-            const contactPerson = validateTextLength(data.contact_person, 2, 100);
-            const email = validateEmail(data.email);
-            const phone = validateTextLength(data.phone, 5, 20);
-            const address = validateTextLength(data.address, 0, 500);
-            const deliveryTime = validateInteger(data.delivery_time, 1, 365);
-
-            if (!name) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Company name is required (2-100 characters)'
-                });
-            }
-
-            if (!contactPerson) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Contact person is required (2-100 characters)'
-                });
-            }
-
-            if (!email) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Valid email address is required'
-                });
-            }
-
-            if (deliveryTime === null) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Delivery time must be a number between 1-365 days'
-                });
-            }
-
-            const supplierData = {
-                name: name,
-                contact_person: contactPerson,
-                email: email,
-                phone: phone || null,
-                address: address || null,
-                delivery_time: deliveryTime
-            };
-
-            const supplier = await SupplierModel.createSupplier(supplierData);
-            const sanitizedSupplier = sanitizeSupplier(supplier);
-
-            sendJSON(res, 201, {
-                success: true,
-                data: sanitizedSupplier,
-                message: 'Supplier created successfully'
-            });
-
-        } catch (error) {
-            console.error('Error creating supplier:', error);
-
-            if (error.message.includes('email already exists')) {
-                sendJSON(res, 400, {
-                    success: false,
-                    message: 'A supplier with this email already exists'
-                });
-            } else {
-                sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error creating supplier: ' + validateInput(error.message)
-                });
-            }
-        }
-    }
-
-    async updateSupplier(req, res, data) {
-        try {
-            setSecurityHeaders(res);
-
-            const id = validateInteger(data.id, 1);
-
-            if (!id) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Valid supplier ID is required'
-                });
-            }
-
-            const updateData = {};
-
-            if (data.name) {
-                const name = validateTextLength(data.name, 2, 100);
-                if (name) updateData.name = name;
-            }
-
-            if (data.contact_person) {
-                const contactPerson = validateTextLength(data.contact_person, 2, 100);
-                if (contactPerson) updateData.contact_person = contactPerson;
-            }
-
-            if (data.email) {
-                const email = validateEmail(data.email);
-                if (!email) {
-                    return sendJSON(res, 400, {
-                        success: false,
-                        message: 'Valid email address is required'
-                    });
-                }
-                updateData.email = email;
-            }
-
-            if (data.phone) {
-                const phone = validateTextLength(data.phone, 5, 20);
-                if (phone) updateData.phone = phone;
-            }
-
-            if (data.address !== undefined) {
-                const address = validateTextLength(data.address, 0, 500);
-                updateData.address = address;
-            }
-
-            if (data.delivery_time) {
-                const deliveryTime = validateInteger(data.delivery_time, 1, 365);
-                if (deliveryTime === null) {
-                    return sendJSON(res, 400, {
-                        success: false,
-                        message: 'Delivery time must be between 1-365 days'
-                    });
-                }
-                updateData.delivery_time = deliveryTime;
-            }
-
-            if (Object.keys(updateData).length === 0) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'No valid fields to update'
-                });
-            }
-
-            const supplier = await SupplierModel.updateSupplier(id, updateData);
-            const sanitizedSupplier = sanitizeSupplier(supplier);
-
-            sendJSON(res, 200, {
-                success: true,
-                data: sanitizedSupplier,
-                message: 'Supplier updated successfully'
-            });
-
-        } catch (error) {
-            console.error('Error updating supplier:', error);
-
-            if (error.message.includes('not found')) {
-                sendJSON(res, 404, {
-                    success: false,
-                    message: 'Supplier not found'
-                });
-            } else if (error.message.includes('email already exists')) {
-                sendJSON(res, 400, {
-                    success: false,
-                    message: 'A supplier with this email already exists'
-                });
-            } else {
-                sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error updating supplier: ' + validateInput(error.message)
-                });
-            }
-        }
-    }
-
-    async deleteSupplier(req, res, params) {
-        try {
-            setSecurityHeaders(res);
-
-            const id = validateInteger(params.id, 1);
-
-            if (!id) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Valid supplier ID is required'
-                });
-            }
-
-            await SupplierModel.deleteSupplier(id);
-
-            sendJSON(res, 200, {
-                success: true,
-                message: 'Supplier deleted successfully'
-            });
-
-        } catch (error) {
-            console.error('Error deleting supplier:', error);
-
-            if (error.message.includes('not found')) {
-                sendJSON(res, 404, {
-                    success: false,
-                    message: 'Supplier not found'
-                });
-            } else if (error.message.includes('associated parts or orders')) {
-                sendJSON(res, 400, {
-                    success: false,
-                    message: 'Cannot delete supplier with associated parts or orders'
-                });
-            } else {
-                sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error deleting supplier: ' + validateInput(error.message)
-                });
-            }
-        }
-    }
 
     async getAllOrders(req, res, query = {}) {
         try {
@@ -385,7 +131,6 @@ class SupplierController {
             });
 
         } catch (error) {
-            console.error('Error getting orders:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error fetching orders: ' + validateInput(error.message)
@@ -428,7 +173,6 @@ class SupplierController {
             });
 
         } catch (error) {
-            console.error('Error getting parts:', error);
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error fetching parts: ' + validateInput(error.message)
@@ -526,8 +270,6 @@ class SupplierController {
             });
 
         } catch (error) {
-            console.error('Controller - Error creating order:', error);
-
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error creating order: ' + validateInput(error.message)
@@ -575,8 +317,6 @@ class SupplierController {
             });
 
         } catch (error) {
-            console.error('Controller - Error updating order status:', error);
-
             if (error.message.includes('not found')) {
                 sendJSON(res, 404, {
                     success: false,

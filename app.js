@@ -53,7 +53,6 @@ const server = http.createServer(async (req, res) => {
             await serveFile(res, 'frontend/pages/login.html', 'text/html');
         }
         else if (pathname === '/suppliers') {
-            console.log('Serving suppliers page...');
             await serveFile(res, 'frontend/pages/suppliers.html', 'text/html');
         }
         else if (pathname === '/client/dashboard' || pathname === '/dashboard') {
@@ -125,8 +124,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         else if (pathname === '/api/auth/login' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
-                req.body = body;
-                await authController.login(req, res);
+                await authController.login(req, res, body);
             } catch (error) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
@@ -135,14 +133,8 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
                 }));
             }
         }
-        // RUTELE ACCOUNTANT - CORECTATE
         else if (pathname.startsWith('/api/accountant')) {
-            console.log('=== Handling accountant route ===');
-            console.log('Pathname:', pathname);
-            console.log('Method:', method);
 
-            // NU mai folosi requireAuth din utils/authUtils
-            // Rutele accountant își gestionează propria autentificare prin requireAccountant
             req.query = queryParams || {};
             return await accountantRoutes(req, res);
         }

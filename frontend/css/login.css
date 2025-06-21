@@ -70,12 +70,6 @@ input:focus {
     outline: none;
     background: #ffffff;
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
-    transform: translateY(-1px);
-}
-
-input:hover {
-    border-color: #e0e3e7;
-    background: #ffffff;
 }
 
 input::placeholder {
@@ -99,11 +93,6 @@ input::placeholder {
     margin: 15px 0 25px;
     letter-spacing: 0.5px;
     box-shadow: 0 4px 12px rgba(12, 20, 70, 0.3);
-}
-
-.login-button:hover {
-    background-color: #101c5a;
-    box-shadow: 0 8px 20px rgba(12, 20, 70, 0.4);
 }
 
 .login-button:active {
@@ -133,11 +122,6 @@ input::placeholder {
     justify-content: center;
 }
 
-.close-button:hover {
-    background-color: #ff0000;
-    box-shadow: 0 6px 16px rgba(227, 66, 52, 0.4);
-}
-
 /* Register link */
 .register-link {
     margin-top: 20px;
@@ -150,11 +134,6 @@ input::placeholder {
     text-decoration: none;
     font-weight: 600;
     transition: all 0.3s ease;
-}
-
-.register-link a:hover {
-    text-decoration: underline;
-    color: #101c5a;
 }
 
 /* succes/error message */

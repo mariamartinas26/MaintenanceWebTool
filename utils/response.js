@@ -28,12 +28,29 @@ function sendSuccess(res, data = {}, message = 'Success') {
  * @param {Object} res - Response object
  * @param {number} statusCode - Codul de eroare
  * @param {string} message - Mesajul de eroare
+ * @param {Object} errors - Erorile de validare (opțional)
  */
-function sendError(res, statusCode, message) {
-    sendJSON(res, statusCode, {
+function sendError(res, statusCode, message, errors = null) {
+    const response = {
         success: false,
         message: message
-    });
+    };
+
+    if (errors) {
+        response.errors = errors;
+    }
+
+    sendJSON(res, statusCode, response);
+}
+
+/**
+ * Trimite răspuns pentru cerere invalidă (400)
+ * @param {Object} res - Response object
+ * @param {string} message - Mesajul de eroare
+ * @param {Object} errors - Erorile de validare (opțional)
+ */
+function sendBadRequest(res, message = 'Bad Request', errors = null) {
+    sendError(res, 400, message, errors);
 }
 
 /**
@@ -56,10 +73,7 @@ function sendCreated(res, data = {}, message = 'Created successfully') {
  * @param {string} message - Mesajul de eroare
  */
 function sendUnauthorized(res, message = 'Unauthorized') {
-    sendJSON(res, 401, {
-        success: false,
-        message: message
-    });
+    sendError(res, 401, message);
 }
 
 /**
@@ -68,10 +82,16 @@ function sendUnauthorized(res, message = 'Unauthorized') {
  * @param {string} message - Mesajul de eroare
  */
 function sendForbidden(res, message = 'Forbidden') {
-    sendJSON(res, 403, {
-        success: false,
-        message: message
-    });
+    sendError(res, 403, message);
+}
+
+/**
+ * Trimite răspuns de not found
+ * @param {Object} res - Response object
+ * @param {string} message - Mesajul de eroare
+ */
+function sendNotFound(res, message = 'Not Found') {
+    sendError(res, 404, message);
 }
 
 /**
@@ -80,18 +100,17 @@ function sendForbidden(res, message = 'Forbidden') {
  * @param {string} message - Mesajul de eroare
  */
 function sendServerError(res, message = 'Internal server error') {
-    sendJSON(res, 500, {
-        success: false,
-        message: message
-    });
+    sendError(res, 500, message);
 }
 
 module.exports = {
     sendJSON,
     sendSuccess,
     sendError,
+    sendBadRequest,
     sendCreated,
     sendUnauthorized,
     sendForbidden,
+    sendNotFound,
     sendServerError
 };

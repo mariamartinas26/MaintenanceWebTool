@@ -1,5 +1,7 @@
 const url = require('url');
+const querystring = require('querystring');
 const accountantController = require('../controllers/accountantController');
+const ImportExportController = require('../controllers/importExportController');
 const { verifyToken, requireAccountant } = require('../middleware/auth');
 
 const accountantRoutes = async (req, res) => {
@@ -9,7 +11,7 @@ const accountantRoutes = async (req, res) => {
     const query = parsedUrl.query;
 
     try {
-        // Verify token
+        //verif tokenul
         await new Promise((resolve, reject) => {
             verifyToken(req, res, (error) => {
                 if (error) {
@@ -25,7 +27,7 @@ const accountantRoutes = async (req, res) => {
             });
         });
 
-        // Verify accountant access
+        //verificam daca are acces la accountant
         await new Promise((resolve, reject) => {
             requireAccountant(req, res, (error) => {
                 if (error) {
@@ -45,7 +47,7 @@ const accountantRoutes = async (req, res) => {
             return await accountantController.getDashboard(req, res);
         }
 
-        // Supplier routes
+        //routes suppliers
         if (path === '/api/accountant/suppliers' && method === 'GET') {
             req.query = query;
             return await accountantController.getSuppliers(req, res);
@@ -73,18 +75,19 @@ const accountantRoutes = async (req, res) => {
             }
         }
 
-        // Export suppliers
-        if (path === '/api/accountant/suppliers/export' && method === 'GET') {
-            req.query = query;
-            return await accountantController.exportSuppliers(req, res);
+        //import data
+        if (path === '/api/accountant/import' && method === 'POST') {
+            return await parseBodyAndExecute(req, res, ImportExportController.importData);
         }
 
-        // Import suppliers
-        if (path === '/api/accountant/suppliers/import' && method === 'POST') {
-            return await parseBodyAndExecute(req, res, accountantController.importSuppliers);
+        //export data
+        if (path === '/api/accountant/export' && method === 'GET') {
+            req.query = query;
+            return await ImportExportController.exportData(req, res);
         }
 
     } catch (error) {
+
         if (!res.headersSent) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({

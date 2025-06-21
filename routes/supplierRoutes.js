@@ -85,8 +85,14 @@ async function handleSupplierRoutes(req, res) {
     }
 
     try {
+        // GET /api/suppliers - Get all suppliers
+        if (pathname === '/api/suppliers' && method === 'GET') {
+            await supplierController.getAllSuppliers(req, res, query);
+        }
+
+
         // GET /api/parts - Get all parts
-        if (pathname === '/api/parts' && method === 'GET') {
+        else if (pathname === '/api/parts' && method === 'GET') {
             await supplierController.getAllParts(req, res, query);
         }
 

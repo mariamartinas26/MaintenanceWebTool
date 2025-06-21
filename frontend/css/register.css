@@ -93,12 +93,6 @@ input:focus {
     outline: none;
     background: #ffffff;
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
-    transform: translateY(-1px);
-}
-
-input:hover {
-    border-color: #e0e3e7;
-    background: #ffffff;
 }
 
 input::placeholder {
@@ -123,11 +117,6 @@ input::placeholder {
     box-shadow: 0 4px 12px rgba(12, 20, 70, 0.3);
 }
 
-.register-button:hover {
-    background-color: #101c5a;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(12, 20, 70, 0.4);
-}
 
 .register-button:active {
     transform: translateY(0px);
@@ -153,11 +142,6 @@ input::placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.close-button:hover {
-    background-color: #ff0000;
-    box-shadow: 0 6px 16px rgba(227, 66, 52, 0.4);
 }
 
 #mesaj {

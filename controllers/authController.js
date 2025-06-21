@@ -5,6 +5,7 @@ const { validateRegisterData } = require('../utils/validation');
 const { sendCreated, sendBadRequest, sendUnauthorized, sendServerError, sendSuccess } = require('../utils/response');
 const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
 
+
 function validateInput(input) {
     if (typeof input !== 'string') return input;
     return sanitizeInput(input);
@@ -171,12 +172,13 @@ const submitRegistrationRequest = async (req, res, body) => {
     }
 };
 
-const login = async (req, res) => {
+const login = async (req, res, body) => {
     try {
         setSecurityHeaders(res);
 
-        const email = validateEmail(req.body.email);
-        const password = validatePassword(req.body.password);
+        // Folosește body în loc de req.body
+        const email = validateEmail(body.email);
+        const password = validatePassword(body.password);
 
         if (!email || !password) {
             res.writeHead(400, {

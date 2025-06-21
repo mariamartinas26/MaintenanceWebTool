@@ -41,11 +41,10 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
     <div class="main-content">
         <!-- Orders Section -->
         <div class="page-header">
-            <h1>Purchase Orders Management</h1>
+            <h1>Orders Management</h1>
             <div class="header-actions">
                 <button class="btn primary-btn" onclick="openOrderModal()">New Order</button>
             </div>
@@ -53,7 +52,6 @@
 
         <div class="orders-section">
             <div id="orders-list" class="orders-list">
-                <!-- Orders will be loaded dynamically -->
             </div>
         </div>
     </div>
@@ -80,11 +78,6 @@
                     <div id="orderItems">
                     </div>
                     <button type="button" class="btn secondary-btn" onclick="addOrderItem()">Add Item</button>
-                </div>
-
-                <div class="form-group">
-                    <label for="orderNotes">Notes</label>
-                    <textarea id="orderNotes" rows="3"></textarea>
                 </div>
 
                 <div class="order-summary">
