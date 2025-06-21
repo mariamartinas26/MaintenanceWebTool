@@ -20,20 +20,24 @@
 </head>
 <body>
 <div class="dashboard-container">
+    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="logo">
             <h2>Repair Queens</h2>
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="active"><a href="/admin/dashboard">
+                <li><a href="/admin/dashboard">
+                    <span class="icon"></span>
                     <span>Appointments</span>
                 </a></li>
                 <li><a href="/inventory/dashboard" id="inventory-link">
+                    <span class="icon"></span>
                     <span>Inventory</span>
                 </a></li>
-                <li><a href="/suppliers" id="providers-link">
-                    <span>Suppliers</span>
+                <li class="active"><a href="/suppliers" id="orders-link">
+                    <span class="icon"></span>
+                    <span>Orders</span>
                 </a></li>
             </ul>
         </nav>

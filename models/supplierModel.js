@@ -4,7 +4,6 @@ class SupplierModel {
 
     static async initializeStorage() {
         try {
-            // Test connection
             const client = await pool.connect();
             client.release();
         } catch (error) {
@@ -53,7 +52,6 @@ class SupplierModel {
     }
 
     static async createSupplier(supplierData) {
-        // Check for duplicate email
         const emailCheck = await pool.query(
             'SELECT id FROM "Suppliers" WHERE email = $1',
             [supplierData.email]
@@ -85,13 +83,11 @@ class SupplierModel {
     }
 
     static async updateSupplier(id, updateData) {
-        // Check if supplier exists
         const existingSupplier = await this.getSupplierById(id);
         if (!existingSupplier) {
             throw new Error('Supplier not found');
         }
 
-        // Check for duplicate email
         if (updateData.email) {
             const emailCheck = await pool.query(
                 'SELECT id FROM "Suppliers" WHERE email = $1 AND id != $2',
@@ -131,7 +127,6 @@ class SupplierModel {
     }
 
     static async deleteSupplier(id) {
-        // Check dependencies
         const partsCheck = await pool.query(
             'SELECT COUNT(*) FROM "Parts" WHERE supplier_id = $1',
             [id]
@@ -156,7 +151,6 @@ class SupplierModel {
         return result.rows[0];
     }
 
-    // Parts operations
     static async getAllParts(filters = {}) {
         let query = `
             SELECT p.*, s.company_name as supplier_name,
@@ -266,79 +260,6 @@ class SupplierModel {
         }));
     }
 
-    static async createPart(partData) {
-        const query = `
-            INSERT INTO "Parts" (
-                name, description, part_number, category, price,
-                stock_quantity, minimum_stock_level, supplier_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                RETURNING *
-        `;
-
-        const values = [
-            partData.name,
-            partData.description || '',
-            partData.part_number || `PN-${Date.now()}`,
-            partData.category || 'General',
-            parseFloat(partData.price),
-            parseInt(partData.stock_quantity) || 0,
-            parseInt(partData.minimum_stock_level) || 5,
-            parseInt(partData.supplier_id)
-        ];
-
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    }
-
-    // Orders operations
-    static async getAllOrders(filters = {}) {
-        let query = `
-            SELECT o.*, s.company_name as supplier_name,
-                   COALESCE(
-                           json_agg(
-                                   json_build_object(
-                                           'id', oi.id,
-                                           'part_id', oi.part_id,
-                                           'name', p.name,
-                                           'quantity', oi.quantity,
-                                           'unit_price', oi.unit_price,
-                                           'subtotal', oi.subtotal
-                                   )
-                           ) FILTER (WHERE oi.id IS NOT NULL),
-                           '[]'
-                   ) as items
-            FROM "Orders" o
-                     LEFT JOIN "Suppliers" s ON o.supplier_id = s.id
-                     LEFT JOIN "OrderItems" oi ON o.id = oi.order_id
-                     LEFT JOIN "Parts" p ON oi.part_id = p.id
-        `;
-
-        const conditions = [];
-        const values = [];
-        let paramCount = 0;
-
-        if (filters.status) {
-            paramCount++;
-            conditions.push(`o.status = $${paramCount}`);
-            values.push(filters.status);
-        }
-
-        if (filters.supplier_id) {
-            paramCount++;
-            conditions.push(`o.supplier_id = $${paramCount}`);
-            values.push(filters.supplier_id);
-        }
-
-        if (conditions.length > 0) {
-            query += ' WHERE ' + conditions.join(' AND ');
-        }
-
-        query += ' GROUP BY o.id, s.company_name ORDER BY o.order_date DESC';
-
-        const result = await pool.query(query, values);
-        return result.rows;
-    }
-
     static async createOrder(orderData) {
         const client = await pool.connect();
 
@@ -370,7 +291,6 @@ class SupplierModel {
                 (parseFloat(firstItem.unit_price) || 0) :
                 (total_amount / productQuantity);
 
-
             const orderQuery = `
                 INSERT INTO "Orders" (
                     supplier_id,
@@ -399,13 +319,11 @@ class SupplierModel {
             const orderResult = await client.query(orderQuery, orderValues);
             const newOrder = orderResult.rows[0];
 
-
             for (const item of orderData.items) {
                 let partId = null;
                 if (item.part_id) {
                     partId = parseInt(item.part_id);
                 } else if (item.name) {
-
                     const partQuery = 'SELECT id FROM "Parts" WHERE name = $1 LIMIT 1';
                     const partResult = await client.query(partQuery, [item.name]);
                     if (partResult.rows.length > 0) {
@@ -434,7 +352,6 @@ class SupplierModel {
                     unitPrice,
                     subtotal
                 ]);
-
             }
 
             await client.query('COMMIT');
@@ -457,12 +374,6 @@ class SupplierModel {
 
     static async updateOrderStatus(orderId, status, actualDeliveryDate = null, notes = null) {
         try {
-            const allOrdersQuery = 'SELECT id, status FROM "Orders" ORDER BY id';
-            const allOrders = await pool.query(allOrdersQuery);
-            allOrders.rows.forEach(row => {
-                console.log(`  ID: ${row.id} (${typeof row.id}), Status: ${row.status}`);
-            });
-
             let query, values;
 
             if (notes && notes.trim() !== '') {
@@ -489,7 +400,6 @@ class SupplierModel {
             }
 
             const result = await pool.query(query, values);
-
 
             if (result.rows.length === 0) {
                 throw new Error(`Order with ID ${orderId} not found`);
@@ -519,7 +429,6 @@ class SupplierModel {
 
             for (const item of itemsResult.rows) {
                 if (item.part_id) {
-
                     const updateStockQuery = `
                         UPDATE "Parts"
                         SET stock_quantity = stock_quantity + $1,
@@ -527,87 +436,11 @@ class SupplierModel {
                         WHERE id = $2 RETURNING name, stock_quantity
                     `;
 
-                    const result = await pool.query(updateStockQuery, [item.quantity, item.part_id]);
-
+                    await pool.query(updateStockQuery, [item.quantity, item.part_id]);
                 }
             }
         } catch (error) {
             console.error('Model - Error updating inventory:', error);
-        }
-    }
-
-    static async initializeSampleData() {
-        const suppliersCount = await pool.query('SELECT COUNT(*) FROM "Suppliers"');
-
-        if (parseInt(suppliersCount.rows[0].count) === 0) {
-            const sampleSuppliers = [
-                {
-                    company_name: 'AutoParts Pro',
-                    contact_person: 'John Smith',
-                    email: 'john@autopartspro.com',
-                    phone: '+1-555-0123',
-                    address: '123 Industrial Ave, Detroit, MI',
-                    delivery_time_days: 3
-                },
-                {
-                    company_name: 'BrakeMaster Supply',
-                    contact_person: 'Sarah Johnson',
-                    email: 'sarah@brakemaster.com',
-                    phone: '+1-555-0456',
-                    address: '456 Commerce St, Chicago, IL',
-                    delivery_time_days: 2
-                }
-            ];
-
-            for (const supplier of sampleSuppliers) {
-                await pool.query(
-                    `INSERT INTO "Suppliers" (company_name, contact_person, email, phone, address, delivery_time_days)
-                     VALUES ($1, $2, $3, $4, $5, $6)`,
-                    [supplier.company_name, supplier.contact_person, supplier.email,
-                        supplier.phone, supplier.address, supplier.delivery_time_days]
-                );
-            }
-        }
-
-        const partsCount = await pool.query('SELECT COUNT(*) FROM "Parts"');
-
-        if (parseInt(partsCount.rows[0].count) === 0) {
-            const suppliersResult = await pool.query('SELECT id FROM "Suppliers" ORDER BY id LIMIT 2');
-            const supplierIds = suppliersResult.rows.map(row => row.id);
-
-            if (supplierIds.length >= 2) {
-                const sampleParts = [
-                    {
-                        name: 'Engine Oil Filter',
-                        description: 'High-quality engine oil filter',
-                        part_number: 'EOF-001',
-                        category: 'Engine Parts',
-                        price: 15.99,
-                        stock_quantity: 150,
-                        minimum_stock_level: 20,
-                        supplier_id: supplierIds[0]
-                    },
-                    {
-                        name: 'Brake Pads Set',
-                        description: 'Premium brake pads set',
-                        part_number: 'BPS-001',
-                        category: 'Brakes',
-                        price: 89.99,
-                        stock_quantity: 45,
-                        minimum_stock_level: 10,
-                        supplier_id: supplierIds[1]
-                    }
-                ];
-
-                for (const part of sampleParts) {
-                    await pool.query(
-                        `INSERT INTO "Parts" (name, description, part_number, category, price, stock_quantity, minimum_stock_level, supplier_id)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                        [part.name, part.description, part.part_number, part.category,
-                            part.price, part.stock_quantity, part.minimum_stock_level, part.supplier_id]
-                    );
-                }
-            }
         }
     }
 }

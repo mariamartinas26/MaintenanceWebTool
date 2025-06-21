@@ -1,27 +1,3 @@
-/* Variables & Reset */
-:root {
-    --primary-color: #101c5a;
-    --primary-dark: #0c1446;
-    --secondary-color: #4ecdc4;
-    --text-color: #333333;
-    --text-light: #6c757d;
-    --light-gray: #f8f9fa;
-    --medium-gray: #e9ecef;
-    --dark-gray: #343a40;
-    --sidebar-bg: #2c3e50;
-    --sidebar-text: #ecf0f1;
-    --success: #28a745;
-    --warning: #ffc107;
-    --danger: #dc3545;
-    --pending: #17a2b8;
-    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-}
-
 * {
     margin: 0;
     padding: 0;
@@ -30,20 +6,15 @@
 
 body {
     font-family: 'Poppins', sans-serif;
-    color: var(--text-color);
-    background-color: var(--light-gray);
+    color: #333333;
+    background-color: #f8f9fa;
     line-height: 1.6;
 }
 
-/* Specific pentru tab-uri */
+/* Font styles */
 .tabs-header .tab,
 .tab-button,
-.nav-tab {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-}
-
-/* Pentru butoane */
+.nav-tab,
 .btn,
 button,
 .add-btn,
@@ -52,13 +23,7 @@ button,
     font-weight: 500;
 }
 
-/* Pentru titluri și headere */
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600;
-}
-
-/* Pentru textele din pagină */
+h1, h2, h3, h4, h5, h6,
 .page-title,
 .section-title {
     font-family: 'Poppins', sans-serif;
@@ -74,8 +39,8 @@ h1, h2, h3, h4, h5, h6 {
 /* Sidebar */
 .sidebar {
     width: 260px;
-    background-color: var(--sidebar-bg);
-    color: var(--sidebar-text);
+    background-color: #2c3e50;
+    color: #ecf0f1;
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -101,17 +66,16 @@ h1, h2, h3, h4, h5, h6 {
 
 .sidebar-nav li {
     margin-bottom: 5px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
 }
 
 .sidebar-nav li a {
     display: flex;
     align-items: center;
     padding: 12px 15px;
-    color: var(--sidebar-text);
+    color: #ecf0f1;
     text-decoration: none;
-    border-radius: var(--radius-sm);
-    transition: background-color 0.3s;
+    border-radius: 4px;
 }
 
 .user-info {
@@ -162,7 +126,6 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
     font-family: 'Poppins', sans-serif;
     backdrop-filter: blur(10px);
     min-width: 70px;
@@ -180,10 +143,10 @@ h1, h2, h3, h4, h5, h6 {
 .nav-tabs {
     display: flex;
     background: white;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     padding: 5px;
     margin-bottom: 30px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .tab-btn {
@@ -191,19 +154,14 @@ h1, h2, h3, h4, h5, h6 {
     padding: 12px 20px;
     border: none;
     background: none;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     cursor: pointer;
     font-weight: 500;
-    transition: all 0.3s;
 }
 
 .tab-btn.active {
-    background-color: var(--primary-color);
+    background-color: #101c5a;
     color: white;
-}
-
-.tab-btn:hover:not(.active) {
-    background-color: var(--light-gray);
 }
 
 /* Tab Content */
@@ -236,9 +194,9 @@ h1, h2, h3, h4, h5, h6 {
 /* Suppliers Grid */
 .suppliers-grid {
     background-color: white;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     padding: 20px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .suppliers-list {
@@ -249,14 +207,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .supplier-card {
     background-color: white;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     padding: 20px;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.supplier-card:hover {
-    box-shadow: var(--shadow-md);
 }
 
 .supplier-header {
@@ -273,7 +226,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .supplier-specialization {
-    color: var(--text-light);
+    color: #6c757d;
     font-size: 14px;
     margin-bottom: 10px;
 }
@@ -286,7 +239,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .rating-stars {
-    color: var(--warning);
+    color: #ffc107;
 }
 
 .supplier-details {
@@ -310,7 +263,7 @@ h1, h2, h3, h4, h5, h6 {
     gap: 10px;
 }
 
-/* CSS pentru dropdown-ul de parts */
+/* Parts dropdown */
 .part-select {
     width: 100%;
     padding: 10px;
@@ -346,9 +299,9 @@ h1, h2, h3, h4, h5, h6 {
 /* Orders List */
 .orders-section {
     background-color: white;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     padding: 20px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .orders-list {
@@ -359,14 +312,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .order-card {
     background-color: white;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     padding: 20px;
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.order-card:hover {
-    box-shadow: var(--shadow-md);
 }
 
 .order-header {
@@ -390,28 +338,28 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .status-placed {
-    background-color: var(--pending);
+    background-color: #17a2b8;
     color: white;
 }
 
 .status-confirmed {
-    background-color: var(--secondary-color);
+    background-color: #4ecdc4;
     color: white;
 }
 
 .status-shipped {
-    background-color: var(--warning);
+    background-color: #ffc107;
     color: white;
 }
 
 .status-delivered {
-    background-color: var(--success);
+    background-color: #28a745;
     color: white;
 }
 
 .order-supplier {
     font-size: 14px;
-    color: var(--text-light);
+    color: #6c757d;
     margin-bottom: 10px;
 }
 
@@ -420,8 +368,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .order-item {
-    border: 1px solid var(--medium-gray);
-    border-radius: var(--radius-sm);
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
     padding: 15px;
     margin-bottom: 15px;
 }
@@ -436,13 +384,13 @@ h1, h2, h3, h4, h5, h6 {
 .order-total {
     font-size: 18px;
     font-weight: 600;
-    color: var(--primary-color);
+    color: #101c5a;
     margin-bottom: 15px;
 }
 
 .order-date {
     font-size: 12px;
-    color: var(--text-light);
+    color: #6c757d;
 }
 
 /* Modal Styles */
@@ -463,7 +411,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .modal-content {
     background-color: white;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     width: 100%;
     max-width: 600px;
     max-height: 90vh;
@@ -476,7 +424,7 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    border-bottom: 1px solid var(--medium-gray);
+    border-bottom: 1px solid #e9ecef;
 }
 
 .modal-header h2 {
@@ -487,12 +435,7 @@ h1, h2, h3, h4, h5, h6 {
 .close-modal {
     font-size: 24px;
     cursor: pointer;
-    color: var(--text-light);
-    transition: color 0.3s;
-}
-
-.close-modal:hover {
-    color: var(--danger);
+    color: #6c757d;
 }
 
 .modal-body {
@@ -525,8 +468,8 @@ select,
 textarea {
     width: 100%;
     padding: 10px 15px;
-    border: 1px solid var(--medium-gray);
-    border-radius: var(--radius-sm);
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
 }
@@ -537,7 +480,7 @@ input[type="number"]:focus,
 select:focus,
 textarea:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: #101c5a;
 }
 
 textarea {
@@ -554,12 +497,11 @@ textarea {
 /* Button Styles */
 .btn {
     padding: 10px 20px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     border: none;
-    transition: all 0.3s;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -567,31 +509,18 @@ textarea {
 }
 
 .primary-btn {
-    background-color: var(--primary-color);
+    background-color: #101c5a;
     color: white;
-}
-
-.primary-btn:hover {
-    background-color: var(--primary-dark);
 }
 
 .secondary-btn {
-    background-color: var(--medium-gray);
-    color: var(--text-color);
-}
-
-.secondary-btn:hover {
-    background-color: var(--dark-gray);
-    color: white;
+    background-color: #e9ecef;
+    color: #333333;
 }
 
 .danger-btn {
-    background-color: var(--danger);
+    background-color: #dc3545;
     color: white;
-}
-
-.danger-btn:hover {
-    background-color: #c82333;
 }
 
 .btn-sm {
@@ -611,23 +540,21 @@ textarea {
     display: flex;
     align-items: center;
     padding: 15px;
-    border: 1px solid #e0e0e0 !important;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.status-option:hover:not(.disabled) {
-    background-color: #f8f9fa;
+    position: relative;
 }
 
 .status-option.selected {
     background-color: #e3f2fd;
+    border-color: #101c5a;
 }
 
 .status-option.disabled {
     cursor: not-allowed;
     opacity: 0.6;
+    background-color: #f8f9fa;
 }
 
 .status-indicator {
@@ -644,20 +571,20 @@ textarea {
 
 .status-label {
     font-weight: 600;
-    color: var(--text-color);
+    color: #333333;
     margin-bottom: 3px;
 }
 
 .status-description {
     font-size: 12px;
-    color: var(--text-light);
+    color: #6c757d;
 }
 
 .current-badge {
     position: absolute;
     top: 10px;
     right: 15px;
-    background-color: var(--secondary-color);
+    background-color: #4ecdc4;
     color: white;
     padding: 2px 8px;
     border-radius: 10px;
@@ -695,134 +622,27 @@ textarea {
 }
 
 #deliveryDateGroup {
-    background-color: var(--light-gray);
+    background-color: #f8f9fa;
     padding: 15px;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
+}
+
+#deliveryDateGroup label {
+    color: #28a745;
+    font-weight: 600;
 }
 
 /* Order Summary */
 .order-summary {
-    background-color: var(--light-gray);
+    background-color: #f8f9fa;
     padding: 15px;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     margin-top: 20px;
 }
 
 .total-amount {
     text-align: right;
     font-size: 18px;
-}
-
-/* Order Status Modal Styles */
-.status-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.status-option {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border: 2px solid var(--medium-gray);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.status-option:hover:not(.disabled) {
-    border-color: var(--primary-color);
-    background-color: rgba(16, 28, 90, 0.05);
-    transform: translateY(-1px);
-}
-
-.status-option.selected {
-    border-color: var(--primary-color);
-    background-color: rgba(16, 28, 90, 0.1);
-    box-shadow: 0 2px 8px rgba(16, 28, 90, 0.2);
-}
-
-.status-option.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background-color: var(--light-gray);
-}
-
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 15px;
-    flex-shrink: 0;
-}
-
-.status-info {
-    flex: 1;
-}
-
-.status-label {
-    font-weight: 600;
-    color: var(--text-color);
-    margin-bottom: 3px;
-}
-
-.status-description {
-    font-size: 12px;
-    color: var(--text-light);
-}
-
-.current-badge {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background-color: var(--secondary-color);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge.status-placed {
-    background-color: rgba(23, 162, 184, 0.1);
-    color: #17a2b8;
-}
-
-.status-badge.status-confirmed {
-    background-color: rgba(78, 205, 196, 0.1);
-    color: #4ecdc4;
-}
-
-.status-badge.status-shipped {
-    background-color: rgba(255, 193, 7, 0.1);
-    color: #ffc107;
-}
-
-.status-badge.status-delivered {
-    background-color: rgba(40, 167, 69, 0.1);
-    color: #28a745;
-}
-
-#deliveryDateGroup {
-    background-color: var(--light-gray);
-    padding: 15px;
-    border-radius: var(--radius-md);
-}
-
-#deliveryDateGroup label {
-    color: var(--success);
-    font-weight: 600;
 }
 
 /* Responsive Styles */
@@ -916,75 +736,4 @@ textarea {
     }
 }
 
-/* Loading States */
-.loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-    color: var(--text-light);
-}
 
-.loading::after {
-    content: '';
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--medium-gray);
-    border-top: 2px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-left: 10px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Empty States */
-.empty-state {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-light);
-}
-
-.empty-state h3 {
-    margin-bottom: 10px;
-    color: var(--text-color);
-}
-
-/* Notifications */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
-    border-radius: var(--radius-md);
-    color: white;
-    font-weight: 500;
-    z-index: 1000;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s;
-}
-
-.notification.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.notification.success {
-    background-color: var(--success);
-}
-
-.notification.error {
-    background-color: var(--danger);
-}
-
-.notification.warning {
-    background-color: var(--warning);
-}
-
-.notification.info {
-    background-color: var(--pending);
-}

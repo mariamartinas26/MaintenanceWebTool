@@ -3,23 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Dashboard - Repair Queens</title>
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self';
-                   script-src 'self' 'unsafe-inline';
-                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-                   font-src 'self' https://fonts.gstatic.com;
-                   img-src 'self' data: https:;
-                   connect-src 'self';">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Client Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
 <header class="main-header">
     <div class="container">
         <div class="header-content">
-            <!-- Logo Section -->
             <div class="logo-section">
                 <div class="logo-container">
                     <img src="/images/logo.png" alt="Repair Queens Logo" class="logo">
@@ -29,7 +20,6 @@
                 </div>
             </div>
 
-            <!-- User Menu -->
             <div class="user-menu">
                 <div class="user-info">
                     <div class="user-details">
@@ -38,50 +28,20 @@
                     </div>
                 </div>
                 <div class="user-actions">
-                    <button class="action-btn logout-btn" id="logout-btn" title="Logout">
+                    <button class="logout-btn" id="logout-btn">
                         <span class="btn-text">Logout</span>
                     </button>
                 </div>
             </div>
-
-            <!-- Mobile Menu Toggle -->
-            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
         </div>
     </div>
 </header>
-
-<!-- Mobile Navigation Overlay -->
-<div class="mobile-nav-overlay" id="mobile-nav-overlay">
-    <div class="mobile-nav-content">
-        <div class="mobile-nav-header">
-            <h3>Menu</h3>
-            <button class="mobile-nav-close" id="mobile-nav-close">×</button>
-        </div>
-        <nav class="mobile-nav">
-            <ul class="mobile-nav-list">
-                <li><a href="#" class="mobile-nav-link active" data-tab="appointments">My Appointments</a></li>
-                <li><a href="#" class="mobile-nav-link" data-tab="new-appointment">New Appointment</a></li>
-                <li><a href="#" class="mobile-nav-link">Profile</a></li>
-                <li><a href="#" class="mobile-nav-link">History</a></li>
-                <li><a href="#" class="mobile-nav-link" id="mobile-contact-btn">Contact</a></li>
-            </ul>
-            <div class="mobile-user-actions">
-                <button class="mobile-action-btn" id="mobile-logout-btn">Logout</button>
-            </div>
-        </nav>
-    </div>
-</div>
 
 <main>
     <div class="container">
         <section class="dashboard-header">
             <div class="dashboard-title">
-                <h2>Dashboard</h2>
-                <p class="dashboard-subtitle">Manage your vehicle service appointments</p>
+                <h2>Appointments</h2>
             </div>
         </section>
 
@@ -96,18 +56,11 @@
             </div>
 
             <div class="tab-content">
-                <!-- Appointments Tab -->
                 <div id="appointments" class="tab-pane active">
-                    <div class="section-header">
-                        <h3>Your Appointments</h3>
-                        <p class="section-description">View and manage all your service appointments</p>
-                    </div>
-
                     <div class="appointments-list" id="appointments-container">
                         <div class="empty-message">
-                            <div class="empty-icon">Calendar</div>
                             <h4>No Appointments Yet</h4>
-                            <p>You don't have any appointments scheduled. Create your first appointment to get started!</p>
+                            <p>You don't have any appointments scheduled.</p>
                             <button class="primary-btn schedule-now-btn">
                                 <span class="btn-text">Schedule Now</span>
                             </button>
@@ -118,24 +71,20 @@
                 <div id="new-appointment" class="tab-pane">
                     <div class="section-header">
                         <h3>Book New Appointment</h3>
-                        <p class="section-description">Schedule a service appointment for your vehicle</p>
                     </div>
 
                     <form id="appointment-form">
-                        <!-- Vehicle Section -->
                         <div class="form-section">
                             <div class="section-title">
                                 <h4>Vehicle Information</h4>
                                 <p>Select your vehicle or add a new one</p>
                             </div>
 
-                            <div class="vehicle-selection">
-                                <div class="form-group">
-                                    <label for="existing-vehicle">Choose existing vehicle:</label>
-                                    <select id="existing-vehicle" name="vehicleId">
-                                        <option value="">Select vehicle or add a new one</option>
-                                    </select>
-                                </div>
+                            <div class="form-group">
+                                <label for="existing-vehicle">Choose existing vehicle:</label>
+                                <select id="existing-vehicle" name="vehicleId">
+                                    <option value="">Select vehicle or add a new one</option>
+                                </select>
                             </div>
 
                             <div class="or-divider">
@@ -159,7 +108,6 @@
                                     <div class="form-group">
                                         <label for="is-electric" class="checkbox-label">
                                             <input type="checkbox" id="is-electric" name="is_electric">
-                                            <span class="checkbox-custom"></span>
                                             Electric Vehicle
                                         </label>
                                     </div>
@@ -188,7 +136,7 @@
                                 <div class="form-group">
                                     <label for="vehicle-notes">Vehicle notes (optional)</label>
                                     <textarea id="vehicle-notes" name="notes" rows="2"
-                                              placeholder="Additional information about vehicle (color, license plate, modifications, etc.)"></textarea>
+                                              placeholder="Additional information about vehicle"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -196,7 +144,6 @@
                         <div class="form-section">
                             <div class="section-title">
                                 <h4>Appointment Details</h4>
-                                <p>When and what type of service do you need?</p>
                             </div>
 
                             <div class="form-group">
@@ -213,12 +160,12 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="appointment-date">Preferred Date *</label>
+                                    <label for="appointment-date">Preferred Date</label>
                                     <input type="date" id="appointment-date" name="date" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="appointment-time">Preferred Time *</label>
+                                    <label for="appointment-time">Preferred Time</label>
                                     <select id="appointment-time" name="time" required>
                                         <option value="">Select date first</option>
                                     </select>
@@ -226,10 +173,9 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="description">Problem Description *</label>
+                                <label for="description">Problem Description</label>
                                 <textarea id="description" name="description" rows="4" required
                                           placeholder="Describe the problem or service you need (minimum 10 characters)"></textarea>
-                                <small class="char-counter">0/10 minimum characters</small>
                             </div>
                         </div>
 
@@ -247,57 +193,6 @@
         </section>
     </div>
 </main>
-
-<!-- Contact Modal -->
-<div id="contact-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Contact Information</h3>
-            <span class="close-modal" id="close-contact-modal">&times;</span>
-        </div>
-        <div class="contact-info">
-            <div class="contact-item">
-                <div class="contact-details">
-                    <h4>Address</h4>
-                    <p>Strada General Henri Mathias Berthelot 16, Iași 700483</p>
-                </div>
-            </div>
-            <div class="contact-item">
-                <div class="contact-details">
-                    <h4>Phone</h4>
-                    <p>0745138438</p>
-                </div>
-            </div>
-            <div class="contact-item">
-                <div class="contact-details">
-                    <h4>Email</h4>
-                    <p>repairqueens@yahoo.com</p>
-                </div>
-            </div>
-            <div class="contact-item">
-                <div class="contact-details">
-                    <h4>Working Hours</h4>
-                    <p>Monday - Friday: 8:00 AM - 6:00 PM<br>
-                        Saturday: 9:00 AM - 4:00 PM<br>
-                        Sunday: Closed</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="appointment-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Appointment Details</h3>
-            <span class="close-modal">&times;</span>
-        </div>
-        <div id="appointment-details">
-        </div>
-    </div>
-</div>
-
-
 
 <script src="/js/dashboard.js"></script>
 </body>

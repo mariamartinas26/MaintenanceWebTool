@@ -1,14 +1,11 @@
-// routes/supplierRoutes.js
 const url = require('url');
 const supplierController = require('../controllers/supplierController');
 
-// Adaugă funcția de autentificare
 async function requireAuth(req, res) {
     const jwt = require('jsonwebtoken');
     const User = require('../models/User');
 
     const authHeader = req.headers.authorization;
-    console.log('Supplier route - checking auth:', authHeader?.substring(0, 20) + '...');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -25,7 +22,6 @@ async function requireAuth(req, res) {
         const secret = process.env.JWT_SECRET;
         const decoded = jwt.verify(token, secret);
 
-        // Verifică user-ul în baza de date
         const user = await User.findById(decoded.userId || decoded.user_id);
 
         if (!user) {
@@ -37,7 +33,6 @@ async function requireAuth(req, res) {
             return false;
         }
 
-        // Verifică dacă e admin sau manager
         if (user.role !== 'admin' && user.role !== 'manager') {
             res.writeHead(403, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
@@ -49,11 +44,9 @@ async function requireAuth(req, res) {
 
         req.userId = user.id;
         req.user = user;
-        console.log('Supplier route auth successful for:', user.email);
         return true;
 
     } catch (error) {
-        console.log('Supplier route auth failed:', error.message);
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
@@ -87,56 +80,13 @@ async function handleSupplierRoutes(req, res) {
     const method = req.method;
     const query = parsedUrl.query;
 
-    console.log('=== SUPPLIER ROUTE ===');
-    console.log('Path:', pathname);
-    console.log('Method:', method);
-
-    // Verifică autentificarea pentru toate rutele supplier
     if (!await requireAuth(req, res)) {
-        return; // Răspunsul a fost deja trimis cu eroare de autentificare
+        return;
     }
 
     try {
-        // GET /api/suppliers - Get all suppliers
-        if (pathname === '/api/suppliers' && method === 'GET') {
-            console.log('Getting all suppliers...');
-            await supplierController.getAllSuppliers(req, res, query);
-        }
-
-        // GET /api/suppliers/:id - Get supplier by ID
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)$/) && method === 'GET') {
-            const id = pathname.split('/')[3];
-            await supplierController.getSupplierById(req, res, { id });
-        }
-
-        // POST /api/suppliers - Create new supplier
-        else if (pathname === '/api/suppliers' && method === 'POST') {
-            const body = await getRequestBody(req);
-            await supplierController.createSupplier(req, res, body);
-        }
-
-        // PUT /api/suppliers/:id - Update supplier
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)$/) && method === 'PUT') {
-            const id = pathname.split('/')[3];
-            const body = await getRequestBody(req);
-            await supplierController.updateSupplier(req, res, { id, ...body });
-        }
-
-        // DELETE /api/suppliers/:id - Delete supplier
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)$/) && method === 'DELETE') {
-            const id = pathname.split('/')[3];
-            await supplierController.deleteSupplier(req, res, { id });
-        }
-
-        // GET /api/suppliers/:id/orders - Get orders by supplier
-        else if (pathname.match(/^\/api\/suppliers\/(\d+)\/orders$/) && method === 'GET') {
-            const supplierId = pathname.split('/')[3];
-            await supplierController.getOrdersBySupplier(req, res, { supplierId, ...query });
-        }
-
         // GET /api/parts - Get all parts
-        else if (pathname === '/api/parts' && method === 'GET') {
-            console.log('Getting all parts...');
+        if (pathname === '/api/parts' && method === 'GET') {
             await supplierController.getAllParts(req, res, query);
         }
 
@@ -148,7 +98,6 @@ async function handleSupplierRoutes(req, res) {
 
         // GET /api/orders - Get all orders
         else if (pathname === '/api/orders' && method === 'GET') {
-            console.log('Getting all orders...');
             await supplierController.getAllOrders(req, res, query);
         }
 
@@ -160,7 +109,6 @@ async function handleSupplierRoutes(req, res) {
         }
 
         else {
-            console.log('Supplier route not found:', pathname);
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, message: 'Supplier route not found' }));
         }

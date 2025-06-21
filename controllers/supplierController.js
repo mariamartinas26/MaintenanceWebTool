@@ -1,5 +1,5 @@
 const SupplierModel = require('../models/supplierModel');
-const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+const { sanitizeInput, setSecurityHeaders } = require('../middleware/auth');
 
 function validateInput(input) {
     if (typeof input !== 'string') return input;
@@ -49,11 +49,10 @@ function sanitizeSupplier(supplier) {
         phone: validateInput(supplier.phone),
         address: validateInput(supplier.address),
         delivery_time_days: validateInteger(supplier.delivery_time_days, 1, 365),
-        total_parts_supplied: validateInteger(supplier.total_parts_supplied, 0, 1000000),
-        total_orders: validateInteger(supplier.total_orders, 0, 100000),
-        total_order_value: validateNumber(supplier.total_order_value, 0, 100000000),
-        last_order_date: supplier.last_order_date,
-        created_at: supplier.created_at
+        parts_count: validateInteger(supplier.parts_count, 0, 1000000),
+        orders_count: validateInteger(supplier.orders_count, 0, 100000),
+        created_at: supplier.created_at,
+        updated_at: supplier.updated_at
     };
 }
 
@@ -64,17 +63,16 @@ function sanitizeOrder(order) {
         id: order.id,
         supplier_id: order.supplier_id,
         supplier_name: validateInput(order.supplier_name),
-        supplier_contact: validateInput(order.supplier_contact),
-        supplier_email: validateInput(order.supplier_email),
-        supplier_phone: validateInput(order.supplier_phone),
         order_date: order.order_date,
         expected_delivery_date: order.expected_delivery_date,
         actual_delivery_date: order.actual_delivery_date,
         status: validateInput(order.status),
         total_amount: validateNumber(order.total_amount, 0, 100000000),
         notes: validateInput(order.notes),
-        total_items: validateInteger(order.total_items, 0, 10000),
-        total_quantity: validateInteger(order.total_quantity, 0, 1000000)
+        product_name: validateInput(order.product_name),
+        product_quantity: validateInteger(order.product_quantity, 0, 10000),
+        product_unit_price: validateNumber(order.product_unit_price, 0, 1000000),
+        items: order.items || []
     };
 }
 
@@ -94,10 +92,6 @@ class SupplierController {
             if (query.search) {
                 const search = validateTextLength(query.search, 1, 100);
                 if (search) sanitizedQuery.search = search;
-            }
-            if (query.status) {
-                const status = validateInput(query.status);
-                if (status) sanitizedQuery.status = status;
             }
 
             const suppliers = await SupplierModel.getAllSuppliers(sanitizedQuery);
@@ -423,13 +417,13 @@ class SupplierController {
                 category: validateInput(part.category),
                 price: validateNumber(part.price, 0, 1000000),
                 stock_quantity: validateInteger(part.stock_quantity, 0, 100000),
+                minimum_stock_level: validateInteger(part.minimum_stock_level, 0, 100000),
                 supplier_name: validateInput(part.supplier_name)
             })).filter(part => part.name);
 
             sendJSON(res, 200, {
                 success: true,
                 data: sanitizedParts,
-                message: 'Parts retrieved successfully',
                 total: sanitizedParts.length
             });
 
@@ -445,8 +439,6 @@ class SupplierController {
     async createOrder(req, res, data) {
         try {
             setSecurityHeaders(res);
-
-            console.log('=== CREATE ORDER CONTROLLER DEBUG ===');
 
             const supplierId = validateInteger(data.supplier_id, 1);
             const items = Array.isArray(data.items) ? data.items : [];
@@ -596,148 +588,6 @@ class SupplierController {
                     message: 'Error updating order status: ' + validateInput(error.message)
                 });
             }
-        }
-    }
-
-    async getOrdersBySupplier(req, res, params) {
-        try {
-            setSecurityHeaders(res);
-
-            const supplierId = validateInteger(params.supplierId, 1);
-            if (!supplierId) {
-                return sendJSON(res, 400, {
-                    success: false,
-                    message: 'Valid supplier ID is required'
-                });
-            }
-
-            await this.getAllOrders(req, res, { supplier_id: supplierId });
-        } catch (error) {
-            console.error('Error in getOrdersBySupplier:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Error fetching orders by supplier: ' + validateInput(error.message)
-            });
-        }
-    }
-
-    async getSuppliersForExport(req, res) {
-        try {
-            setSecurityHeaders(res);
-
-            const result = await this.getSuppliersForExportData(req);
-
-            sendJSON(res, 200, {
-                success: true,
-                data: result,
-                total: result.length,
-                exported_at: new Date().toISOString()
-            });
-        } catch (error) {
-            console.error('Export suppliers error:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Failed to export suppliers data'
-            });
-        }
-    }
-
-    async getSuppliersForExportData(req) {
-        try {
-            const suppliers = await SupplierModel.getAllSuppliers({});
-
-            return suppliers.map(supplier => {
-                const sanitized = sanitizeSupplier(supplier);
-                return {
-                    id: sanitized.id,
-                    company_name: sanitized.company_name || 'Unknown Company',
-                    contact_person: sanitized.contact_person || 'Unknown Contact',
-                    email: sanitized.email || 'No Email',
-                    phone: sanitized.phone || 'No Phone',
-                    address: sanitized.address || 'No Address',
-                    delivery_time_days: sanitized.delivery_time_days || 0,
-                    total_parts_supplied: sanitized.total_parts_supplied || 0,
-                    total_orders: sanitized.total_orders || 0,
-                    total_order_value: sanitized.total_order_value || 0,
-                    last_order_date: supplier.last_order_date ? new Date(supplier.last_order_date).toLocaleString() : null,
-                    created_at: supplier.created_at ? new Date(supplier.created_at).toLocaleString() : null
-                };
-            });
-
-        } catch (error) {
-            console.error('Error getting suppliers for export:', error);
-            throw error;
-        }
-    }
-
-    async getOrdersForExport(req, res) {
-        try {
-            setSecurityHeaders(res);
-
-            const result = await this.getOrdersForExportData(req);
-
-            sendJSON(res, 200, {
-                success: true,
-                data: result,
-                total: result.length,
-                exported_at: new Date().toISOString()
-            });
-        } catch (error) {
-            console.error('Export orders error:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Failed to export orders data'
-            });
-        }
-    }
-
-    async getOrdersForExportData(req) {
-        try {
-            const orders = await SupplierModel.getAllOrders({});
-
-            return orders.map(order => {
-                const sanitized = sanitizeOrder(order);
-
-                let deliveryStatus = 'Pending';
-                let deliveryDelayDays = null;
-
-                if (sanitized.actual_delivery_date && sanitized.expected_delivery_date) {
-                    const actualDate = new Date(sanitized.actual_delivery_date);
-                    const expectedDate = new Date(sanitized.expected_delivery_date);
-                    const diffTime = actualDate.getTime() - expectedDate.getTime();
-                    deliveryDelayDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                    if (deliveryDelayDays > 0) {
-                        deliveryStatus = 'Late';
-                    } else if (deliveryDelayDays < 0) {
-                        deliveryStatus = 'Early';
-                    } else {
-                        deliveryStatus = 'On Time';
-                    }
-                }
-
-                return {
-                    id: sanitized.id,
-                    supplier_name: sanitized.supplier_name || 'Unknown Supplier',
-                    supplier_contact: sanitized.supplier_contact || '',
-                    supplier_email: sanitized.supplier_email || '',
-                    supplier_phone: sanitized.supplier_phone || '',
-                    order_date: order.order_date ? new Date(order.order_date).toLocaleString() : null,
-                    expected_delivery_date: order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleString() : null,
-                    actual_delivery_date: order.actual_delivery_date ? new Date(order.actual_delivery_date).toLocaleString() : null,
-                    status: sanitized.status || 'Unknown',
-                    total_amount: sanitized.total_amount || 0,
-                    notes: sanitized.notes || '',
-                    total_items: sanitized.total_items || 0,
-                    total_quantity: sanitized.total_quantity || 0,
-                    delivery_status: deliveryStatus,
-                    delivery_delay_days: deliveryDelayDays
-                };
-            });
-
-        } catch (error) {
-            console.error('Error getting orders for export:', error);
-            throw error;
         }
     }
 }

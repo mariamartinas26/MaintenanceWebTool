@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supplier Management</title>
+    <title>Orders Management</title>
     <link rel="stylesheet" href="../css/suppliers.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -16,7 +16,7 @@
         </div>
         <nav class="sidebar-nav">
             <ul>
-                <li class="active"><a href="/admin/dashboard">
+                <li><a href="/admin/dashboard">
                     <span class="icon"></span>
                     <span>Appointments</span>
                 </a></li>
@@ -24,13 +24,9 @@
                     <span class="icon"></span>
                     <span>Inventory</span>
                 </a></li>
-                <li><a href="/suppliers" id="providers-link">
+                <li class="active"><a href="/suppliers" id="orders-link">
                     <span class="icon"></span>
-                    <span>Suppliers</span>
-                </a></li>
-                <li><a href="#" id="export-link">
-                    <span class="icon"></span>
-                    <span>Export Data</span>
+                    <span>Orders</span>
                 </a></li>
             </ul>
         </nav>
@@ -47,106 +43,18 @@
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Navigation Tabs -->
-        <div class="nav-tabs">
-            <button class="tab-btn active" data-tab="suppliers">Suppliers</button>
-            <button class="tab-btn" data-tab="orders">Orders</button>
-        </div>
-
-        <!-- Suppliers Tab -->
-        <div id="suppliers-tab" class="tab-content active">
-            <div class="page-header">
-                <h1>Supplier Management</h1>
-                <div class="header-actions">
-                    <button class="btn primary-btn" onclick="openSupplierModal()">Add New Supplier</button>
-                </div>
-            </div>
-
-            <div class="suppliers-grid">
-                <div id="suppliers-list" class="suppliers-list">
-                </div>
+        <!-- Orders Section -->
+        <div class="page-header">
+            <h1>Purchase Orders Management</h1>
+            <div class="header-actions">
+                <button class="btn primary-btn" onclick="openOrderModal()">New Order</button>
             </div>
         </div>
 
-        <!-- Orders Tab -->
-        <div id="orders-tab" class="tab-content">
-            <div class="page-header">
-                <h1>Purchase Orders</h1>
-                <div class="header-actions">
-                    <button class="btn primary-btn" onclick="openOrderModal()">New Order</button>
-                </div>
+        <div class="orders-section">
+            <div id="orders-list" class="orders-list">
+                <!-- Orders will be loaded dynamically -->
             </div>
-
-            <div class="orders-section">
-                <div id="orders-list" class="orders-list">
-                    <!-- Orders will be loaded dynamically -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Supplier Modal -->
-<div id="supplierModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="supplierModalTitle">Add New Supplier</h2>
-            <span class="close-modal" onclick="closeSupplierModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="supplierForm">
-                <input type="hidden" id="supplierId">
-
-                <div class="form-group">
-                    <label for="supplierName">Supplier Name</label>
-                    <input type="text" id="supplierName" required>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="contactPerson">Contact Person</label>
-                        <input type="text" id="contactPerson" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Phone</label>
-                        <input type="text" id="phone" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="address">Address</label>
-                    <textarea id="address" rows="3"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="specialization">Specialization</label>
-                        <select id="specialization" required>
-                            <option value="">Select Specialization</option>
-                            <option value="Engine Parts">Engine Parts</option>
-                            <option value="Transmission">Transmission</option>
-                            <option value="Brakes">Brakes</option>
-                            <option value="Electrical">Electrical</option>
-                            <option value="Body Parts">Body Parts</option>
-                            <option value="Fluids & Oils">Fluids & Oils</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="deliveryTime">Delivery Time (days)</label>
-                        <input type="number" id="deliveryTime" min="1" required>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn secondary-btn" onclick="closeSupplierModal()">Cancel</button>
-                    <button type="submit" class="btn primary-btn">Save Supplier</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
