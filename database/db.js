@@ -10,10 +10,26 @@ const pool = new Pool({
 });
 
 pool.on('connect', () => {
+    console.log('Connected to PostgreSQL database');
 });
 
 pool.on('error', (err) => {
+    console.error('Database connection error:', err);
     process.exit(-1);
 });
 
-module.exports = { pool };
+
+const query = async (text, params) => {
+    try {
+        const result = await pool.query(text, params);
+        return result;
+    } catch (error) {
+        console.error('Database query error:', error);
+        throw error;
+    }
+};
+
+module.exports = {
+    pool,
+    query
+};

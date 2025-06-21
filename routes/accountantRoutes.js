@@ -1,7 +1,8 @@
 const url = require('url');
 const querystring = require('querystring');
 const accountantController = require('../controllers/accountantController');
-const { requireAccountant } = require('../middleware/auth');
+const ImportExportController = require('../controllers/importExportController');
+const { verifyToken, requireAccountant } = require('../middleware/auth');
 
 const accountantRoutes = async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
@@ -10,9 +11,15 @@ const accountantRoutes = async (req, res) => {
     const query = parsedUrl.query;
 
     try {
+        //verif tokenul
         await new Promise((resolve, reject) => {
-            requireAccountant(req, res, (error) => {
+            verifyToken(req, res, (error) => {
                 if (error) {
+                    res.writeHead(error.statusCode || 401, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: error.message
+                    }));
                     reject(error);
                 } else {
                     resolve();
@@ -20,12 +27,27 @@ const accountantRoutes = async (req, res) => {
             });
         });
 
-        // Dashboard accountant
+        //verificam daca are acces la accountant
+        await new Promise((resolve, reject) => {
+            requireAccountant(req, res, (error) => {
+                if (error) {
+                    res.writeHead(error.statusCode || 403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: error.message
+                    }));
+                    reject(error);
+                } else {
+                    resolve();
+                }
+            });
+        });
+
         if (path === '/api/accountant/dashboard' && method === 'GET') {
             return await accountantController.getDashboard(req, res);
         }
 
-        // Suppliers routes
+        //routes suppliers
         if (path === '/api/accountant/suppliers' && method === 'GET') {
             req.query = query;
             return await accountantController.getSuppliers(req, res);
@@ -53,46 +75,40 @@ const accountantRoutes = async (req, res) => {
             }
         }
 
-        // Export suppliers
+        //import data
+        if (path === '/api/accountant/import' && method === 'POST') {
+            return await parseBodyAndExecute(req, res, ImportExportController.importData);
+        }
+
+        //export data
+        if (path === '/api/accountant/export' && method === 'GET') {
+            req.query = query;
+            return await ImportExportController.exportData(req, res);
+        }
+
+        //export suppliers
         if (path === '/api/accountant/suppliers/export' && method === 'GET') {
             req.query = query;
             return await accountantController.exportSuppliers(req, res);
         }
 
-        // Import suppliers
+        //import suppliers
         if (path === '/api/accountant/suppliers/import' && method === 'POST') {
             return await parseBodyAndExecute(req, res, accountantController.importSuppliers);
         }
-
-        // Import/Export routes placeholder (pentru viitoare funcționalități)
-        if (path === '/api/accountant/import-export' && method === 'GET') {
-            return await getImportExportOptions(req, res);
-        }
-
-        // Reports routes placeholder (pentru viitoare funcționalități)
-        if (path === '/api/accountant/reports' && method === 'GET') {
-            return await getReports(req, res);
-        }
-
-        // Dacă nu se potrivește nicio rută
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: false,
-            message: 'Accountant route not found'
-        }));
-
     } catch (error) {
-        console.error('=== ERROR in accountantRoutes ===');
-        console.error('Error:', error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: false,
-            message: 'Internal server error in accountant routes'
-        }));
+
+        if (!res.headersSent) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Internal server error in accountant routes',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            }));
+        }
     }
 };
 
-// Helper function pentru parsarea body-ului
 const parseBodyAndExecute = (req, res, controllerFunction) => {
     return new Promise((resolve, reject) => {
         let body = '';
@@ -113,11 +129,13 @@ const parseBodyAndExecute = (req, res, controllerFunction) => {
                 resolve();
             } catch (error) {
                 console.error('Error parsing body or executing controller:', error);
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Invalid JSON in request body'
-                }));
+                if (!res.headersSent) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: 'Invalid JSON in request body'
+                    }));
+                }
                 resolve();
             }
         });
@@ -127,102 +145,6 @@ const parseBodyAndExecute = (req, res, controllerFunction) => {
             reject(error);
         });
     });
-};
-
-// Placeholder pentru opțiuni import/export (pentru dezvoltare viitoare)
-const getImportExportOptions = async (req, res) => {
-    try {
-        const userRole = req.user.role;
-
-        if (!['admin', 'manager', 'accountant'].includes(userRole)) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({
-                success: false,
-                message: 'Access denied. Import/Export access required.'
-            }));
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: true,
-            data: {
-                availableFormats: ['json', 'csv', 'xlsx'],
-                supportedEntities: ['suppliers', 'transactions', 'reports'],
-                maxFileSize: '10MB',
-                note: 'Import/Export functionality will be implemented here'
-            },
-            message: 'Import/Export options retrieved successfully'
-        }));
-
-    } catch (error) {
-        console.error('Error getting import/export options:', error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: false,
-            message: 'Failed to retrieve import/export options'
-        }));
-    }
-};
-
-// Placeholder pentru rapoarte (pentru dezvoltare viitoare)
-const getReports = async (req, res) => {
-    try {
-        const userRole = req.user.role;
-
-        if (!['admin', 'manager', 'accountant'].includes(userRole)) {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({
-                success: false,
-                message: 'Access denied. Reports access required.'
-            }));
-        }
-
-        // Obține date simple pentru rapoarte
-        const db = require('../database/db');
-
-        const suppliersStats = await db.query(`
-            SELECT 
-                status,
-                COUNT(*) as count
-            FROM suppliers 
-            GROUP BY status
-        `);
-
-        const monthlyStats = await db.query(`
-            SELECT 
-                DATE_TRUNC('month', created_at) as month,
-                COUNT(*) as suppliers_added
-            FROM suppliers 
-            WHERE created_at >= NOW() - INTERVAL '12 months'
-            GROUP BY DATE_TRUNC('month', created_at)
-            ORDER BY month DESC
-        `);
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: true,
-            data: {
-                suppliersByStatus: suppliersStats.rows,
-                monthlySupplierGrowth: monthlyStats.rows,
-                reportTypes: [
-                    'suppliers_summary',
-                    'monthly_activity',
-                    'status_distribution',
-                    'contact_analysis'
-                ],
-                note: 'More detailed reports will be implemented here'
-            },
-            message: 'Reports data retrieved successfully'
-        }));
-
-    } catch (error) {
-        console.error('Error getting reports:', error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-            success: false,
-            message: 'Failed to retrieve reports'
-        }));
-    }
 };
 
 module.exports = {
