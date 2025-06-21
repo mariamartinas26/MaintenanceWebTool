@@ -2,9 +2,32 @@ const { pool } = require('../database/db');
 const AppointmentModel = require('../models/appointmentModel');
 const CalendarModel = require('../models/calendarModel');
 const { getUserIdFromToken } = require('../utils/authUtils');
+const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
 
-// Funcții helper pentru răspunsuri HTTP native
+function validateInput(input) {
+    if (typeof input !== 'string') return input;
+    return sanitizeInput(input);
+}
+
+function validateNumber(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseFloat(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseInt(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function validateStatus(status) {
+    const validStatuses = ['pending', 'approved', 'rejected', 'cancelled', 'completed'];
+    return validStatuses.includes(status) ? status : null;
+}
+
 function sendJSON(res, statusCode, data) {
+    setSecurityHeaders(res);
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
 }
@@ -12,7 +35,7 @@ function sendJSON(res, statusCode, data) {
 function sendSuccess(res, data, message) {
     sendJSON(res, 200, {
         success: true,
-        message: message,
+        message: validateInput(message),
         ...data
     });
 }
@@ -20,37 +43,57 @@ function sendSuccess(res, data, message) {
 function sendError(res, statusCode, message) {
     sendJSON(res, statusCode, {
         success: false,
-        message: message
+        message: validateInput(message)
     });
 }
 
 function sendCreated(res, data, message) {
     sendJSON(res, 201, {
         success: true,
-        message: message,
+        message: validateInput(message),
         ...data
     });
 }
 
-// Funcție pentru a extrage body-ul din request
 async function getRequestBody(req) {
     return new Promise((resolve, reject) => {
         let body = '';
+        let totalSize = 0;
+        const maxSize = 10 * 1024 * 1024; // 10MB limit
+
         req.on('data', chunk => {
+            totalSize += chunk.length;
+            if (totalSize > maxSize) {
+                reject(new Error('Request body too large'));
+                return;
+            }
             body += chunk.toString();
         });
+
         req.on('end', () => {
             try {
                 if (!body.trim()) {
                     resolve({});
                     return;
                 }
-                const parsed = JSON.parse(body);
+
+                if (body.length > maxSize) {
+                    reject(new Error('Request body too large'));
+                    return;
+                }
+
+                const parsed = safeJsonParse(body);
+                if (parsed === null) {
+                    reject(new Error('Invalid or potentially malicious JSON'));
+                    return;
+                }
+
                 resolve(parsed);
             } catch (error) {
                 reject(new Error('Invalid JSON in request body'));
             }
         });
+
         req.on('error', (error) => {
             reject(error);
         });
@@ -58,11 +101,9 @@ async function getRequestBody(req) {
 }
 
 class AppointmentController {
-    /**
-     * GET /api/appointments - gets all appointments for a user
-     */
     static async getAppointments(req, res) {
         try {
+            setSecurityHeaders(res);
             console.log('Getting appointments for user...');
 
             const authHeader = req.headers.authorization;
@@ -77,23 +118,22 @@ class AppointmentController {
             const appointments = await AppointmentModel.getUserAppointments(userId);
             console.log('Retrieved appointments:', appointments.length);
 
-            //format data for response
             const formattedAppointments = appointments.map(row => ({
                 id: row.id,
                 date: row.appointment_date.toISOString().split('T')[0],
                 time: row.appointment_date.toTimeString().slice(0, 5),
-                status: row.status,
+                status: validateInput(row.status),
                 serviceType: 'general',
-                description: row.problem_description,
-                adminResponse: row.admin_response,
-                estimatedPrice: row.estimated_price,
-                estimatedCompletionTime: row.estimated_completion_time,
+                description: validateInput(row.problem_description),
+                adminResponse: validateInput(row.admin_response),
+                estimatedPrice: validateNumber(row.estimated_price),
+                estimatedCompletionTime: validateInput(row.estimated_completion_time),
                 createdAt: row.created_at,
                 vehicle: row.vehicle_type ? {
-                    type: row.vehicle_type,
-                    brand: row.brand,
-                    model: row.model,
-                    year: row.year
+                    type: validateInput(row.vehicle_type),
+                    brand: validateInput(row.brand),
+                    model: validateInput(row.model),
+                    year: validateInteger(row.year, 1900, new Date().getFullYear() + 10)
                 } : null
             }));
 
@@ -101,15 +141,13 @@ class AppointmentController {
 
         } catch (error) {
             console.error('Error in getAppointments:', error);
-            sendError(res, 500, 'Error getting appointments: ' + error.message);
+            sendError(res, 500, 'Error getting appointments: ' + validateInput(error.message));
         }
     }
 
-    /**
-     * POST /api/appointments - creates a new appointment (original method)
-     */
     static async createAppointment(req, res) {
         try {
+            setSecurityHeaders(res);
             console.log('Creating new appointment...');
 
             const body = await getRequestBody(req);
@@ -124,10 +162,14 @@ class AppointmentController {
             }
 
             console.log('User ID for new appointment:', userId);
-            const { date, time, description, vehicleId } = body;
+
+            const date = validateInput(body.date);
+            const time = validateInput(body.time);
+            const description = validateInput(body.description);
+            const vehicleId = validateInteger(body.vehicleId, 1);
+
             console.log('Appointment data:', { date, time, description, vehicleId });
 
-            //data validation
             console.log('Starting data validation...');
             AppointmentController.validateAppointmentData(date, time, description);
             console.log('Data validation passed');
@@ -147,7 +189,6 @@ class AppointmentController {
                 await client.query('BEGIN');
                 console.log('Transaction started');
 
-                //insert appointment
                 console.log('Creating appointment in database...');
                 const newAppointment = await AppointmentModel.createAppointment(
                     userId,
@@ -157,12 +198,10 @@ class AppointmentController {
                 );
                 console.log('Appointment created in database:', newAppointment.id);
 
-                //updates calendar
                 console.log('Updating calendar...');
                 await CalendarModel.updateSlotAppointments(date, time, 1);
                 console.log('Calendar updated');
 
-                //add to appointment history
                 console.log('Adding to appointment history...');
                 await AppointmentModel.addAppointmentHistory(
                     client,
@@ -181,8 +220,8 @@ class AppointmentController {
                     id: newAppointment.id,
                     date: newAppointment.appointment_date.toISOString().split('T')[0],
                     time: newAppointment.appointment_date.toTimeString().slice(0, 5),
-                    status: newAppointment.status,
-                    description: newAppointment.problem_description,
+                    status: validateInput(newAppointment.status),
+                    description: validateInput(newAppointment.problem_description),
                     createdAt: newAppointment.created_at
                 };
 
@@ -202,15 +241,13 @@ class AppointmentController {
         } catch (error) {
             console.error('Error in createAppointment:', error);
             console.error('Error stack:', error.stack);
-            sendError(res, 500, 'Error creating appointment: ' + error.message);
+            sendError(res, 500, 'Error creating appointment: ' + validateInput(error.message));
         }
     }
 
-    /**
-     * POST /api/appointments - creates a new appointment (with body already extracted)
-     */
     static async createAppointmentWithBody(req, res, body) {
         try {
+            setSecurityHeaders(res);
             console.log('Creating new appointment with extracted body...');
             console.log('Request body received:', body);
 
@@ -223,10 +260,14 @@ class AppointmentController {
             }
 
             console.log('User ID for new appointment:', userId);
-            const { date, time, description, vehicleId } = body;
+
+            const date = validateInput(body.date);
+            const time = validateInput(body.time);
+            const description = validateInput(body.description);
+            const vehicleId = validateInteger(body.vehicleId, 1);
+
             console.log('Appointment data:', { date, time, description, vehicleId });
 
-            //data validation
             console.log('Starting data validation...');
             AppointmentController.validateAppointmentData(date, time, description);
             console.log('Data validation passed');
@@ -246,7 +287,6 @@ class AppointmentController {
                 await client.query('BEGIN');
                 console.log('Transaction started');
 
-                //insert appointment
                 console.log('Creating appointment in database...');
                 const newAppointment = await AppointmentModel.createAppointment(
                     userId,
@@ -256,12 +296,10 @@ class AppointmentController {
                 );
                 console.log('Appointment created in database:', newAppointment.id);
 
-                //updates calendar
                 console.log('Updating calendar...');
                 await CalendarModel.updateSlotAppointments(date, time, 1);
                 console.log('Calendar updated');
 
-                //add to appointment history
                 console.log('Adding to appointment history...');
                 await AppointmentModel.addAppointmentHistory(
                     client,
@@ -280,8 +318,8 @@ class AppointmentController {
                     id: newAppointment.id,
                     date: newAppointment.appointment_date.toISOString().split('T')[0],
                     time: newAppointment.appointment_date.toTimeString().slice(0, 5),
-                    status: newAppointment.status,
-                    description: newAppointment.problem_description,
+                    status: validateInput(newAppointment.status),
+                    description: validateInput(newAppointment.problem_description),
                     createdAt: newAppointment.created_at
                 };
 
@@ -301,16 +339,19 @@ class AppointmentController {
         } catch (error) {
             console.error('Error in createAppointmentWithBody:', error);
             console.error('Error stack:', error.stack);
-            sendError(res, 500, 'Error creating appointment: ' + error.message);
+            sendError(res, 500, 'Error creating appointment: ' + validateInput(error.message));
         }
     }
 
-    /**
-     * PUT /api/appointments/:id - updates appointment status (original method)
-     */
     static async updateAppointment(req, res, appointmentId) {
         try {
+            setSecurityHeaders(res);
             console.log('Updating appointment:', appointmentId);
+
+            const validAppointmentId = validateInteger(appointmentId, 1);
+            if (!validAppointmentId) {
+                return sendError(res, 400, 'Invalid appointment ID');
+            }
 
             const body = await getRequestBody(req);
             const authHeader = req.headers.authorization;
@@ -320,15 +361,13 @@ class AppointmentController {
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
-            const { status } = body;
+            const status = validateInput(body.status);
 
-            //only cancelling available for clients
             if (status !== 'cancelled') {
                 return sendError(res, 400, 'You can only cancel the appointment');
             }
 
-            //checks if appointment belongs to client
-            const appointment = await AppointmentModel.getAppointmentById(appointmentId, userId);
+            const appointment = await AppointmentModel.getAppointmentById(validAppointmentId, userId);
 
             if (!appointment) {
                 return sendError(res, 404, 'Appointment not found');
@@ -341,20 +380,17 @@ class AppointmentController {
             try {
                 await client.query('BEGIN');
 
-                //updates appointment status
-                const updatedAppointment = await AppointmentModel.updateAppointmentStatus(appointmentId, 'cancelled');
+                const updatedAppointment = await AppointmentModel.updateAppointmentStatus(validAppointmentId, 'cancelled');
 
-                //updates calendar
                 const appointmentDateTime = updatedAppointment.appointment_date;
                 const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
                 const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 5);
 
                 await CalendarModel.updateSlotAppointments(appointmentDateStr, appointmentTimeStr, -1);
 
-                //add to appointment history
                 await AppointmentModel.addAppointmentHistory(
                     client,
-                    appointmentId,
+                    validAppointmentId,
                     userId,
                     'cancelled',
                     'cancelled',
@@ -375,16 +411,19 @@ class AppointmentController {
 
         } catch (error) {
             console.error('Error in updateAppointment:', error);
-            sendError(res, 500, 'Error updating appointment: ' + error.message);
+            sendError(res, 500, 'Error updating appointment: ' + validateInput(error.message));
         }
     }
 
-    /**
-     * PUT /api/appointments/:id - updates appointment status (with body already extracted)
-     */
     static async updateAppointmentWithBody(req, res, appointmentId, body) {
         try {
+            setSecurityHeaders(res);
             console.log('Updating appointment with extracted body:', appointmentId);
+
+            const validAppointmentId = validateInteger(appointmentId, 1);
+            if (!validAppointmentId) {
+                return sendError(res, 400, 'Invalid appointment ID');
+            }
 
             const authHeader = req.headers.authorization;
             const userId = getUserIdFromToken(authHeader);
@@ -393,15 +432,13 @@ class AppointmentController {
                 return sendError(res, 401, 'Invalid or missing token');
             }
 
-            const { status } = body;
+            const status = validateInput(body.status);
 
-            //only cancelling available for clients
             if (status !== 'cancelled') {
                 return sendError(res, 400, 'You can only cancel the appointment');
             }
 
-            //checks if appointment belongs to client
-            const appointment = await AppointmentModel.getAppointmentById(appointmentId, userId);
+            const appointment = await AppointmentModel.getAppointmentById(validAppointmentId, userId);
 
             if (!appointment) {
                 return sendError(res, 404, 'Appointment not found');
@@ -414,20 +451,17 @@ class AppointmentController {
             try {
                 await client.query('BEGIN');
 
-                //updates appointment status
-                const updatedAppointment = await AppointmentModel.updateAppointmentStatus(appointmentId, 'cancelled');
+                const updatedAppointment = await AppointmentModel.updateAppointmentStatus(validAppointmentId, 'cancelled');
 
-                //updates calendar
                 const appointmentDateTime = updatedAppointment.appointment_date;
                 const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
                 const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 5);
 
                 await CalendarModel.updateSlotAppointments(appointmentDateStr, appointmentTimeStr, -1);
 
-                //add to appointment history
                 await AppointmentModel.addAppointmentHistory(
                     client,
-                    appointmentId,
+                    validAppointmentId,
                     userId,
                     'cancelled',
                     'cancelled',
@@ -448,20 +482,26 @@ class AppointmentController {
 
         } catch (error) {
             console.error('Error in updateAppointmentWithBody:', error);
-            sendError(res, 500, 'Error updating appointment: ' + error.message);
+            sendError(res, 500, 'Error updating appointment: ' + validateInput(error.message));
         }
     }
 
-    /**
-     * validating appointment dates
-     */
     static validateAppointmentData(date, time, description) {
         if (!date || !time || !description) {
             throw new Error('Date, hour and description are required');
         }
 
-        if (description.trim().length < 10) {
+        const cleanDescription = description.trim();
+        if (cleanDescription.length < 10) {
             throw new Error('Description should be at least 10 characters long');
+        }
+
+        if (cleanDescription.length > 2000) {
+            throw new Error('Description too long (max 2000 characters)');
+        }
+
+        if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanDescription)) {
+            throw new Error('Invalid description content');
         }
     }
 
@@ -473,16 +513,35 @@ class AppointmentController {
         const dateStr = String(date).trim();
         const timeStr = String(time).trim();
 
-        //validates date format
+        if (dateStr.length > 10 || timeStr.length > 8) {
+            throw new Error('Date or time format too long');
+        }
+
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(dateStr)) {
             throw new Error(`Invalid data format: ${dateStr}. Use YYYY-MM-DD`);
         }
 
-        //validates time format (HH:MM sau HH:MM:SS)
         const timeRegex = /^\d{2}:\d{2}(:\d{2})?$/;
         if (!timeRegex.test(timeStr)) {
             throw new Error(`Time format invalid: ${timeStr}. Use HH:MM sau HH:MM:SS`);
+        }
+
+        const dateParts = dateStr.split('-').map(num => parseInt(num));
+        const year = dateParts[0];
+        const month = dateParts[1];
+        const day = dateParts[2];
+
+        if (year < 2020 || year > 2030 || month < 1 || month > 12 || day < 1 || day > 31) {
+            throw new Error('Invalid date values');
+        }
+
+        const timeParts = timeStr.split(':').map(num => parseInt(num));
+        const hour = timeParts[0];
+        const minute = timeParts[1];
+
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+            throw new Error('Invalid time values');
         }
 
         const fullTimeStr = timeStr.includes(':') && timeStr.split(':').length === 2
@@ -499,24 +558,25 @@ class AppointmentController {
         return appointmentDateTime;
     }
 
-    /**
-     * Validare reguli business pentru programare
-     */
     static async validateAppointmentRules(userId, appointmentDateTime, date, time) {
-        //checks if date is not in the past
         const now = new Date();
+        const maxFutureDate = new Date();
+        maxFutureDate.setFullYear(maxFutureDate.getFullYear() + 1);
+
         if (appointmentDateTime <= now) {
             throw new Error('Date and hour of the appointment should be in the future');
         }
 
-        //checks if user doesn't have another appointment at the same time
+        if (appointmentDateTime > maxFutureDate) {
+            throw new Error('Appointment cannot be scheduled more than 1 year in advance');
+        }
+
         const hasExistingAppointment = await AppointmentModel.checkExistingAppointment(userId, appointmentDateTime);
 
         if (hasExistingAppointment) {
             throw new Error('You already have an appointment at this hour!');
         }
 
-        //checks availability in calendar
         await AppointmentController.ensureSlotsExistForDate(date);
         const slot = await CalendarModel.getSlotByDateTime(date, time);
 
@@ -533,15 +593,14 @@ class AppointmentController {
         }
     }
 
-    /**
-     * checks possibility of cancellation
-     */
     static validateCancellation(appointment) {
-        if (appointment.status === 'cancelled') {
+        const validStatus = validateStatus(appointment.status);
+
+        if (validStatus === 'cancelled') {
             throw new Error('Appointment already cancelled');
         }
 
-        if (appointment.status === 'completed') {
+        if (validStatus === 'completed') {
             throw new Error('You can not cancel a completed appointment');
         }
 
@@ -555,9 +614,6 @@ class AppointmentController {
         }
     }
 
-    /**
-     * creates slots for a date if they don't exist
-     */
     static async ensureSlotsExistForDate(date) {
         const existingCount = await CalendarModel.getSlotsCountForDate(date);
 
@@ -565,7 +621,6 @@ class AppointmentController {
             return;
         }
 
-        //checks if it is weekend
         const requestedDate = new Date(date);
         const dayOfWeek = requestedDate.getDay();
 
@@ -573,7 +628,6 @@ class AppointmentController {
             return;
         }
 
-        //creates slots
         const workingHours = [
             { start: '08:00:00', end: '09:00:00', maxAppointments: 2 },
             { start: '09:00:00', end: '10:00:00', maxAppointments: 2 },

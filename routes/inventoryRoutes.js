@@ -2,9 +2,39 @@ const url = require('url');
 const InventoryController = require('../controllers/inventoryController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
 
+// Security headers helper function
+function getSecurityHeaders() {
+    return {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        // CSP allowing external fonts and styles
+        'Content-Security-Policy': [
+            "default-src 'self'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+            "script-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: https:",
+            "connect-src 'self'"
+        ].join('; '),
+        // Security headers
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'X-XSS-Protection': '1; mode=block'
+    };
+}
+
 function sendJSON(res, statusCode, data) {
-    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.writeHead(statusCode, {
+        'Content-Type': 'application/json',
+        ...getSecurityHeaders()
+    });
     res.end(JSON.stringify(data));
+}
+
+function sendHTML(res, statusCode, html) {
+    res.writeHead(statusCode, getSecurityHeaders());
+    res.end(html);
 }
 
 const runMiddleware = (req, res, fn) => {
@@ -94,7 +124,12 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getPartById(req, res);
         }
 
-
+        // PUT /inventory/api/parts/:id/stock - Update part stock
+        if (path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/) && method === 'PUT') {
+            const matches = path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/);
+            req.params = { id: matches[1] };
+            return InventoryController.updatePartStock(req, res);
+        }
 
         // DELETE /inventory/api/parts/:id - Delete part
         if (path.match(/^\/inventory\/api\/parts\/(\d+)$/) && method === 'DELETE') {
@@ -102,7 +137,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             req.params = { id: matches[1] };
             return InventoryController.deletePart(req, res);
         }
-
 
         return sendJSON(res, 404, {
             success: false,
@@ -129,13 +163,7 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
                 }
 
                 const html = fs.readFileSync(inventoryDashboardPath, 'utf8');
-
-                res.writeHead(200, {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-cache'
-                });
-                res.end(html);
-                return;
+                return sendHTML(res, 200, html);
             } catch (error) {
                 return sendJSON(res, 500, {
                     success: false,
@@ -159,13 +187,7 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
                 }
 
                 const html = fs.readFileSync(partsPagePath, 'utf8');
-
-                res.writeHead(200, {
-                    'Content-Type': 'text/html; charset=utf-8',
-                    'Cache-Control': 'no-cache'
-                });
-                res.end(html);
-                return;
+                return sendHTML(res, 200, html);
             } catch (error) {
                 return sendJSON(res, 500, {
                     success: false,
@@ -174,7 +196,6 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
             }
         }
     }
-
 
     // Serve static files for inventory (CSS, JS, images)
     if (path.startsWith('/css/') || path.startsWith('/js/')) {
@@ -230,15 +251,31 @@ const serveStaticFile = (req, res, path) => {
 
         const contentType = contentTypes[ext] || 'application/octet-stream';
 
+        // Add security headers for static files too
+        const staticHeaders = {
+            'Content-Type': contentType,
+            'Content-Length': stat.size,
+            'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+            'X-Content-Type-Options': 'nosniff'
+        };
+
+        // Add CSP for HTML files
+        if (ext === '.html') {
+            staticHeaders['Content-Security-Policy'] = [
+                "default-src 'self'",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+                "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
+                "script-src 'self' 'unsafe-inline'",
+                "img-src 'self' data: https:",
+                "connect-src 'self'"
+            ].join('; ');
+            staticHeaders['X-Frame-Options'] = 'DENY';
+        }
+
         // Read and serve file
         const fileContent = fs.readFileSync(fullPath);
 
-        res.writeHead(200, {
-            'Content-Type': contentType,
-            'Content-Length': stat.size,
-            'Cache-Control': 'public, max-age=3600' // Cache for 1 hour
-        });
-
+        res.writeHead(200, staticHeaders);
         res.end(fileContent);
 
     } catch (error) {

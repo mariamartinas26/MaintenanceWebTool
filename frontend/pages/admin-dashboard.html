@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Repair Queens</title>
+
+    <!-- Security Headers (only CSP and Referrer Policy work in meta tags) -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline';
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self';">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/admin-dashboard.css">
 </head>
@@ -169,6 +180,7 @@
     </div>
 </div>
 
+<script src="../js/security-utils.js"></script>
 <script src="../js/admin-dashboard.js"></script>
 </body>
 </html>

@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Dashboard - Repair Queens</title>
+
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline';
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+                   font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self';">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/inventory-dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -28,10 +39,6 @@
                 <li><a href="/suppliers" id="providers-link">
                     <span class="icon"></span>
                     <span>Suppliers</span>
-                </a></li>
-                <li><a href="#" id="export-link">
-                    <span class="icon"></span>
-                    <span>Export Data</span>
                 </a></li>
             </ul>
         </nav>
@@ -108,12 +115,6 @@
                         <h3>Search Parts</h3>
                         <p>Find and manage existing parts</p>
                     </a>
-
-                    <div class="action-card" onclick="showStockUpdateModal()">
-                        <i class="fas fa-warehouse"></i>
-                        <h3>Update Stock</h3>
-                        <p>Quick stock adjustments</p>
-                    </div>
                 </div>
             </section>
 
@@ -123,63 +124,10 @@
                     <h2>Parts by Category</h2>
                 </div>
                 <div class="categories-grid" id="categoriesGrid">
-                    <div class="loading">Loading categories...</div>
                 </div>
             </section>
         </div>
     </main>
-</div>
-
-<!-- Stock Update Modal -->
-<div id="stockUpdateModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-warehouse"></i> Quick Stock Update</h3>
-            <span class="modal-close" onclick="hideStockUpdateModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="stockUpdateForm">
-                <div class="form-group">
-                    <label for="partSearch">Search Part:</label>
-                    <input type="text" id="partSearch" placeholder="Search by name or part number..." onkeyup="searchPartsForStock()">
-                    <div id="partSearchResults" class="search-results"></div>
-                </div>
-
-                <div id="selectedPartInfo" class="selected-part" style="display: none;">
-                    <h4 id="selectedPartName">Part Name</h4>
-                    <p>Current Stock: <span id="currentStock"></span></p>
-                    <p>Minimum Level: <span id="minLevel"></span></p>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="stockOperation">Operation:</label>
-                        <select id="stockOperation" required>
-                            <option value="">Select operation</option>
-                            <option value="add">Add Stock</option>
-                            <option value="subtract">Remove Stock</option>
-                            <option value="set">Set Exact Amount</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="stockQuantity">Quantity:</label>
-                        <input type="number" id="stockQuantity" min="1" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="stockReason">Reason (optional):</label>
-                    <input type="text" id="stockReason" placeholder="e.g., Received shipment, Used for repair...">
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="hideStockUpdateModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Update Stock</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <div id="loadingOverlay" class="loading-overlay">
@@ -189,44 +137,7 @@
     </div>
 </div>
 
+<script src="/js/security-utils.js"></script>
 <script src="/js/inventory-dashboard.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const providersLink = document.getElementById('providers-link');
-        if (providersLink) {
-            providersLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = '/suppliers';
-            });
-        }
-
-        const ordersLink = document.getElementById('orders-link');
-        if (ordersLink) {
-            ordersLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = '/suppliers#orders';
-            });
-        }
-
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function() {
-                logout();
-            });
-        }
-
-        const currentPath = window.location.pathname;
-        const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
-
-        sidebarLinks.forEach(link => {
-            const linkPath = new URL(link.href).pathname;
-            if (currentPath === linkPath) {
-                link.parentElement.classList.add('active');
-            } else {
-                link.parentElement.classList.remove('active');
-            }
-        });
-    });
-</script>
 </body>
 </html>

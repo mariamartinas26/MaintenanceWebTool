@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- REMOVED: CSP and X-Frame-Options meta tags - these are handled by server headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <title>Parts Management - Repair Queens</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/inventory-parts.css">
@@ -27,10 +29,6 @@
                 <li><a href="/suppliers" id="providers-link">
                     <span class="icon"></span>
                     <span>Suppliers</span>
-                </a></li>
-                <li><a href="#" id="export-link">
-                    <span class="icon"></span>
-                    <span>Export Data</span>
                 </a></li>
             </ul>
         </nav>
@@ -64,10 +62,6 @@
                 <h2 class="sr-only">Filter Options</h2>
                 <div class="filters-container">
                     <div class="filters-group">
-                        <select id="categoryFilter">
-                            <option value="all">All Categories</option>
-                        </select>
-
                         <select id="stockFilter">
                             <option value="in-stock">In Stock</option>
                             <option value="low-stock">Low Stock</option>
@@ -80,7 +74,6 @@
             <section class="parts-section">
                 <h2 class="sr-only">Parts Inventory</h2>
                 <div id="partsContainer" class="parts-grid">
-                    <div class="loading">Loading parts...</div>
                 </div>
 
                 <div id="pagination" class="pagination" style="display: none;">
@@ -175,13 +168,7 @@
     </div>
 </div>
 
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-spinner">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>Loading...</p>
-    </div>
-</div>
-
+<script src="/js/security-utils.js"></script>
 <script src="/js/inventory-parts.js"></script>
 </body>
 </html>
