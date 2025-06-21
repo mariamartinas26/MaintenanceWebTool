@@ -3,6 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Security Headers - Doar cele care functioneaza prin meta tags -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline';
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self';">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+
     <title>Manager Dashboard - Repair Queens</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/manager-dashboard.css">
@@ -46,9 +57,9 @@
         </div>
 
         <div class="request-actions">
-            <button class="action-btn view-btn">View Details</button>
-            <button class="action-btn approve-btn">Approve</button>
-            <button class="action-btn reject-btn">Reject</button>
+            <button type="button" class="action-btn view-btn">View Details</button>
+            <button type="button" class="action-btn approve-btn">Approve</button>
+            <button type="button" class="action-btn reject-btn">Reject</button>
         </div>
     </div>
 </template>
@@ -113,7 +124,6 @@
     </div>
 </template>
 
-
 <body>
 <div class="manager-container">
     <!-- Header -->
@@ -138,7 +148,7 @@
                 </div>
             </div>
             <div class="manager-actions">
-                <button class="logout-btn" id="logout-btn">Logout</button>
+                <button type="button" class="logout-btn" id="logout-btn">Logout</button>
             </div>
         </div>
     </header>
@@ -152,11 +162,11 @@
 </div>
 
 <!-- View Request Modal -->
-<div class="modal" id="view-request-modal">
+<div class="modal" id="view-request-modal" role="dialog" aria-labelledby="view-modal-title" aria-hidden="true">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Request Details</h2>
-            <button class="close-modal">&times;</button>
+            <h2 id="view-modal-title">Request Details</h2>
+            <button type="button" class="close-modal" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body" id="request-details">
             <!--si aici detaliile requestului -->
@@ -165,59 +175,83 @@
 </div>
 
 <!-- Approve Request Modal -->
-<div class="modal" id="approve-request-modal">
+<div class="modal" id="approve-request-modal" role="dialog" aria-labelledby="approve-modal-title" aria-hidden="true">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Approve Request</h2>
-            <button class="close-modal">&times;</button>
+            <h2 id="approve-modal-title">Approve Request</h2>
+            <button type="button" class="close-modal" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="form-group">
-                <label for="assign-role">Assign Role *</label>
-                <select id="assign-role" required>
-                    <option value="">Select a role</option>
-                    <option value="client">Client</option>
-                    <option value="admin">Admin</option>
-                    <option value="accountant">Accountant</option>
-                </select>
-                <small class="field-hint">Choose the role for this user (may be different from requested role)</small>
-            </div>
-            <div class="form-group">
-                <label for="approve-message">Welcome Message (Optional)</label>
-                <textarea id="approve-message" placeholder="Write a welcome message for the new user..."></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="cancel-btn close-modal">Cancel</button>
-                <button class="approve-btn" id="confirm-approve-btn">Approve Request</button>
-            </div>
+            <form id="approve-form" novalidate>
+                <!-- CSRF Token placeholder - should be populated by backend -->
+                <input type="hidden" name="_token" id="csrf-token" value="">
+
+                <div class="form-group">
+                    <label for="assign-role">Assign Role *</label>
+                    <select id="assign-role" name="assigned_role" required aria-describedby="role-hint">
+                        <option value="">Select a role</option>
+                        <option value="client">Client</option>
+                        <option value="admin">Admin</option>
+                        <option value="accountant">Accountant</option>
+                    </select>
+                    <small class="field-hint" id="role-hint">Choose the role for this user (may be different from requested role)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="approve-message">Welcome Message (Optional)</label>
+                    <textarea id="approve-message"
+                              name="manager_message"
+                              rows="4"
+                              maxlength="1000"
+                              placeholder="Write a welcome message for the new user..."></textarea>
+                    <small class="field-hint">Maximum 1000 characters</small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Cancel</button>
+                    <button type="submit" class="approve-btn" id="confirm-approve-btn">Approve Request</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <!-- Reject Request Modal -->
-<div class="modal" id="reject-request-modal">
+<div class="modal" id="reject-request-modal" role="dialog" aria-labelledby="reject-modal-title" aria-hidden="true">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Reject Request</h2>
-            <button class="close-modal">&times;</button>
+            <h2 id="reject-modal-title">Reject Request</h2>
+            <button type="button" class="close-modal" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="form-group">
-                <label>Rejection reason</label>
-                <textarea id="reject-message" placeholder="Explain why the request was rejected..."></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="cancel-btn close-modal">Cancel</button>
-                <button class="reject-btn" id="confirm-reject-btn">Reject Request</button>
-            </div>
+            <form id="reject-form" novalidate>
+                <!-- CSRF Token placeholder - should be populated by backend -->
+                <input type="hidden" name="_token" id="csrf-token-reject" value="">
+
+                <div class="form-group">
+                    <label for="reject-message">Rejection reason *</label>
+                    <textarea id="reject-message"
+                              name="manager_message"
+                              rows="4"
+                              maxlength="1000"
+                              required
+                              placeholder="Explain why the request was rejected..."></textarea>
+                    <small class="field-hint">Required - Maximum 1000 characters</small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn close-modal">Cancel</button>
+                    <button type="submit" class="reject-btn" id="confirm-reject-btn">Reject Request</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <!-- Notification -->
-<div class="notification" id="notification">
+<div class="notification" id="notification" role="alert" aria-live="polite">
     <span id="notification-message"></span>
-    <button class="notification-close" id="notification-close">&times;</button>
+    <button type="button" class="notification-close" id="notification-close" aria-label="Close notification">&times;</button>
 </div>
 
 <script src="/js/manager-dashboard.js"></script>
