@@ -13,10 +13,6 @@ class AdminDashboard {
         return window.SecurityUtils.sanitizeInput(input);
     }
 
-    safeJsonParse(jsonString) {
-        return window.SecurityUtils.safeJsonParse(jsonString);
-    }
-
     sanitizeObject(obj) {
         return window.SecurityUtils.sanitizeObject(obj);
     }
@@ -24,13 +20,6 @@ class AdminDashboard {
     safeSetText(element, text) {
         if (element && text !== null && text !== undefined) {
             element.textContent = String(text);
-        }
-    }
-
-    safeSetHTML(element, html) {
-        if (element && html !== null && html !== undefined) {
-            const sanitized = this.sanitizeInput(String(html));
-            element.innerHTML = sanitized;
         }
     }
 
@@ -138,8 +127,12 @@ class AdminDashboard {
     async loadParts() {
         try {
             const token = localStorage.getItem('token');
-            if (!token) return;
+            if (!token) {
+                console.log('No token found, skipping parts loading');
+                return;
+            }
 
+            console.log('Loading parts from API...');
             const response = await fetch('/admin/api/parts?available_only=true', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -154,20 +147,35 @@ class AdminDashboard {
                 return;
             }
 
-            if (data.success) {
-                this.availableParts = data.parts.map(part => this.sanitizeObject({
-                    id: part.id,
-                    name: part.name,
-                    partNumber: part.part_number,
-                    category: part.category,
-                    price: parseFloat(part.price),
-                    stockQuantity: part.stock_quantity,
-                    description: part.description || '',
-                    supplierName: part.supplier_name || 'Unknown'
-                }));
+            if (data.success && data.parts) {
+
+                this.availableParts = data.parts.map((part, index) => {
+                    const sanitizedPart = this.sanitizeObject({
+                        id: part.id,
+                        name: part.name,
+                        partNumber: part.part_number,
+                        category: part.category,
+                        price: parseFloat(part.price),
+                        stockQuantity: part.stock_quantity,
+                        description: part.description || '',
+                        supplierName: part.supplier_name || 'Unknown'
+                    });
+
+                    if (!sanitizedPart.price || sanitizedPart.price <= 0 || isNaN(sanitizedPart.price)) {
+                        console.warn(`Part ${index} has invalid price:`, sanitizedPart);
+                    }
+
+                    return sanitizedPart;
+                });
+
+                console.log(`Successfully loaded ${this.availableParts.length} parts`);
+            } else {
+                console.error('Failed to load parts:', data);
+                this.availableParts = [];
             }
         } catch (error) {
-            // Silent error handling
+            console.error('Error loading parts:', error);
+            this.availableParts = [];
         }
     }
 
@@ -223,22 +231,39 @@ class AdminDashboard {
     }
 
     addPartToSelection(part) {
-        if (!part || !part.id) return;
+        if (!part || !part.id) {
+            console.error('Invalid part provided to addPartToSelection:', part);
+            return;
+        }
 
-        const existingPart = this.selectedParts.find(p => p.id === part.id);
-        if (existingPart) {
-            existingPart.quantity += 1;
+
+        if (!part.price || part.price <= 0 || isNaN(part.price)) {
+            console.error('Part has invalid price:', part);
+            return;
+        }
+
+        const existingPartIndex = this.selectedParts.findIndex(p => p.id === part.id);
+
+        if (existingPartIndex !== -1) {
+            this.selectedParts[existingPartIndex].quantity += 1;
         } else {
-            this.selectedParts.push(this.sanitizeObject({
+            const newPart = this.sanitizeObject({
                 id: part.id,
                 name: part.name,
                 partNumber: part.partNumber,
                 category: part.category,
-                price: part.price,
+                price: parseFloat(part.price),
                 stockQuantity: part.stockQuantity,
                 description: part.description,
                 quantity: 1
-            }));
+            });
+
+            if (!newPart.price || newPart.price <= 0 || isNaN(newPart.price)) {
+                console.error('Part price became invalid after sanitization:', newPart);
+                return;
+            }
+
+            this.selectedParts.push(newPart);
         }
 
         this.renderSelectedParts();
@@ -735,40 +760,109 @@ class AdminDashboard {
             const appointmentId = formData.get('appointment-id') || document.getElementById('appointment-id').value;
             const status = formData.get('status');
 
+            console.log('=== Frontend Status Update ===');
+            console.log('Appointment ID:', appointmentId);
+            console.log('New Status:', status);
+            console.log('Selected Parts:', this.selectedParts);
+
             const updateData = { status: status };
 
             const adminMessage = document.getElementById('admin-message').value;
-            if (adminMessage.trim()) {
+            if (adminMessage && adminMessage.trim()) {
                 updateData.adminResponse = this.sanitizeInput(adminMessage);
             }
 
             if (status === 'approved') {
-                updateData.estimatedPrice = parseFloat(document.getElementById('estimated-price').value);
-                updateData.warranty = parseInt(document.getElementById('warranty').value);
+                const estimatedPriceInput = document.getElementById('estimated-price');
+                const warrantyInput = document.getElementById('warranty');
 
-                if (!updateData.estimatedPrice || updateData.estimatedPrice <= 0) {
+                const estimatedPrice = parseFloat(estimatedPriceInput.value);
+                const warranty = parseInt(warrantyInput.value);
+
+                if (!estimatedPrice || estimatedPrice <= 0) {
+                    alert('Please enter a valid estimated price');
                     return;
                 }
-                if (!updateData.warranty || updateData.warranty < 0) {
+                if (!warranty || warranty < 0) {
+                    alert('Please enter a valid warranty period');
                     return;
                 }
 
-                if (this.selectedParts.length > 0) {
-                    updateData.selectedParts = this.selectedParts.map(part => ({
-                        partId: part.id,
-                        quantity: part.quantity,
-                        unitPrice: part.price
-                    }));
+                updateData.estimatedPrice = estimatedPrice;
+                updateData.warranty = warranty;
+
+                // Handle selected parts
+                if (this.selectedParts && this.selectedParts.length > 0) {
+                    console.log('Processing selected parts...');
+
+                    // Validate all parts have valid prices
+                    const invalidParts = [];
+                    for (let i = 0; i < this.selectedParts.length; i++) {
+                        const part = this.selectedParts[i];
+                        console.log(`Validating part ${i}:`, part);
+
+                        if (!part.price || part.price <= 0 || isNaN(part.price)) {
+                            invalidParts.push({
+                                index: i,
+                                part: part,
+                                issue: `Invalid price: ${part.price}`
+                            });
+                        }
+
+                        if (!part.quantity || part.quantity <= 0 || isNaN(part.quantity)) {
+                            invalidParts.push({
+                                index: i,
+                                part: part,
+                                issue: `Invalid quantity: ${part.quantity}`
+                            });
+                        }
+
+                        if (!part.id) {
+                            invalidParts.push({
+                                index: i,
+                                part: part,
+                                issue: 'Missing part ID'
+                            });
+                        }
+                    }
+
+                    if (invalidParts.length > 0) {
+                        console.error('Invalid parts found:', invalidParts);
+                        alert('Some selected parts have invalid data. Please check and try again.');
+                        return;
+                    }
+
+                    // Transform parts data for backend
+                    updateData.selectedParts = this.selectedParts.map((part, index) => {
+                        const partData = {
+                            partId: parseInt(part.id),
+                            quantity: parseInt(part.quantity),
+                            unitPrice: parseFloat(part.price)
+                        };
+
+                        console.log(`Transformed part ${index}:`, partData);
+                        return partData;
+                    });
+
+                    console.log('Final parts data to send:', updateData.selectedParts);
+                } else {
+                    console.log('No parts selected');
                 }
             }
 
             if (status === 'rejected') {
-                updateData.rejectionReason = this.sanitizeInput(document.getElementById('rejection-reason').value);
+                const rejectionReasonInput = document.getElementById('rejection-reason');
+                const rejectionReason = rejectionReasonInput.value;
 
-                if (!updateData.rejectionReason || !updateData.rejectionReason.trim()) {
+                if (!rejectionReason || !rejectionReason.trim()) {
+                    alert('Please enter a rejection reason');
                     return;
                 }
+
+                updateData.rejectionReason = this.sanitizeInput(rejectionReason);
             }
+
+            console.log('Final update data:', JSON.stringify(updateData, null, 2));
 
             const response = await fetch(`/admin/api/appointments/${appointmentId}/status`, {
                 method: 'PUT',
@@ -780,6 +874,7 @@ class AdminDashboard {
             });
 
             const data = await response.json();
+            console.log('Server response:', data);
 
             if (response.status === 401) {
                 this.handleAuthError();
@@ -789,10 +884,15 @@ class AdminDashboard {
             if (data.success) {
                 this.closeModal();
                 this.loadAppointments();
+                alert('Appointment status updated successfully');
+            } else {
+                console.error('Update failed:', data);
+                alert('Failed to update appointment: ' + (data.message || 'Unknown error'));
             }
 
         } catch (error) {
-            // Silent error handling
+            console.error('Error in handleStatusUpdate:', error);
+            alert('An error occurred while updating the appointment. Please try again.');
         }
     }
 

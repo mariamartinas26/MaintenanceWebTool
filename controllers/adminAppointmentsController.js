@@ -36,12 +36,9 @@ class AdminAppointmentsController {
         try {
             setSecurityHeaders(res);
 
-            console.log('Getting appointments for admin...');
             const status = validateInput(req.query.status);
             const date_filter = validateInput(req.query.date_filter);
             const search = validateInput(req.query.search);
-
-            console.log('Query params:', { status, date_filter, search });
 
             const filters = {};
             if (status && status !== 'all' && validateStatus(status)) {
@@ -51,9 +48,7 @@ class AdminAppointmentsController {
                 filters.date_filter = date_filter;
             }
 
-            console.log('Filters:', filters);
             const appointments = await AdminAppointment.getAllForAdmin(filters);
-            console.log('Appointments retrieved:', appointments.length);
 
             let formattedAppointments = appointments.map(appointment => ({
                 id: appointment.id,
@@ -249,8 +244,9 @@ class AdminAppointmentsController {
 
                     const sanitizedParts = selectedParts.map(part => ({
                         partId: validateInteger(part.partId, 1),
-                        quantity: validateInteger(part.quantity, 1, 1000)
-                    })).filter(part => part.partId && part.quantity);
+                        quantity: validateInteger(part.quantity, 1, 1000),
+                        unitPrice: validateNumber(part.unitPrice, 0)
+                    })).filter(part => part.partId && part.quantity && part.unitPrice !== null);
 
                     const partValidation = await Part.checkAvailability(sanitizedParts);
                     if (!partValidation.available) {
@@ -312,8 +308,9 @@ class AdminAppointmentsController {
 
             const sanitizedParts = selectedParts.map(part => ({
                 partId: validateInteger(part.partId, 1),
-                quantity: validateInteger(part.quantity, 1, 1000)
-            })).filter(part => part.partId && part.quantity);
+                quantity: validateInteger(part.quantity, 1, 1000),
+                unitPrice: validateNumber(part.unitPrice, 0)
+            })).filter(part => part.partId && part.quantity && part.unitPrice !== null);
 
             const updatedAppointment = await AdminAppointment.updateStatusWithParts(
                 appointmentId,
