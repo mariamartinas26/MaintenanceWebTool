@@ -4,8 +4,16 @@ const bcrypt = require('bcryptjs');
 class AccountRequest {
     static async create(requestData) {
         try {
-            const saltRounds = 12;
-            const hashedPassword = await bcrypt.hash(requestData.password_hash, saltRounds);
+
+            let finalPasswordHash;
+            if (requestData.password_hash) {
+                finalPasswordHash = requestData.password_hash;
+            } else if (requestData.password) {
+                const saltRounds = 12;
+                finalPasswordHash = await bcrypt.hash(requestData.password, saltRounds);
+            } else {
+                throw new Error('Password or password_hash required');
+            }
 
             const query = `
                 INSERT INTO "AccountRequests" (
@@ -17,7 +25,7 @@ class AccountRequest {
 
             const values = [
                 requestData.email,
-                hashedPassword,
+                finalPasswordHash,
                 requestData.first_name,
                 requestData.last_name,
                 requestData.phone,
@@ -99,7 +107,7 @@ class AccountRequest {
                 values.push(additionalData.approved_user_id);
             }
 
-            if (additionalData.assigned_role) {  // ✅ Nou câmp
+            if (additionalData.assigned_role) {
                 paramCount++;
                 query += `, assigned_role = $${paramCount}`;
                 values.push(additionalData.assigned_role);
@@ -155,7 +163,7 @@ class AccountRequest {
                 WHERE status = 'rejected'
                   AND processed_at < NOW() - INTERVAL '${daysOld} days'
             `;
-            const result = await db.query(query);
+            const result = await pool.query(query);
             return result.rowCount;
         } catch (error) {
             console.error('Error deleting old rejected requests:', error);

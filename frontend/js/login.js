@@ -24,7 +24,6 @@ class LoginManager {
     }
 
     init() {
-
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setupElements());
         } else {
@@ -66,7 +65,7 @@ class LoginManager {
             return;
         }
 
-        const email = this.sanitizeInput(emailInput.value.trim());
+        const email = emailInput.value.trim(); // Don't sanitize before sending
         const password = passwordInput.value;
 
         if (!this.validateForm(email, password)) {
@@ -74,6 +73,8 @@ class LoginManager {
         }
 
         try {
+            console.log('Attempting login with:', { email }); // Debug log
+
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -82,16 +83,22 @@ class LoginManager {
                 body: JSON.stringify({ email, password })
             });
 
+            console.log('Response status:', response.status); // Debug log
+
             if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Login error response:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const responseText = await response.text();
+            console.log('Response text:', responseText); // Debug log
 
             let data;
             try {
                 data = JSON.parse(responseText);
             } catch (parseError) {
+                console.error('JSON parse error:', parseError);
                 throw new Error('Invalid JSON response from server');
             }
 
@@ -102,22 +109,28 @@ class LoginManager {
                 this.showMessage(data.message || 'Login failed', 'error');
             }
         } catch (error) {
-            this.showMessage('Network error: ' + this.sanitizeInput(error.message), 'error');
+            console.error('Login error:', error);
+            this.showMessage('Network error: ' + error.message, 'error');
         }
     }
 
     storeAuthData(token, user) {
         try {
+            // Fix: Use the correct field names from backend response
             const sanitizedUser = {
-                ...user,
-                name: user.name ? this.sanitizeInput(user.name) : '',
+                id: user.id,
                 email: user.email ? this.sanitizeInput(user.email) : '',
+                first_name: user.first_name ? this.sanitizeInput(user.first_name) : '',
+                last_name: user.last_name ? this.sanitizeInput(user.last_name) : '',
                 role: user.role ? this.sanitizeInput(user.role) : 'client'
             };
 
-            localStorage.setItem('token', this.sanitizeInput(token));
+            localStorage.setItem('token', token); // Don't sanitize the token
             localStorage.setItem('user', JSON.stringify(sanitizedUser));
+
+            console.log('Auth data stored:', { user: sanitizedUser }); // Debug log
         } catch (error) {
+            console.error('Error saving login data:', error);
             this.showMessage('Error saving login data', 'error');
         }
     }
@@ -132,6 +145,7 @@ class LoginManager {
         };
 
         const route = roleRoutes[user.role] || '/client/dashboard';
+        console.log('Redirecting to:', route); // Debug log
         window.location.href = route;
     }
 
@@ -167,18 +181,13 @@ class LoginManager {
                     const user = JSON.parse(userString);
 
                     if (user && typeof user === 'object' && user.role) {
-                        const sanitizedUser = {
-                            ...user,
-                            name: user.name ? this.sanitizeInput(user.name) : '',
-                            email: user.email ? this.sanitizeInput(user.email) : '',
-                            role: this.sanitizeInput(user.role)
-                        };
-
-                        this.redirectUser(sanitizedUser);
+                        this.redirectUser(user);
                     } else {
-                        throw new Error('Invalid user data structure');
+                        console.log('Invalid user data, clearing auth');
+                        this.clearAuthData();
                     }
                 } catch (parseError) {
+                    console.error('Error parsing stored user data:', parseError);
                     this.clearAuthData();
                 }
             }
@@ -188,7 +197,6 @@ class LoginManager {
     clearAuthData() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        localStorage.clear();
     }
 
     validateEmail(email) {

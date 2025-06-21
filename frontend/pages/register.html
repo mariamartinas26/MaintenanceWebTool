@@ -3,28 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:;">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Register - Repair Queens</title>
     <link rel="stylesheet" href="/css/register.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="register-container">
-    <button class="close-button" id="closeButton">✕</button>
+    <button class="close-button" id="closeButton" type="button" aria-label="Close registration form">✕</button>
     <h1 class="app-title">Register Client</h1>
 
-    <form id="registerForm">
+    <form id="registerForm" novalidate autocomplete="on">
         <div class="form-grid">
-            <input type="text" id="prenume" placeholder="First name" required>
-            <input type="text" id="nume" placeholder="Last name" required>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="tel" id="telefon" placeholder="Phone number (ex: 07xxxxxxxx)" required pattern="^0\d{9}$">
-            <input type="password" id="parola" placeholder="Password" required minlength="6">
+            <input type="text"
+                   id="prenume"
+                   name="first_name"
+                   placeholder="First name"
+                   required
+                   autocomplete="given-name"
+                   maxlength="50"
+                   minlength="2"
+                   spellcheck="false"
+                   aria-label="First name">
+
+            <input type="text"
+                   id="nume"
+                   name="last_name"
+                   placeholder="Last name"
+                   required
+                   autocomplete="family-name"
+                   maxlength="50"
+                   minlength="2"
+                   spellcheck="false"
+                   aria-label="Last name">
+
+            <input type="email"
+                   id="email"
+                   name="email"
+                   placeholder="Email"
+                   required
+                   autocomplete="email"
+                   maxlength="254"
+                   spellcheck="false"
+                   aria-label="Email address">
+
+            <input type="tel"
+                   id="telefon"
+                   name="phone"
+                   placeholder="Phone number (ex: 07xxxxxxxx)"
+                   required
+                   pattern="^0\d{9}$"
+                   autocomplete="tel"
+                   maxlength="10"
+                   minlength="10"
+                   spellcheck="false"
+                   aria-label="Phone number">
+
+            <input type="password"
+                   id="parola"
+                   name="password"
+                   placeholder="Password"
+                   required
+                   minlength="6"
+                   maxlength="128"
+                   autocomplete="new-password"
+                   aria-label="Password">
         </div>
         <button type="submit" class="register-button">Register</button>
-        <p id="mesaj"></p>
+        <p id="mesaj" style="display: none;" role="alert" aria-live="polite"></p>
     </form>
 </div>
 
-<script src="/js/register.js"></script>
+<script src="/js/register.js" defer></script>
 </body>
 </html>
