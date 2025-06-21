@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="schema:accessibilityFeature" content="alternativeText">
+  <meta property="schema:accessibilityFeature" content="MathML">
+  <meta property="schema:accessibilityHazard" content="noFlashingHazard">
+  <meta property="schema:copyrightHolder" content="Martinas Ioana Maria si Sacarescu Rebecca Maria">
+  <title>Maintenance Web Tool - Repair Queens</title>
+  <link rel="stylesheet" href="scholarly.min.css">
+</head>
+<body prefix="schema: http://schema.org">
+<article resource="#" typeof="schema:ScholarlyArticle">
+  <header>
+    <h1 property="schema:name">Maintenance Web Tool - Repair Queens</h1>
+  </header>
+
+  <nav>
+    <h2>Cuprins</h2>
+    <ol>
+      <li><a href="#abstract">Rezumat</a></li>
+      <li><a href="#introduction">Introducere</a></li>
+      <li><a href="#general-description">Descriere generală</a></li>
+      <li><a href="#application-interface">Interfața aplicației</a></li>
+      <li><a href="#system-features">Caracteristicile sistemului</a></li>
+      <li><a href="#non-functional-requirements">Cerințe nefuncționale</a></li>
+      <li><a href="#references">Referințe</a></li>
+    </ol>
+  </nav>
+
+  <div role="contentinfo">
+    <section typeof="sa:AuthorsList">
+      <h2>Autori</h2>
+      <ul>
+        <li typeof="sa:ContributorRole" property="schema:author">
+          <span typeof="schema:Person">
+            <span property="schema:name">Martinas Ioana Maria</span>
+          </span>
+        </li>
+        <li typeof="sa:ContributorRole" property="schema:author">
+          <span typeof="schema:Person">
+            <span property="schema:name">Sacarescu Rebecca Maria</span>
+          </span>
+        </li>
+      </ul>
+    </section>
+  </div>
+
+  <section typeof="sa:Abstract" id="abstract" role="doc-abstract">
+    <h2>1. Rezumat</h2>
+    <p>
+      Proiectul Maintenance Web Tool are ca scop dezvoltarea unui sistem online dedicat gestionării eficiente a programărilor și operațiunilor desfășurate
+      în cadrul unui service pentru motociclete, biciclete și trotinete (electrice sau clasice). Platforma se adresează atât clienților, cât și
+      personalului din service, oferind funcționalități personalizate în funcție de rolul atribuit fiecărui utilizator.
+    </p>
+  </section>
+
+  <section id="introduction" role="doc-introduction">
+    <h2>2. Introducere</h2>
+
+    <h3>2.1 Scop</h3>
+    <p>
+      Scopul aplicației noastre este de a le oferi utilizatorilor posibilitatea de a-și face programări online pentru servicii de reparație,
+      mentenanță sau întreținere a trotinetelor, motocicletelor și bicicletelor într-un mod rapid, simplu și eficient. Aplicația elimină nevoia
+      apelurilor telefonice sau a vizitelor fizice doar pentru a stabili o programare, permițând astfel economisirea timpului și îmbunătățirea experienței clientului.
+      Prin intermediul platformei, utilizatorii pot selecta tipul de vehicul, serviciul dorit și ora preferată pentru programare. După efectuarea unei programări, aceștia
+      pot urmări statusul cererii în cont, iar istoricul programărilor rămâne salvat.
+      Pentru service, aplicația asigură o mai bună organizare a activității, oferind o planificare clară a programărilor, o evidență completă a clienților și a
+      reparațiilor efectuate, precum și o administrare eficientă a resurselor.
+    </p>
+
+    <h3>2.2 Convențiile documentului</h3>
+    <p>
+      Fontul utilizat în acest document este sans-serif, cu dimensiunea 16px.
+      În cazul în care dorim să evidențiem anumite elemente, vom folosi <b>bold</b>.
+      Fiecare punct va fi detaliat în mai multe subpuncte, numerotate sau cu marcatori, în funcție de caz.
+    </p>
+
+    <h3>2.3 Publicul vizat și sugestii de lectură</h3>
+    <p id="p_in_h3">
+      Documentul este destinat următoarelor categorii de utilizatori:
+    </p>
+    <ul>
+      <li><b>Dezvoltatori și testeri:</b> Secțiunile relevante includ 3.1 Perspectiva produsului, 3.2 Funcțiile produsului și 6. Cerințele nefuncționale. Acestea oferă informații despre arhitectură, funcționalități și cerințe tehnice.</li>
+      <li><b>Manageri de proiect:</b> Secțiunile 2.1 Scop, 2.4 Domeniul de aplicare și 5. Caracteristicile sistemului sunt cele mai utile pentru înțelegerea obiectivelor proiectului.</li>
+      <li><b>Utilizatori finali:</b> Pot consulta secțiunea 3.5 Documentația utilizatorului pentru a învăța cum să utilizeze aplicația.</li>
+      <li><b>Scriitori de documentație:</b> Pot consulta 2.2 Convențiile documentului pentru a înțelege stilul, formatul și terminologia utilizată.</li>
+    </ul>
+
+
+    <h3>2.4 Domeniul de aplicare al produsului</h3>
+    <ul>
+      <li> Această aplicație web are ca scop digitalizarea procesului de programare și comunicare între clienți și service, oferind o experiență
+        modernă și eficientă de planificare a lucrărilor de reparație sau întreținere.</li>
+      <li>Clienții pot trimite o solicitare de programare, specificând data și ora dorită și detalii despre defecțiune.</li>
+      <li>Administratorul service-ului poate accepta sau respinge programările. În cazul respingerii, poate adăuga un mesaj explicativ. Dacă solicitarea este acceptată,
+        acesta poate furniza detalii utile, cum ar fi o estimare de preț, termen de execuție și o garanție.</li>
+      <li>Aplicația permite administrarea stocurilor de piese disponibile în service, precum și gestionarea comenzilor trimise către furnizori.
+        Astfel, se asigură o mai bună planificare a resurselor și evitarea întârzierilor în procesul de reparație.</li>
+      <li>Sistemul suportă importul de date în formate CSV și JSON, precum și exportul în formatele CSV, JSON și PDF, a datelor despre furnizori, piese mecanice și programări.</li>
+      <li>Aplicația este dezvoltată ca platformă web și este accesibilă atât de pe desktop, cât și de pe dispozitive mobile, asigurând flexibilitate.</li>
+    </ul>
+  </section>
+
+  <section id="general-description">
+    <h2>3. Descriere generală</h2>
+
+    <h3>3.1 Perspectiva produsului</h3>
+    <p>
+      Perspectiva proiectului este de a dezvolta un instrument web util și ușor de utilizat
+      pentru vizualizarea datelor referitoare la nominalizările actorilor la premiile SAG,
+      oferind utilizatorilor posibilitatea de a explora aceste date în mod flexibil și interactiv.
+    </p>
+    <p>
+      Următoarea diagramă prezintă componentele majore ale sistemului aplicației:
+    </p>
+    <div class="imag">
+      <img src="view/diagram1.png" typeof="sa:image" alt="Diagrama componentelor majore ale sistemului">
+    </div>
+    <ul>
+      <li><b>Frontend</b> - reprezintă partea vizibilă a aplicației pentru utilizator, care include interfața grafică de utilizator (User Interface), dezvoltată cu ajutorul unor tehnologii web precum HTML, CSS și JavaScript.</li>
+      <li><b>API REST/GraphQL</b> - reprezintă partea de interacțiune între frontend și backend, oferind o interfață de programare a aplicației (API) pentru accesul la date și servicii.
+        API-ul poate fi implementat cu ajutorul protocolului REST sau GraphQL.</li>
+      <li><b>Backend</b> - reprezintă partea de procesare și stocare a datelor din aplicație, și include servicii ale aplicației și gestionarea datelor din baze de date.</li>
+      <li><b>Database & Storage</b> - reprezintă componenta de stocare a datelor utilizate de aplicație, care include baze de date relaționale și servicii de stocare în cloud.</li>
+    </ul>
+    <p>
+      Aceste componente colaborează împreună pentru a oferi utilizatorilor un instrument web puternic și flexibil de vizualizare a datelor.
+    </p>
+
+    <h3>3.2 Funcțiile produsului</h3>
+    <p>
+      Utilizatorul poate accesa paginile Statistics, News, Nominations și Register:
+    </p>
+    <div class="imag">
+      <img class="uml" src="view/umldiagramsag.png" typeof="sa:image" alt="Diagrama UML a paginilor aplicației (SAG Awards)">
+    </div>
+    <p>
+      În cadrul acestora, ne vom folosi de două baze de date pentru preluarea datelor despre actori, filme și
+      nominalizările lor (SAG Awards și TheMovieDB) și o bază de date pentru memorarea utilizatorilor:
+    </p>
+    <div class="imag">
+      <img class="uml" src="view/databaseUml.png" typeof="sa:image" alt="Diagrama UML a bazelor de date">
+    </div>
+
+    <h3>3.3 Clasele și caracteristicile utilizatorilor</h3>
+    <p>
+      Aplicația este utilizată de mai multe categorii de utilizatori, fiecare având roluri și permisiuni specifice în cadrul platformei:
+    </p>
+    <ul>
+      <li><b>Client</b> – Poate crea un cont, adăuga vehicule personale (motociclete, trotinete sau biciclete – electrice sau nu) și poate realiza programări pentru acestea.
+        Programările pot fi efectuate în intervalul luni-vineri, în limita a trei locuri disponibile pe fiecare interval disponibil. Clientul poate urmări statusul programării din contul lui.
+        În cazul aprobării, va primi un mesaj cu detalii, un preț estimativ și o garanție a serviciului.</li>
+      <li><b>Administrator</b> – Are acces la toate cererile de programare, împreună cu detaliile vehiculului și problema raportată.
+        Administratorul poate aproba o programare, caz în care trebuie să introducă un preț estimativ, o garanție și să asocieze piese mecanice necesare reparației.
+        Alternativ, poate respinge o programare oferind un mesaj explicativ. De asemenea, are acces la gestiunea inventarului: poate vizualiza toate piesele, comanda
+        altele noi și actualiza statusul comenzilor (In transit, Delivered, Cancelled).</li>
+      <li><b>Contabil</b> – Poate vizualiza și gestiona furnizorii cu care colaborează service-ul, având posibilitatea de a adăuga furnizori noi. Dispune
+        de funcționalități de import și export de date în diverse formate (CSV, JSON pentru import; PDF, CSV, JSON pentru export). Poate importa/exporta informații
+        legate de furnizori, piese mecanice și programări.</li>
+      <li><b>Manager</b> – Este responsabil de aprobarea conturilor de utilizatori noi. După aprobare, oferă fiecărui utilizator un rol
+        specific (client, administrator, contabil) în funcție de scopul și atribuțiile acestuia în cadrul aplicației.</li>
+    </ul>
+
+    <h3>3.4 Constrângeri de proiectare și implementare</h3>
+    <p>
+      Constrângerile de proiectare și implementare pentru aplicația web de programare și gestionare a serviciilor de întreținere și reparații pentru trotinete, scutere și biciclete sunt următoarele:
+    </p>
+    <ul>
+      <li><b>Limitări hardware și performanță</b>: Serverul trebuie să asigure o capacitate suficientă pentru a gestiona conexiunile multiple simultane,
+        mai ales în intervalele orare de vârf, și să ofere timpi de răspuns optimi.</li>
+      <li><b>Interfețe și interoperabilitate</b>: Aplicația trebuie să permită importul și exportul datelor în formatele CSV, JSON și PDF.</li>
+      <li><b>Tehnologii și instrumente utilizate</b>: Proiectul utilizează Node.js pentru backend, PostgreSQL pentru gestionarea bazei de date, iar frontend-ul
+        este realizat cu HTML, CSS și JavaScript. Alegerea acestor tehnologii implică o structură modulară și orientată pe REST API.</li>
+      <li><b>Securitate și protecția datelor</b>: Aplicația implementează mai multe măsuri pentru a asigura securitatea datelor și a utilizatorilor:
+        <ul>
+          <li>Prevenirea atacurilor de tip SQL Injection prin utilizarea de query-uri parametrizate în interacțiunea cu PostgreSQL.</li>
+          <li>Protecție împotriva atacurilor de tip Cross-Site Scripting (XSS) prin validarea și igienizarea datelor introduse de utilizatori.</li>
+          <li>Autentificare și autorizare bazate pe JSON Web Tokens (JWT), care permit gestionarea sigură a sesiunilor și a drepturilor pe baza rolurilor definite (client, administrator, contabil, manager).</li>
+          <li>Parolele sunt criptate folosind algoritmi siguri înainte de a fi stocate în baza de date.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>3.5 Documentația utilizatorului</h3>
+    <p>
+      La accesarea aplicației, utilizatorul este întâmpinat cu o pagină principală unde poate naviga spre autentificare sau înregistrare.
+      Pentru a utiliza funcționalitățile aplicației, este necesar ca fiecare utilizator să își creeze un cont.
+    </p>
+    <ul>
+      <li><b>Crearea contului:</b> Utilizatorul accesează formularul de înregistrare, completează datele cerute, iar cererea este trimisă spre aprobare de către
+        manager. După aprobarea contului și atribuirea unui rol, utilizatorul poate accesa funcționalitățile corespunzătoare.</li>
+      <li><b>Clientul:</b> După autentificare, clientul poate:
+        <ul>
+          <li>Adăuga un nou vehicul (bicicletă, trotinetă, motocicletă – electrice sau nu);</li>
+          <li>Vizualiza lista vehiculelor sale și alege unul pentru a crea o programare în zilele lucrătoare;</li>
+          <li>Vizualiza statusul programării sale (în așteptare, aprobată sau respinsă);</li>
+          <li>Dacă programarea este aprobată, clientul va putea vedea un mesaj din partea administratorului cu detalii despre reparație și prețul estimativ.</li>
+        </ul>
+      </li>
+      <li><b>Administratorul:</b> După autentificare, administratorul poate:
+        <ul>
+          <li>Vizualiza toate cererile de programare primite de la clienți, împreună cu detaliile fiecărei cereri;</li>
+          <li>Aproba sau respinge programări. La aprobare, trebuie să introducă un preț estimativ, o garanție și piesele necesare reparației;</li>
+          <li>Gestiona inventarul de piese mecanice, vizualizând stocurile curente și comandând piese noi;</li>
+          <li>Actualiza statusul comenzilor de piese (In transit, Delivered, Cancelled).</li>
+        </ul>
+      </li>
+      <li><b>Contabilul:</b> După autentificare, contabilul poate:
+        <ul>
+          <li>Vizualiza lista furnizorilor actuali ai service-ului;</li>
+          <li>Adăuga furnizori noi în sistem;</li>
+          <li>Importa și exporta date în formatele CSV, JSON și PDF referitoare la furnizori, piese mecanice și programări.</li>
+        </ul>
+      </li>
+      <li><b>Managerul:</b> După autentificare, managerul poate:
+        <ul>
+          <li>Vizualiza toate cererile de creare de cont;</li>
+          <li>Aproba sau respinge cererile și atribui rolul corespunzător fiecărui utilizator (client, admin, contabil).</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section id="application-interface">
+    <h2>4. Interfața aplicației</h2>
+
+    <h3>4.1 Interfața cu utilizatorul</h3>
+    <p>
+      Interacțiunile și interfața utilizatorului pentru proiectul FireStream pentru vizualizare a datelor nominalizărilor actorilor la SAG Awards ar putea fi următoarele:
+    </p>
+    <ul>
+      <li>
+        <h4>Pagina "Home"</h4>
+        <div class="interface">
+          <img src="view/index.png" typeof="sa:image" alt="Captură de ecran: Pagina Home a aplicației">
+          <img src="view/header.png" typeof="sa:image" alt="Captură de ecran: Antetul aplicației">
+        </div>
+      </li>
+      <li>
+        <h4>Pagina "Statistics"</h4>
+        <ul>
+          <li>Ecranul principal trebuie să afișeze diverse statistici despre popularitatea actorilor, evoluția / involuția
+            unor actori în funcție de producțiile de film în care au jucat și impactul acestora asupra publicului larg.</li>
+          <li><i>Grafice și diagrame</i>: Utilizatorul va putea alege dintr-o varietate de grafice și diagrame pentru a
+            vizualiza datele. Acestea pot include grafice de bare, diagrame circulare, grafice de linie etc.</li>
+          <li><i>Tabeluri</i>: Utilizatorul va putea vizualiza datele sub formă de tabel și va avea opțiunea de a sorta
+            datele în funcție de diferite coloane.</li>
+          <li><i>Filtrare și sortare</i>: Utilizatorul va putea folosi diverse filtre pentru a personaliza vizualizarea
+            datelor. De exemplu, utilizatorul poate filtra nominalizările după an, categorie, gen, producător etc. De
+            asemenea, utilizatorul va avea opțiunea de a sorta nominalizările în funcție de diferite criterii, cum ar
+            fi numărul de nominalizări, numărul de premii câștigate etc.</li>
+          <li>Pentru exportul statisticilor, utilizatorul va avea 3 formate diferite pentru a exporta fișierul în
+            formatele <i>CSV</i>, <i>WebP</i> sau <i>SVG</i>, astfel încât acestea să poată fi utilizate în alte aplicații.</li>
+        </ul>
+        <div class="interface">
+          <img src="view/statistics.png" typeof="sa:image" alt="Captură de ecran: Pagina Statistics a aplicației">
+        </div>
+      </li>
+      <li>
+        <h4>Pagina "Nominations"</h4>
+        <ul>
+          <li>Pe ecranul principal ar trebui să existe un meniu pentru a naviga prin categoriile de nominalizări, cum
+            ar fi cel mai bun actor sau cea mai bună actriță în rol principal, etc. În plus, trebuie să existe un mod
+            de căutare pentru a găsi nominalizările specifice.</li>
+          <li>După selectarea unei nominalizări, utilizatorul ar trebui să poată vedea informații detaliate despre actor
+            sau producția cinematografică, precum și posibilitatea de a accesa știri referitoare la această nominalizare.
+            De asemenea, ar trebui să fie disponibilă o opțiune pentru a filtra informațiile după diverse criterii, cum ar
+            fi anul sau studio-ul.</li>
+          <li>Selectarea unei nominalizări pentru a accesa pagina dedicată acelei nominalizări, unde utilizatorul poate
+            vedea mai multe detalii despre actor, producție și nominalizare.</li>
+        </ul>
+        <div class="interface">
+          <img src="view/nominations-1.png" typeof="sa:image" alt="Captură de ecran: Pagina Nominations - vedere generală">
+          <img src="view/nominations-2.png" typeof="sa:image" alt="Captură de ecran: Pagina Nominations - detalii nominalizare">
+        </div>
+      </li>
+      <li>
+        <h4>Pagina "News"</h4>
+        <ul>
+          <li>Căutarea de știri: utilizatorul poate introduce un nume de nominalizat în câmpul de căutare și apăsa
+            butonul de căutare pentru a căuta știrile care conțin numele respectivului nominalizat.</li>
+          <li>Sortarea știrilor după data publicării sau popularitate: utilizatorul poate alege opțiunea de sortare și
+            paginile de știri se vor reîncărca pentru a reflecta sortarea aleasă.</li>
+          <li>Vizualizarea detaliilor știrii: utilizatorul poate da click pe titlul știrii pentru a vedea detalii
+            suplimentare despre știre.</li>
+        </ul>
+        <div class="interface">
+          <img src="view/news1.png" typeof="sa:image" alt="Captură de ecran: Pagina News a aplicației">
+        </div>
+      </li>
+      <li><p>Un buton "<i>Ajutor</i>" va fi disponibil pe fiecare pagină, cu informații despre utilizarea aplicației și cu răspunsuri la întrebări frecvente.</p></li>
+    </ul>
+
+    <h3>4.2 Interfața hardware</h3>
+    <p>
+      Următoarele tipuri de dispozitive vor fi acceptate de proiectul Maintenance Web Tool:
+    </p>
+    <ul>
+      <li><b>Laptop-uri și desktop-uri</b></li>
+      <li><b>Tablete și telefoane mobile</b></li>
+    </ul>
+
+    <h3>4.3 Interfața software</h3>
+    <p>
+      Interfețele software ale proiectului sunt:
+    </p>
+    <ul>
+      <li><b>API-ul REST/GraphQL propriu dezvoltat</b>: Acesta va fi folosit pentru a prelua și trimite date între server
+        și client referitoare la nominalizările actorilor și filmelor la SAG Awards. Acesta va avea definiții clare pentru
+        endpoint-uri, verbe HTTP și tipuri de date acceptate și returnate.</li>
+      <li><b>API-ul REST/GraphQL</b>: Acesta va fi folosit pentru a prelua și controla datele referitoare la redarea
+        știriilor privitoare la fiecare nominalizat în parte la SAG Awards. Acesta va avea definiții clare pentru
+        endpoint-uri, verbe HTTP și tipuri de date acceptate și returnate.</li>
+      <li><b>API-ul TMDb (The Movie Database)</b>: Acesta va fi folosit pentru a prelua informații suplimentare despre
+        actori și producții cinematografice, care vor fi afișate pe site-ul web. Interacțiunea cu acest API va implica
+        cereri HTTP (de ex. GET) pentru a prelua datele necesare și procesarea răspunsurilor API.</li>
+      <li><b>Baza de date pentru datele utilizatorilor</b>: Aceasta va fi folosită pentru stocarea datelor utilizatorilor,
+        cum ar fi informațiile de autentificare, preferințele utilizatorilor. Această interfață software va implica conexiunea
+        cu o bază de date, definirea schemelor și operații CRUD (Create, Read, Update, Delete).</li>
+      <li><b>Sistemele de operare și bibliotecile utilizate</b>: Acestea vor fi folosite pentru a asigura funcționarea
+        corectă a aplicației pe diferite platforme. De exemplu Node.js va fi folosit pentru a implementa serverul web.</li>
+      <li><b>Protocoale de comunicare</b>: Aplicația va utiliza protocoale de comunicare standard, cum ar fi HTTPS, pentru
+        a comunica cu API-urile și cu baza de date.</li>
+    </ul>
+
+    <h3>4.4 Interfața de comunicații</h3>
+    <p>
+      Interfața de comunicare asociată proiectului include o serie de funcții de comunicare, cum ar fi:
+    </p>
+    <ul>
+      <li>comunicare prin email, pentru trimiterea de notificări și mesaje</li>
+      <li>comunicare prin browsere web, pentru accesarea și interacționarea cu interfața utilizatorului</li>
+      <li>comunicare prin REST și GraphQL, pentru a interoga și accesa datele furnizate de API-ul propriu dezvoltat</li>
+      <li>utilizarea formularelor pentru a colecta și procesa datele introduse de utilizator.</li>
+    </ul>
+    <p>Standardul de comunicare utilizat pentru accesarea datelor este HTTP, prin intermediul căruia se trimit cereri și se primesc răspunsuri de la serverul web.
+      În plus, se vor implementa mecanisme de securitate suplimentare, cum ar fi autentificarea și autorizarea utilizatorilor, pentru a proteja datele personale și a preveni accesul neautorizat la sistem.</p>
+  </section>
+
+  <section id="system-features">
+    <h2>5. Caracteristicile sistemului</h2>
+    <p>
+      Aplicația oferă următoarele funcționalități principale:
+    </p>
+    <ul>
+      <li>Gestionarea conturilor de utilizatori, cu roluri distincte (client, administrator, contabil, manager);</li>
+      <li>Autentificare securizată pe bază de JSON Web Tokens (JWT) și protecție împotriva SQL Injection și Cross-Site Scripting (XSS);</li>
+      <li>Programarea intervențiilor pentru vehicule (în funcție de disponibilitatea pe sloturi orare, de luni până vineri);</li>
+      <li>Administrarea programărilor și a pieselor necesare pentru reparații, inclusiv aprobare, estimare de preț și gestiune inventar;</li>
+      <li>Importul și exportul datelor (furnizori, piese, programări) în formate CSV, JSON și PDF;</li>
+      <li>Vizualizarea și gestionarea comenzilor de piese și a statusurilor („In transit”, „Delivered”, „Cancelled”).</li>
+    </ul>
+  </section>
+
+  <section id="non-functional-requirements">
+    <h2>6. Cerințe nefuncționale</h2>
+    <p>
+      Sistemul respectă următoarele cerințe nefuncționale:
+    </p>
+    <ul>
+      <li><b>Securitate:</b> Aplicația utilizează JSON Web Tokens (JWT) pentru autentificare și autorizare, prevenind accesul neautorizat.
+        De asemenea, sunt implementate măsuri de protecție împotriva atacurilor de tip SQL Injection și Cross-Site Scripting (XSS).</li>
+      <li><b>Performanță:</b> Sistemul răspunde rapid la cererile utilizatorilor, având timpi de răspuns scăzuți datorită structurii eficiente a bazei de date PostgreSQL
+        și a arhitecturii backend Node.js.</li>
+      <li><b>Fiabilitate:</b> Aplicația gestionează corect erorile la nivel de server și client, oferind mesaje informative.</li>
+      <li><b>Interoperabilitate:</b> Sistemul poate importa și exporta date în formate CSV, JSON și PDF.</li>
+      <li><b>Usability:</b> Interfața web este intuitivă, realizată cu HTML, CSS și JavaScript, și respectă principiile de design responsive pentru a putea fi accesată de pe orice dispozitiv.</li>
+      <li><b>Scalabilitate:</b> Arhitectura aplicației permite extinderea funcționalităților, adăugarea de noi roluri și manipularea unui număr mai mare de
+        utilizatori și date, fără a compromite performanța generală.</li>
+    </ul>
+  </section>
+
+  <section id="references" role="doc-bibliography">
+    <h2>7. Referințe</h2>
+    <ul>
+      <li typeof="schema:WebPage" resource="https://w3c.github.io/scholarly-html/" property="schema:citation">
+        <cite property="schema:name">
+          <a href="https://w3c.github.io/scholarly-html/">Formatul ScholarlyHTML</a>
+        </cite>
+      </li>
+      <li typeof="schema:WebPage" resource="https://github.com/rick4470/IEEE-SRS-Tempate#readme" property="schema:citation">
+        <cite property="schema:name">
+          <a href="https://github.com/rick4470/IEEE-SRS-Tempate#readme">IEEE System Requirements Specification Template</a>,
+        </cite> by <span property="schema:author" typeof="schema:Person">
+          <span property="schema:givenName"><a href="https://github.com/rick4470">rick4470</a></span>
+        </span>
+      </li>
+      <li typeof="schema:WebPage" resource="https://www.draw.io/index.html" property="schema:citation">
+        <cite property="schema:name">
+          <a href="https://www.draw.io/index.html">Creare diagrame draw.io</a>
+        </cite>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+  </footer>
+</article>
+</body>
+</html>
