@@ -1,71 +1,3 @@
-function sanitizeInput(input) {
-    if (typeof input !== 'string') return input;
-
-    return input
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;')
-        .replace(/\//g, '&#x2F;');
-}
-
-function safeJsonParse(jsonString) {
-    try {
-        if (!jsonString || typeof jsonString !== 'string') {
-            return null;
-        }
-
-        if (/<script|javascript:|on\w+\s*=|data:/i.test(jsonString)) {
-            console.warn('Potentially malicious content detected in JSON');
-            return null;
-        }
-
-        const parsed = JSON.parse(jsonString);
-        if (typeof parsed === 'object' && parsed !== null) {
-            return sanitizeObject(parsed);
-        }
-
-        return parsed;
-    } catch (error) {
-        console.error('Error parsing JSON safely:', error);
-        return null;
-    }
-}
-
-function sanitizeObject(obj) {
-    if (obj === null || typeof obj !== 'object') {
-        return typeof obj === 'string' ? sanitizeInput(obj) : obj;
-    }
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => sanitizeObject(item));
-    }
-
-    const sanitized = {};
-    for (const [key, value] of Object.entries(obj)) {
-        const sanitizedKey = sanitizeInput(key);
-        sanitized[sanitizedKey] = sanitizeObject(value);
-    }
-
-    return sanitized;
-}
-
-function validateToken(token) {
-    if (!token || typeof token !== 'string') {
-        return false;
-    }
-
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-        return false;
-    }
-
-    const jwtRegex = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
-    return jwtRegex.test(token);
-}
-
-
 class ManagerDashboard {
     constructor() {
         this.requestsContainer = document.getElementById('requests-container');
@@ -74,99 +6,76 @@ class ManagerDashboard {
         this.viewModal = document.getElementById('view-request-modal');
         this.approveModal = document.getElementById('approve-request-modal');
         this.rejectModal = document.getElementById('reject-request-modal');
-        this.closeModalBtns = document.querySelectorAll('.close-modal');
 
         this.pendingCount = document.getElementById('pending-count');
         this.approvedCount = document.getElementById('approved-count');
         this.rejectedCount = document.getElementById('rejected-count');
 
         this.allRequests = [];
-        this.filteredRequests = [];
         this.currentRequestId = null;
-
-        this.refreshInterval = null;
 
         this.init();
     }
 
     init() {
-        document.addEventListener('DOMContentLoaded', () => {
-            this.checkManagerAuth();
-            this.loadRequests();
-            this.setupEventListeners();
-            this.updateStats();
-            this.startAutoRefresh();
-        });
+        this.checkAuth();
+        this.loadRequests();
+        this.setupEventListeners();
     }
 
-    redirectBasedOnRole(role) {
-        const routes = {
-            admin: '/admin/dashboard',
-            manager: null,
-            accountant: '/accountant/dashboard',
-            client: '/client/dashboard'
-        };
-
-        const sanitizedRole = sanitizeInput(role);
-        const route = routes[sanitizedRole];
-
-        if (route) {
-            window.location.href = route;
-        } else if (sanitizedRole === 'manager') {
-            // Manager stays on current page
-        } else {
-            window.location.href = '/login';
-        }
-    }
-
-    checkManagerAuth() {
+    checkAuth() {
         const token = localStorage.getItem('token');
-        const userString = localStorage.getItem('user');
+        const user = this.getUser();
 
-        if (!token || !validateToken(token)) {
+        if (!token || !user) {
             window.location.href = '/login';
             return;
         }
-
-        const user = safeJsonParse(userString) || {};
 
         if (!['admin', 'manager'].includes(user.role)) {
-            this.redirectBasedOnRole(user.role);
+            window.location.href = '/login';
             return;
+        }
+    }
+
+    getUser() {
+        try {
+            const userString = localStorage.getItem('user');
+            return userString ? JSON.parse(userString) : null;
+        } catch (error) {
+            return null;
         }
     }
 
     async loadRequests() {
         try {
             const token = localStorage.getItem('token');
-            if (!validateToken(token)) {
-                throw new Error('Invalid token');
-            }
 
             const response = await fetch('/api/manager/requests', {
-                method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
 
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
             if (!response.ok) {
                 throw new Error('Failed to load requests');
             }
 
             const data = await response.json();
-            // Sanitize the received data
-            const sanitizedData = sanitizeObject(data);
-            this.allRequests = sanitizedData.requests || [];
-            this.filteredRequests = [...this.allRequests];
+
+            this.allRequests = data.requests || data.data || [];
             this.renderRequests();
             this.updateStats();
 
         } catch (error) {
             console.error('Failed to load requests:', error);
             this.allRequests = [];
-            this.filteredRequests = [];
             this.renderRequests();
         }
     }
@@ -174,7 +83,7 @@ class ManagerDashboard {
     setupEventListeners() {
         this.logoutBtn.addEventListener('click', () => this.handleLogout());
 
-        this.closeModalBtns.forEach(btn => {
+        document.querySelectorAll('.close-modal').forEach(btn => {
             btn.addEventListener('click', () => this.closeAllModals());
         });
 
@@ -186,15 +95,23 @@ class ManagerDashboard {
             });
         });
 
-        document.getElementById('confirm-approve-btn').addEventListener('click', () => this.confirmApproval());
-        document.getElementById('confirm-reject-btn').addEventListener('click', () => this.confirmRejection());
+        document.getElementById('approve-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.confirmApproval();
+        });
+
+        document.getElementById('reject-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.confirmRejection();
+        });
     }
 
     renderRequests() {
-        if (this.filteredRequests.length === 0) {
+        if (this.allRequests.length === 0) {
             this.requestsContainer.innerHTML = `
                 <div class="empty-state">
                     <h3>No requests found</h3>
+                    <p>There are currently no registration requests to review.</p>
                 </div>
             `;
             return;
@@ -202,54 +119,59 @@ class ManagerDashboard {
 
         this.requestsContainer.innerHTML = '';
 
-        this.filteredRequests.forEach(request => {
+        this.allRequests.forEach(request => {
             const card = this.createRequestCard(request);
             this.requestsContainer.appendChild(card);
         });
     }
 
     createRequestCard(request) {
-        const template = document.getElementById('request-card-template');
-        const card = template.content.cloneNode(true);
+        const card = document.createElement('div');
+        card.className = 'request-card';
 
-        // Use textContent for safe text insertion
-        card.querySelector('.request-name').textContent = `${request.first_name} ${request.last_name}`;
-        card.querySelector('.request-email').textContent = request.email;
-        card.querySelector('.request-date').textContent = `Requested: ${this.formatDate(request.created_at)}`;
-        card.querySelector('.phone-value').textContent = request.phone;
+        const isPending = request.status === 'pending';
+        const approveBtn = isPending ? `<button type="button" class="action-btn approve-btn" onclick="dashboard.showApproveModal(${request.id})">Approve</button>` : '';
+        const rejectBtn = isPending ? `<button type="button" class="action-btn reject-btn" onclick="dashboard.showRejectModal(${request.id})">Reject</button>` : '';
 
-        const roleBadge = card.querySelector('.role-badge');
-        if (request.status === 'approved' && request.assigned_role) {
-            roleBadge.textContent = `Assigned: ${request.assigned_role}`;
-            roleBadge.className = `role-badge role-${sanitizeInput(request.assigned_role)}`;
-            roleBadge.title = `Originally requested: ${sanitizeInput(request.role)}`;
-        } else {
-            roleBadge.textContent = `Requested: ${request.role}`;
-            roleBadge.className = `role-badge role-${sanitizeInput(request.role)}`;
-        }
+        card.innerHTML = `
+            <div class="request-header">
+                <div class="request-info">
+                    <h4>${this.escapeHtml(request.first_name)} ${this.escapeHtml(request.last_name)}</h4>
+                    <div class="request-email">${this.escapeHtml(request.email)}</div>
+                </div>
+            </div>
 
-        const statusBadge = card.querySelector('.status-badge');
-        statusBadge.textContent = request.status;
-        statusBadge.className = `status-badge status-${sanitizeInput(request.status)}`;
+            <div class="request-details">
+                <div class="detail-row">
+                    <span class="detail-label">Phone:</span>
+                    <span class="detail-value">${this.escapeHtml(request.phone || 'N/A')}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">
+                        <span class="status-badge status-${request.status}">${this.escapeHtml(request.status)}</span>
+                    </span>
+                </div>
+                ${request.assigned_role ? `
+                <div class="detail-row">
+                    <span class="detail-label">Assigned Role:</span>
+                    <span class="detail-value">${this.escapeHtml(request.assigned_role)}</span>
+                </div>
+                ` : ''}
+            </div>
 
-        // Safe message handling
-        if (request.message) {
-            card.querySelector('.request-message').style.display = 'block';
-            card.querySelector('.message-text').textContent = request.message;
-        }
+            ${request.message ? `
+            <div class="request-message">
+                <p>${this.escapeHtml(request.message)}</p>
+            </div>
+            ` : ''}
 
-        card.querySelector('.view-btn').addEventListener('click', () => this.viewRequest(request.id));
-
-        if (request.status === 'pending') {
-            card.querySelector('.approve-btn').addEventListener('click', () => this.showApproveModal(request.id));
-            card.querySelector('.reject-btn').addEventListener('click', () => this.showRejectModal(request.id));
-        } else {
-            card.querySelector('.approve-btn').style.display = 'none';
-            card.querySelector('.reject-btn').style.display = 'none';
-        }
-
-        // Sanitize the request ID before setting it as attribute
-        card.querySelector('.request-card').setAttribute('data-request-id', sanitizeInput(request.id.toString()));
+            <div class="request-actions">
+                <button type="button" class="action-btn view-btn" onclick="dashboard.viewRequest(${request.id})">View Details</button>
+                ${approveBtn}
+                ${rejectBtn}
+            </div>
+        `;
 
         return card;
     }
@@ -259,47 +181,37 @@ class ManagerDashboard {
         const approved = this.allRequests.filter(r => r.status === 'approved').length;
         const rejected = this.allRequests.filter(r => r.status === 'rejected').length;
 
-        this.pendingCount.textContent = pending.toString();
-        this.approvedCount.textContent = approved.toString();
-        this.rejectedCount.textContent = rejected.toString();
+        this.pendingCount.textContent = pending;
+        this.approvedCount.textContent = approved;
+        this.rejectedCount.textContent = rejected;
     }
 
     viewRequest(requestId) {
         const request = this.allRequests.find(r => r.id === requestId);
         if (!request) return;
 
-        const template = document.getElementById('request-details-template');
-        const details = template.content.cloneNode(true);
-
-        // Use textContent for all user data
-        details.querySelector('.full-name').textContent = `${request.first_name} ${request.last_name}`;
-        details.querySelector('.email-value').textContent = request.email;
-        details.querySelector('.phone-value').textContent = request.phone;
-        details.querySelector('.role-value').textContent = request.role;
-        details.querySelector('.request-date').textContent = this.formatDate(request.created_at);
-
-        const statusBadge = details.querySelector('.status-badge');
-        statusBadge.textContent = request.status;
-        statusBadge.className = `status-badge status-${sanitizeInput(request.status)}`;
-
-        if (request.message) {
-            details.querySelector('.message-section').style.display = 'block';
-            details.querySelector('.message-text').textContent = request.message;
-        }
-
-        if (request.processed_at) {
-            details.querySelector('.processed-item').style.display = 'flex';
-            details.querySelector('.processed-date').textContent = this.formatDate(request.processed_at);
-        }
-
-        if (request.manager_message) {
-            details.querySelector('.admin-message-item').style.display = 'flex';
-            details.querySelector('.admin-message').textContent = request.manager_message;
-        }
-
         const modalBody = document.getElementById('request-details');
-        modalBody.innerHTML = '';
-        modalBody.appendChild(details);
+        modalBody.innerHTML = `
+            <div class="basic-info">
+                <h3>Personal Info</h3>
+                <p><strong>Name:</strong> ${this.escapeHtml(request.first_name)} ${this.escapeHtml(request.last_name)}</p>
+                <p><strong>Email:</strong> ${this.escapeHtml(request.email)}</p>
+                <p><strong>Phone:</strong> ${this.escapeHtml(request.phone || 'N/A')}</p>
+                <p><strong>Requested Role:</strong> ${this.escapeHtml(request.requested_role || request.role)}</p>
+                ${request.assigned_role ? `<p><strong>Assigned Role:</strong> ${this.escapeHtml(request.assigned_role)}</p>` : ''}
+                
+                ${request.message ? `
+                <h3>Message</h3>
+                <p>${this.escapeHtml(request.message)}</p>
+                ` : ''}
+                
+                <h3>Details</h3>
+                <p><strong>Status:</strong> <span class="status-badge status-${request.status}">${this.escapeHtml(request.status)}</span></p>
+                <p><strong>Requested:</strong> ${this.formatDate(request.created_at)}</p>
+                ${request.processed_at ? `<p><strong>Processed:</strong> ${this.formatDate(request.processed_at)}</p>` : ''}
+                ${request.manager_message ? `<p><strong>Manager Note:</strong> ${this.escapeHtml(request.manager_message)}</p>` : ''}
+            </div>
+        `;
 
         this.showModal(this.viewModal);
     }
@@ -307,12 +219,9 @@ class ManagerDashboard {
     showApproveModal(requestId) {
         this.currentRequestId = requestId;
 
-        document.getElementById('assign-role').value = '';
-        document.getElementById('approve-message').value = '';
-
         const request = this.allRequests.find(r => r.id === requestId);
         if (request) {
-            document.getElementById('assign-role').value = sanitizeInput(request.role);
+            document.getElementById('assign-role').value = request.requested_role || request.role;
         }
 
         this.showModal(this.approveModal);
@@ -327,8 +236,7 @@ class ManagerDashboard {
     async confirmApproval() {
         if (!this.currentRequestId) return;
 
-        const assignedRole = sanitizeInput(document.getElementById('assign-role').value);
-        const welcomeMessage = sanitizeInput(document.getElementById('approve-message').value.trim());
+        const assignedRole = document.getElementById('assign-role').value;
 
         if (!assignedRole) {
             alert('Please select a role for the user');
@@ -337,31 +245,26 @@ class ManagerDashboard {
 
         try {
             const token = localStorage.getItem('token');
-            if (!validateToken(token)) {
-                throw new Error('Invalid token');
-            }
 
-            const response = await fetch(`/api/manager/requests/${sanitizeInput(this.currentRequestId.toString())}/approve`, {
+            const response = await fetch(`/api/manager/requests/${this.currentRequestId}/approve`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    assigned_role: assignedRole,
-                    manager_message: welcomeMessage
+                    assigned_role: assignedRole
                 })
             });
 
             const data = await response.json();
-            const sanitizedData = sanitizeObject(data);
 
-            if (sanitizedData.success) {
+            if (data.success) {
                 alert(`Request approved! User assigned role: ${assignedRole}`);
                 this.closeAllModals();
                 this.loadRequests();
             } else {
-                alert(sanitizedData.message || 'Failed to approve request');
+                alert(data.message || 'Failed to approve request');
             }
 
         } catch (error) {
@@ -373,20 +276,17 @@ class ManagerDashboard {
     async confirmRejection() {
         if (!this.currentRequestId) return;
 
-        const rejectionMessage = sanitizeInput(document.getElementById('reject-message').value.trim());
+        const rejectionMessage = document.getElementById('reject-message').value.trim();
 
         if (!rejectionMessage) {
-            alert('Please provide a message for the user');
+            alert('Please provide a reason for rejection');
             return;
         }
 
         try {
             const token = localStorage.getItem('token');
-            if (!validateToken(token)) {
-                throw new Error('Invalid token');
-            }
 
-            const response = await fetch(`/api/manager/requests/${sanitizeInput(this.currentRequestId.toString())}/reject`, {
+            const response = await fetch(`/api/manager/requests/${this.currentRequestId}/reject`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -398,14 +298,13 @@ class ManagerDashboard {
             });
 
             const data = await response.json();
-            const sanitizedData = sanitizeObject(data);
 
-            if (sanitizedData.success) {
+            if (data.success) {
                 alert('Request rejected successfully!');
                 this.closeAllModals();
                 this.loadRequests();
             } else {
-                alert(sanitizedData.message || 'Failed to reject request');
+                alert(data.message || 'Failed to reject request');
             }
 
         } catch (error) {
@@ -416,19 +315,12 @@ class ManagerDashboard {
 
     showModal(modal) {
         modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
     }
 
     closeAllModals() {
         [this.viewModal, this.approveModal, this.rejectModal].forEach(modal => {
             modal.style.display = 'none';
         });
-        document.body.style.overflow = 'auto';
-
-        document.getElementById('assign-role').value = '';
-        document.getElementById('approve-message').value = '';
-        document.getElementById('reject-message').value = '';
-
         this.currentRequestId = null;
     }
 
@@ -436,42 +328,30 @@ class ManagerDashboard {
         if (confirm('Are you sure you want to logout?')) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            this.stopAutoRefresh();
             window.location.href = '/homepage';
-        }
-    }
-
-    startAutoRefresh() {
-        this.refreshInterval = setInterval(() => {
-            this.loadRequests();
-        }, 30000);
-    }
-
-    stopAutoRefresh() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-            this.refreshInterval = null;
         }
     }
 
     formatDate(dateString) {
         try {
             const date = new Date(dateString);
-            if (isNaN(date.getTime())) {
-                return 'Invalid date';
-            }
-            return date.toLocaleDateString('ro-RO', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            return date.toLocaleDateString('ro-RO');
         } catch (error) {
-            console.error('Date formatting error:', error);
             return 'Invalid date';
         }
     }
+
+    escapeHtml(text) {
+        if (typeof text !== 'string') return text;
+
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
 }
 
-const managerDashboard = new ManagerDashboard();
+const dashboard = new ManagerDashboard();

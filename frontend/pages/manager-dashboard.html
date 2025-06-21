@@ -3,126 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Security Headers - Doar cele care functioneaza prin meta tags -->
-    <meta http-equiv="Content-Security-Policy"
-          content="default-src 'self';
-                   script-src 'self' 'unsafe-inline';
-                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-                   font-src 'self' https://fonts.gstatic.com;
-                   img-src 'self' data: https:;
-                   connect-src 'self';">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-
     <title>Manager Dashboard - Repair Queens</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/manager-dashboard.css">
 </head>
-
-<!--Template request card-->
-<template id="request-card-template">
-    <div class="request-card">
-        <div class="request-header">
-            <div class="request-info">
-                <h4 class="request-name"></h4>
-                <div class="request-email"></div>
-                <div class="request-date"></div>
-            </div>
-            <div class="role-badge"></div>
-        </div>
-
-        <div class="request-details">
-            <div class="detail-row">
-                <span class="detail-label">Phone:</span>
-                <span class="detail-value phone-value"></span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value">
-                    <span class="status-badge"></span>
-                </span>
-            </div>
-            <div class="detail-row company-row" style="display: none;">
-                <span class="detail-label">Company:</span>
-                <span class="detail-value company-value"></span>
-            </div>
-            <div class="detail-row experience-row" style="display: none;">
-                <span class="detail-label">Experience:</span>
-                <span class="detail-value experience-value"></span>
-            </div>
-        </div>
-
-        <div class="request-message" style="display: none;">
-            <p class="message-text"></p>
-        </div>
-
-        <div class="request-actions">
-            <button type="button" class="action-btn view-btn">View Details</button>
-            <button type="button" class="action-btn approve-btn">Approve</button>
-            <button type="button" class="action-btn reject-btn">Reject</button>
-        </div>
-    </div>
-</template>
-
-<!-- Template detalii-->
-<template id="request-details-template">
-    <div class="detail-section">
-        <h3>Personal Information</h3>
-        <div class="detail-item">
-            <div class="detail-label">Full Name</div>
-            <div class="detail-value full-name"></div>
-        </div>
-        <div class="detail-item">
-            <div class="detail-label">Email</div>
-            <div class="detail-value email-value"></div>
-        </div>
-        <div class="detail-item">
-            <div class="detail-label">Phone</div>
-            <div class="detail-value phone-value"></div>
-        </div>
-        <div class="detail-item">
-            <div class="detail-label">Requested Role</div>
-            <div class="detail-value role-value"></div>
-        </div>
-        <div class="detail-item company-item" style="display: none;">
-            <div class="detail-label">Company</div>
-            <div class="detail-value company-value"></div>
-        </div>
-        <div class="detail-item experience-item" style="display: none;">
-            <div class="detail-label">Experience</div>
-            <div class="detail-value experience-value"></div>
-        </div>
-    </div>
-
-    <div class="detail-section message-section" style="display: none;">
-        <h3>Request Message</h3>
-        <div class="detail-item">
-            <div class="detail-value message-text"></div>
-        </div>
-    </div>
-
-    <div class="detail-section">
-        <h3>Request Details</h3>
-        <div class="detail-item">
-            <div class="detail-label">Status</div>
-            <div class="detail-value">
-                <span class="status-badge"></span>
-            </div>
-        </div>
-        <div class="detail-item">
-            <div class="detail-label">Request Date</div>
-            <div class="detail-value request-date"></div>
-        </div>
-        <div class="detail-item processed-item" style="display: none;">
-            <div class="detail-label">Processed Date</div>
-            <div class="detail-value processed-date"></div>
-        </div>
-        <div class="detail-item admin-message-item" style="display: none;">
-            <div class="detail-label">Admin Message</div>
-            <div class="detail-value admin-message"></div>
-        </div>
-    </div>
-</template>
 
 <body>
 <div class="manager-container">
@@ -131,7 +15,6 @@
         <div class="header-content">
             <div class="header-title">
                 <h1>Manager Dashboard</h1>
-                <p>Manage account registration requests</p>
             </div>
             <div class="header-stats">
                 <div class="stat-item">
@@ -156,92 +39,62 @@
     <!-- Requests Section -->
     <section class="requests-section">
         <div class="requests-grid" id="requests-container">
-            <!--vom avea aici requests cards-->
         </div>
     </section>
 </div>
 
-<!-- View Request Modal -->
-<div class="modal" id="view-request-modal" role="dialog" aria-labelledby="view-modal-title" aria-hidden="true">
+<div class="modal" id="view-request-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="view-modal-title">Request Details</h2>
-            <button type="button" class="close-modal" aria-label="Close modal">&times;</button>
+            <h2>Details</h2>
+            <button type="button" class="close-modal">&times;</button>
         </div>
         <div class="modal-body" id="request-details">
-            <!--si aici detaliile requestului -->
         </div>
     </div>
 </div>
 
-<!-- Approve Request Modal -->
-<div class="modal" id="approve-request-modal" role="dialog" aria-labelledby="approve-modal-title" aria-hidden="true">
+<div class="modal" id="approve-request-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="approve-modal-title">Approve Request</h2>
-            <button type="button" class="close-modal" aria-label="Close modal">&times;</button>
+            <h2>Approve Request</h2>
+            <button type="button" class="close-modal">&times;</button>
         </div>
         <div class="modal-body">
-            <form id="approve-form" novalidate>
-                <!-- CSRF Token placeholder - should be populated by backend -->
-                <input type="hidden" name="_token" id="csrf-token" value="">
-
+            <form id="approve-form">
                 <div class="form-group">
-                    <label for="assign-role">Assign Role *</label>
-                    <select id="assign-role" name="assigned_role" required aria-describedby="role-hint">
+                    <label for="assign-role">Assign Role</label>
+                    <select id="assign-role" name="assigned_role" required>
                         <option value="">Select a role</option>
                         <option value="client">Client</option>
                         <option value="admin">Admin</option>
                         <option value="accountant">Accountant</option>
                     </select>
-                    <small class="field-hint" id="role-hint">Choose the role for this user (may be different from requested role)</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="approve-message">Welcome Message (Optional)</label>
-                    <textarea id="approve-message"
-                              name="manager_message"
-                              rows="4"
-                              maxlength="1000"
-                              placeholder="Write a welcome message for the new user..."></textarea>
-                    <small class="field-hint">Maximum 1000 characters</small>
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="cancel-btn close-modal">Cancel</button>
-                    <button type="submit" class="approve-btn" id="confirm-approve-btn">Approve Request</button>
+                    <button type="submit" class="approve-btn">Approve Request</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Reject Request Modal -->
-<div class="modal" id="reject-request-modal" role="dialog" aria-labelledby="reject-modal-title" aria-hidden="true">
+<div class="modal" id="reject-request-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="reject-modal-title">Reject Request</h2>
-            <button type="button" class="close-modal" aria-label="Close modal">&times;</button>
+            <h2>Reject Request</h2>
+            <button type="button" class="close-modal">&times;</button>
         </div>
         <div class="modal-body">
-            <form id="reject-form" novalidate>
-                <!-- CSRF Token placeholder - should be populated by backend -->
-                <input type="hidden" name="_token" id="csrf-token-reject" value="">
-
+            <form id="reject-form">
                 <div class="form-group">
                     <label for="reject-message">Rejection reason *</label>
-                    <textarea id="reject-message"
-                              name="manager_message"
-                              rows="4"
-                              maxlength="1000"
-                              required
-                              placeholder="Explain why the request was rejected..."></textarea>
-                    <small class="field-hint">Required - Maximum 1000 characters</small>
+                    <textarea id="reject-message" name="manager_message" rows="4" maxlength="1000" required></textarea>
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="cancel-btn close-modal">Cancel</button>
-                    <button type="submit" class="reject-btn" id="confirm-reject-btn">Reject Request</button>
+                    <button type="submit" class="reject-btn">Reject Request</button>
                 </div>
             </form>
         </div>
@@ -249,9 +102,9 @@
 </div>
 
 <!-- Notification -->
-<div class="notification" id="notification" role="alert" aria-live="polite">
+<div class="notification" id="notification">
     <span id="notification-message"></span>
-    <button type="button" class="notification-close" id="notification-close" aria-label="Close notification">&times;</button>
+    <button type="button" class="notification-close" id="notification-close">&times;</button>
 </div>
 
 <script src="/js/manager-dashboard.js"></script>

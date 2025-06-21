@@ -48,7 +48,7 @@ body {
     font-weight: 600;
 }
 
-/* Buttons */
+/* Butoane */
 .btn {
     padding: 10px 20px;
     border: none;
@@ -70,7 +70,6 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Cards Grid */
 .requests-section {
     background: white;
     border-radius: 8px;
@@ -167,6 +166,14 @@ body {
     align-items: end;
 }
 
+.import-form {
+    grid-template-columns: 1fr 1fr 1fr 200px;
+}
+
+.export-form {
+    grid-template-columns: 1fr 1fr 200px;
+}
+
 .form-group input[type="file"] {
     padding: 8px 12px;
     border: 1px solid #e9ecef;
@@ -204,7 +211,6 @@ body {
     gap: 10px;
 }
 
-/* Simple Suppliers List (No Grid) */
 .suppliers-list {
     padding: 20px 0;
 }
@@ -410,6 +416,11 @@ body {
     .modal-header,
     .modal-body {
         padding: 20px;
+    }
+
+    .import-form,
+    .export-form {
+        grid-template-columns: 1fr;
     }
 }
 

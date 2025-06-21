@@ -1,152 +1,141 @@
 const PDFDocument = require('pdfkit');
-
 class PDFGenerator {
-    static generatePDF(data, dataType) {
+    static async generatePDF(data, dataType) {
         return new Promise((resolve, reject) => {
             try {
-                const doc = new PDFDocument({ margin: 50 });
-                const chunks = [];
+                const doc = new PDFDocument();
+                const buffers = [];
 
-                // Colectează datele PDF-ului
-                doc.on('data', chunk => chunks.push(chunk));
+                // Collect PDF data
+                doc.on('data', buffers.push.bind(buffers));
                 doc.on('end', () => {
-                    const pdfBuffer = Buffer.concat(chunks);
-                    resolve(pdfBuffer);
+                    const pdfData = Buffer.concat(buffers);
+                    resolve(pdfData);
                 });
 
-                // Header
-                doc.fontSize(20)
-                    .font('Helvetica-Bold')
-                    .text(`${dataType.toUpperCase()} EXPORT REPORT`, { align: 'center' });
+                // PDF Header
+                doc.fontSize(20).text(`${dataType.toUpperCase()} Export Report`, 50, 50);
+                doc.fontSize(12).text(`Generated on: ${new Date().toLocaleString()}`, 50, 80);
+                doc.fontSize(12).text(`Total Records: ${data.length}`, 50, 100);
 
-                doc.moveDown();
+                // Add separator line
+                doc.moveTo(50, 120).lineTo(550, 120).stroke();
 
-                // Informații generale
-                doc.fontSize(12)
-                    .font('Helvetica')
-                    .text(`Generated: ${new Date().toLocaleString('ro-RO')}`, { align: 'left' })
-                    .text(`Total Records: ${data.length}`)
-                    .text(`Data Type: ${dataType}`);
+                let yPosition = 140;
 
-                doc.moveDown(2);
-
-                // Generează conținutul bazat pe tipul de date
+                // Generate content based on data type
                 switch (dataType) {
                     case 'suppliers':
-                        this.generateSuppliersTable(doc, data);
+                        yPosition = this.generateSuppliersContent(doc, data, yPosition);
                         break;
                     case 'parts':
-                        this.generatePartsTable(doc, data);
+                        yPosition = this.generatePartsContent(doc, data, yPosition);
                         break;
                     case 'appointments':
-                        this.generateAppointmentsTable(doc, data);
+                        yPosition = this.generateAppointmentsContent(doc, data, yPosition);
                         break;
-                    default:
-                        doc.text('Unknown data type');
                 }
 
-                // Footer
-                doc.fontSize(10)
-                    .text(`Page ${doc.bufferedPageRange().count}`, 50, doc.page.height - 50, { align: 'center' });
-
                 doc.end();
-
             } catch (error) {
                 reject(error);
             }
         });
     }
 
-    static generateSuppliersTable(doc, suppliers) {
-        doc.fontSize(16)
-            .font('Helvetica-Bold')
-            .text('Suppliers List', { align: 'left' });
-
-        doc.moveDown();
+    static generateSuppliersContent(doc, suppliers, startY) {
+        let yPos = startY;
 
         suppliers.forEach((supplier, index) => {
-            if (index > 0) doc.moveDown();
+            // Check if we need a new page
+            if (yPos > 700) {
+                doc.addPage();
+                yPos = 50;
+            }
 
-            doc.fontSize(12)
-                .font('Helvetica-Bold')
-                .text(`${index + 1}. ${supplier.company_name || 'N/A'}`, { continued: false });
+            doc.fontSize(14).text(`${index + 1}. ${supplier.company_name}`, 50, yPos);
+            yPos += 20;
 
             doc.fontSize(10)
-                .font('Helvetica')
-                .text(`Contact: ${supplier.contact_person || 'N/A'}`)
-                .text(`Email: ${supplier.email || 'N/A'}`)
-                .text(`Phone: ${supplier.phone || 'N/A'}`)
-                .text(`Address: ${supplier.address || 'N/A'}`)
-                .text(`Delivery Time: ${supplier.delivery_time_days || 'N/A'} days`)
-                .text(`Created: ${supplier.created_at ? new Date(supplier.created_at).toLocaleDateString('ro-RO') : 'N/A'}`);
+                .text(`Contact: ${supplier.contact_person}`, 70, yPos)
+                .text(`Email: ${supplier.email}`, 70, yPos + 15)
+                .text(`Phone: ${supplier.phone || 'N/A'}`, 70, yPos + 30)
+                .text(`Address: ${supplier.address || 'N/A'}`, 70, yPos + 45)
+                .text(`Delivery Time: ${supplier.delivery_time_days} days`, 70, yPos + 60);
 
-            // Verifică dacă trebuie să adaugi o pagină nouă
-            if (doc.y > 700) {
-                doc.addPage();
-            }
+            yPos += 90;
+
+            // Add separator line
+            doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
+            yPos += 10;
         });
+
+        return yPos;
     }
 
-    static generatePartsTable(doc, parts) {
-        doc.fontSize(16)
-            .font('Helvetica-Bold')
-            .text('Parts List', { align: 'left' });
-
-        doc.moveDown();
+    static generatePartsContent(doc, parts, startY) {
+        let yPos = startY;
 
         parts.forEach((part, index) => {
-            if (index > 0) doc.moveDown();
+            if (yPos > 680) {
+                doc.addPage();
+                yPos = 50;
+            }
 
-            doc.fontSize(12)
-                .font('Helvetica-Bold')
-                .text(`${index + 1}. ${part.name || 'N/A'}`, { continued: false });
+            doc.fontSize(14).text(`${index + 1}. ${part.name}`, 50, yPos);
+            yPos += 20;
 
             doc.fontSize(10)
-                .font('Helvetica')
-                .text(`Part Number: ${part.part_number || 'N/A'}`)
-                .text(`Description: ${part.description || 'N/A'}`)
-                .text(`Category: ${part.category || 'N/A'}`)
-                .text(`Price: ${part.price ? `$${part.price}` : 'N/A'}`)
-                .text(`Stock: ${part.stock_quantity || 0}`)
-                .text(`Min Stock: ${part.minimum_stock_level || 'N/A'}`)
-                .text(`Supplier: ${part.supplier_name || 'N/A'}`)
-                .text(`Created: ${part.created_at ? new Date(part.created_at).toLocaleDateString('ro-RO') : 'N/A'}`);
+                .text(`Description: ${part.description || 'N/A'}`, 70, yPos)
+                .text(`Part Number: ${part.part_number || 'N/A'}`, 70, yPos + 15)
+                .text(`Category: ${part.category || 'N/A'}`, 70, yPos + 30)
+                .text(`Price: $${part.price}`, 70, yPos + 45)
+                .text(`Stock: ${part.stock_quantity}`, 70, yPos + 60)
+                .text(`Min Stock: ${part.minimum_stock_level}`, 70, yPos + 75)
+                .text(`Supplier: ${part.supplier_name || 'N/A'}`, 70, yPos + 90);
 
-            if (doc.y > 700) {
-                doc.addPage();
-            }
+            yPos += 120;
+
+            doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
+            yPos += 10;
         });
+
+        return yPos;
     }
 
-    static generateAppointmentsTable(doc, appointments) {
-        doc.fontSize(16)
-            .font('Helvetica-Bold')
-            .text('Appointments List', { align: 'left' });
-
-        doc.moveDown();
+    static generateAppointmentsContent(doc, appointments, startY) {
+        let yPos = startY;
 
         appointments.forEach((appointment, index) => {
-            if (index > 0) doc.moveDown();
+            if (yPos > 650) {
+                doc.addPage();
+                yPos = 50;
+            }
 
-            doc.fontSize(12)
-                .font('Helvetica-Bold')
-                .text(`${index + 1}. Appointment #${appointment.id}`, { continued: false });
+            doc.fontSize(14).text(`${index + 1}. Appointment #${appointment.id}`, 50, yPos);
+            yPos += 20;
+
+            const customerName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.trim();
+            const vehicleInfo = appointment.brand
+                ? `${appointment.brand} ${appointment.model} (${appointment.year})`
+                : 'N/A';
 
             doc.fontSize(10)
-                .font('Helvetica')
-                .text(`Client: ${appointment.first_name || ''} ${appointment.last_name || ''}`)
-                .text(`Email: ${appointment.user_email || 'N/A'}`)
-                .text(`Vehicle: ${appointment.brand || ''} ${appointment.model || ''} ${appointment.year || ''}`)
-                .text(`Date: ${appointment.appointment_date ? new Date(appointment.appointment_date).toLocaleDateString('ro-RO') : 'N/A'}`)
-                .text(`Status: ${appointment.status || 'N/A'}`)
-                .text(`Problem: ${appointment.problem_description || 'N/A'}`)
-                .text(`Estimated Price: ${appointment.estimated_price ? `$${appointment.estimated_price}` : 'N/A'}`)
-                .text(`Created: ${appointment.created_at ? new Date(appointment.created_at).toLocaleDateString('ro-RO') : 'N/A'}`);
+                .text(`Customer: ${customerName || 'N/A'}`, 70, yPos)
+                .text(`Email: ${appointment.user_email || 'N/A'}`, 70, yPos + 15)
+                .text(`Vehicle: ${vehicleInfo}`, 70, yPos + 30)
+                .text(`Date: ${new Date(appointment.appointment_date).toLocaleString()}`, 70, yPos + 45)
+                .text(`Status: ${appointment.status}`, 70, yPos + 60)
+                .text(`Problem: ${appointment.problem_description}`, 70, yPos + 75)
+                .text(`Estimated Price: $${appointment.estimated_price || 'TBD'}`, 70, yPos + 90);
 
-            if (doc.y > 700) {
-                doc.addPage();
-            }
+            yPos += 120;
+
+            doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
+            yPos += 10;
         });
+
+        return yPos;
     }
 }
 
