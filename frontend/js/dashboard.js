@@ -1,33 +1,141 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const scheduleBtn = document.querySelector('.schedule-now-btn');
-    if (scheduleBtn) {
-        scheduleBtn.addEventListener('click', function() {
-            document.querySelector('[data-tab="new-appointment"]').click();
+class Dashboard {
+    constructor() {
+        this.token = null;
+        this.user = {};
+        this.currentAppointments = [];
+        this.initSecurityUtils();
+        this.init();
+    }
+
+    initSecurityUtils() {
+        // Security utility functions
+        this.sanitizeInput = function(input) {
+            if (typeof input !== 'string') return input;
+
+            return input
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;')
+                .replace(/\//g, '&#x2F;');
+        };
+
+        this.safeJsonParse = function(jsonString) {
+            try {
+                if (!jsonString || typeof jsonString !== 'string') {
+                    return null;
+                }
+
+                if (/<script|javascript:|on\w+\s*=|data:/i.test(jsonString)) {
+                    console.warn('Potentially malicious content detected in JSON');
+                    return null;
+                }
+
+                const parsed = JSON.parse(jsonString);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    return this.sanitizeObject(parsed);
+                }
+
+                return parsed;
+            } catch (error) {
+                console.error('Error parsing JSON safely:', error);
+                return null;
+            }
+        }.bind(this);
+
+        this.sanitizeObject = function(obj) {
+            if (obj === null || typeof obj !== 'object') {
+                return typeof obj === 'string' ? this.sanitizeInput(obj) : obj;
+            }
+
+            if (Array.isArray(obj)) {
+                return obj.map(item => this.sanitizeObject(item));
+            }
+
+            const sanitized = {};
+            for (const [key, value] of Object.entries(obj)) {
+                const sanitizedKey = this.sanitizeInput(key);
+                sanitized[sanitizedKey] = this.sanitizeObject(value);
+            }
+
+            return sanitized;
+        }.bind(this);
+
+        this.validateToken = function(token) {
+            if (!token || typeof token !== 'string') {
+                return false;
+            }
+
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                return false;
+            }
+
+            const jwtRegex = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+            return jwtRegex.test(token);
+        };
+
+        this.safeDecodeJWT = function(token) {
+            try {
+                if (!this.validateToken(token)) {
+                    return null;
+                }
+
+                const parts = token.split('.');
+                const payload = parts[1];
+
+                const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+                return this.safeJsonParse(decoded);
+            } catch (error) {
+                console.error('Error decoding JWT safely:', error);
+                return null;
+            }
+        }.bind(this);
+
+        this.safeSetHTML = function(element, html) {
+            const sanitized = this.sanitizeInput(html);
+            element.innerHTML = sanitized;
+        };
+    }
+
+    init() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupScheduleButton();
+            this.checkAuthentication();
+            this.initializeDashboard();
+            this.loadUserInfo();
+            this.loadAppointments();
+            this.loadUserVehicles();
+            this.setupEventListeners();
+            this.setupFormHandlers();
+            this.setupMobileMenu();
+            this.startTokenValidationInterval();
         });
     }
-});
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Check authentication
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-
-    if (!token || !user.id) {
-        window.location.href = 'login.html';
-        return;
+    setupScheduleButton() {
+        const scheduleBtn = document.querySelector('.schedule-now-btn');
+        if (scheduleBtn) {
+            scheduleBtn.addEventListener('click', () => {
+                document.querySelector('[data-tab="new-appointment"]').click();
+            });
+        }
     }
 
-    // Initialize dashboard
-    initializeDashboard();
-    loadUserInfo();
-    loadAppointments();
-    loadUserVehicles();
-    setupEventListeners();
-    setupFormHandlers();
-    setupMobileMenu();
+    checkAuthentication() {
+        this.token = localStorage.getItem('token');
+        const userString = localStorage.getItem('user');
+        this.user = userString ? this.safeJsonParse(userString) || {} : {};
 
-    function initializeDashboard() {
-        console.log('Dashboard initialized for user:', user.first_name);
+        if (!this.token || !this.user.id) {
+            window.location.href = 'login.html';
+            return;
+        }
+    }
+
+    initializeDashboard() {
+        console.log('Dashboard initialized for user:', this.user.first_name);
 
         // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
@@ -37,19 +145,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function loadUserInfo() {
+    loadUserInfo() {
         const userNameElement = document.getElementById('user-name');
-        if (userNameElement && user.first_name) {
-            userNameElement.textContent = user.first_name;
+        if (userNameElement && this.user.first_name) {
+            userNameElement.textContent = this.sanitizeInput(this.user.first_name);
         }
     }
 
-    async function loadUserVehicles() {
+    async loadUserVehicles() {
         try {
             const response = await fetch('/api/vehicles', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -57,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                populateVehicleSelect(data.vehicles);
+                this.populateVehicleSelect(data.vehicles);
             } else {
                 console.error('Error loading vehicles:', data.message);
             }
@@ -67,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function populateVehicleSelect(vehicles) {
+    populateVehicleSelect(vehicles) {
         const select = document.getElementById('existing-vehicle');
         if (!select) return;
 
@@ -76,31 +184,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
         vehicles.forEach(vehicle => {
             const option = document.createElement('option');
-            option.value = vehicle.id;
-            option.textContent = `${vehicle.brand} ${vehicle.model} (${vehicle.year}) - ${vehicle.vehicle_type}${vehicle.is_electric ? ' Electric' : ''}`;
+            option.value = this.sanitizeInput(vehicle.id);
+
+            const brand = this.sanitizeInput(vehicle.brand || '');
+            const model = this.sanitizeInput(vehicle.model || '');
+            const year = this.sanitizeInput(vehicle.year || '');
+            const vehicleType = this.sanitizeInput(vehicle.vehicle_type || '');
+            const electricText = vehicle.is_electric ? ' Electric' : '';
+
+            option.textContent = `${brand} ${model} (${year}) - ${vehicleType}${electricText}`;
             select.appendChild(option);
         });
     }
 
-    function setupMobileMenu() {
+    setupMobileMenu() {
         const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
         const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
         const mobileNavClose = document.getElementById('mobile-nav-close');
 
         if (mobileMenuToggle && mobileNavOverlay) {
-            mobileMenuToggle.addEventListener('click', function() {
+            mobileMenuToggle.addEventListener('click', () => {
                 mobileNavOverlay.style.display = 'block';
             });
         }
 
         if (mobileNavClose && mobileNavOverlay) {
-            mobileNavClose.addEventListener('click', function() {
+            mobileNavClose.addEventListener('click', () => {
                 mobileNavOverlay.style.display = 'none';
             });
         }
 
         if (mobileNavOverlay) {
-            mobileNavOverlay.addEventListener('click', function(e) {
+            mobileNavOverlay.addEventListener('click', (e) => {
                 if (e.target === mobileNavOverlay) {
                     mobileNavOverlay.style.display = 'none';
                 }
@@ -110,15 +225,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mobile nav links
         const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
         mobileNavLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                const targetTab = this.getAttribute('data-tab');
+            link.addEventListener('click', () => {
+                const targetTab = link.getAttribute('data-tab');
                 if (targetTab) {
                     // Update active states for mobile nav
                     mobileNavLinks.forEach(l => l.classList.remove('active'));
-                    this.classList.add('active');
+                    link.classList.add('active');
 
                     // Switch tab
-                    switchTab(targetTab);
+                    this.switchTab(targetTab);
 
                     // Close mobile menu
                     mobileNavOverlay.style.display = 'none';
@@ -129,35 +244,30 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mobile logout button
         const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
         if (mobileLogoutBtn) {
-            mobileLogoutBtn.addEventListener('click', logout);
+            mobileLogoutBtn.addEventListener('click', () => this.logout());
         }
 
         // Mobile contact button
         const mobileContactBtn = document.getElementById('mobile-contact-btn');
         if (mobileContactBtn) {
-            mobileContactBtn.addEventListener('click', function() {
-                showContactModal();
+            mobileContactBtn.addEventListener('click', () => {
+                this.showContactModal();
                 mobileNavOverlay.style.display = 'none';
             });
         }
     }
 
-    function setupEventListeners() {
+    setupEventListeners() {
         // Contact modal
-        const contactBtn = document.getElementById('contact-btn');
         const contactModal = document.getElementById('contact-modal');
         const closeContactModal = document.getElementById('close-contact-modal');
 
-        if (contactBtn) {
-            contactBtn.addEventListener('click', showContactModal);
-        }
-
         if (closeContactModal && contactModal) {
-            closeContactModal.addEventListener('click', function() {
+            closeContactModal.addEventListener('click', () => {
                 contactModal.style.display = 'none';
             });
 
-            window.addEventListener('click', function(e) {
+            window.addEventListener('click', (e) => {
                 if (e.target === contactModal) {
                     contactModal.style.display = 'none';
                 }
@@ -169,17 +279,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const closeAppointmentModal = appointmentModal?.querySelector('.close-modal');
 
         if (closeAppointmentModal && appointmentModal) {
-            closeAppointmentModal.addEventListener('click', function() {
+            closeAppointmentModal.addEventListener('click', () => {
                 appointmentModal.style.display = 'none';
             });
 
-            window.addEventListener('click', function(e) {
+            window.addEventListener('click', (e) => {
                 if (e.target === appointmentModal) {
                     appointmentModal.style.display = 'none';
                 }
             });
 
-            document.addEventListener('keydown', function(e) {
+            document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     if (appointmentModal.style.display === 'flex') {
                         appointmentModal.style.display = 'none';
@@ -191,71 +301,40 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Navigation tab switching
-        const navLinks = document.querySelectorAll('.nav-link[data-tab]');
-        navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetTab = this.getAttribute('data-tab');
-
-                // Update active states for main nav
-                navLinks.forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-
-                switchTab(targetTab);
-            });
-        });
-
         // Tab buttons
         const tabButtons = document.querySelectorAll('.tab-btn[data-tab]');
         tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const targetTab = this.getAttribute('data-tab');
-                switchTab(targetTab);
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-tab');
+                this.switchTab(targetTab);
             });
         });
-
-        // New appointment button
-        const newAppointmentBtn = document.getElementById('new-appointment-btn');
-        if (newAppointmentBtn) {
-            newAppointmentBtn.addEventListener('click', function() {
-                switchTab('new-appointment');
-            });
-        }
 
         // Logout buttons
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', logout);
+            logoutBtn.addEventListener('click', () => this.logout());
         }
 
         // Cancel button
         const cancelBtn = document.getElementById('cancel-btn');
         if (cancelBtn) {
-            cancelBtn.addEventListener('click', function() {
+            cancelBtn.addEventListener('click', () => {
                 if (confirm('Are you sure you want to cancel? All entered data will be lost.')) {
-                    resetForm();
-                    switchTab('appointments');
+                    this.resetForm();
+                    this.switchTab('appointments');
                 }
             });
         }
     }
 
-    function switchTab(targetTab) {
+    switchTab(targetTab) {
         // Update tab buttons
         const tabButtons = document.querySelectorAll('.tab-btn');
         tabButtons.forEach(btn => btn.classList.remove('active'));
         const targetTabBtn = document.querySelector(`[data-tab="${targetTab}"].tab-btn`);
         if (targetTabBtn) {
             targetTabBtn.classList.add('active');
-        }
-
-        // Update nav links
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => link.classList.remove('active'));
-        const targetNavLink = document.querySelector(`[data-tab="${targetTab}"].nav-link`);
-        if (targetNavLink) {
-            targetNavLink.classList.add('active');
         }
 
         // Switch tab panes
@@ -267,31 +346,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function showContactModal() {
+    showContactModal() {
         const contactModal = document.getElementById('contact-modal');
         if (contactModal) {
             contactModal.style.display = 'flex';
         }
     }
 
-    function setupFormHandlers() {
+    setupFormHandlers() {
         // Date change handler - load available slots
         const dateInput = document.getElementById('appointment-date');
         if (dateInput) {
-            dateInput.addEventListener('change', loadAvailableSlots);
+            dateInput.addEventListener('change', () => this.loadAvailableSlots());
         }
 
         // Existing vehicle selection handler
         const existingVehicleSelect = document.getElementById('existing-vehicle');
         if (existingVehicleSelect) {
-            existingVehicleSelect.addEventListener('change', function() {
+            existingVehicleSelect.addEventListener('change', () => {
                 const newVehicleSection = document.getElementById('new-vehicle-section');
-                if (this.value) {
+                if (existingVehicleSelect.value) {
                     // Hide new vehicle form and clear its values
                     if (newVehicleSection) {
                         newVehicleSection.style.display = 'none';
                     }
-                    clearNewVehicleForm();
+                    this.clearNewVehicleForm();
                 } else {
                     // Show new vehicle form
                     if (newVehicleSection) {
@@ -322,11 +401,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Form submission
         const appointmentForm = document.getElementById('appointment-form');
         if (appointmentForm) {
-            appointmentForm.addEventListener('submit', handleFormSubmission);
+            appointmentForm.addEventListener('submit', (e) => this.handleFormSubmission(e));
         }
     }
 
-    async function loadAvailableSlots() {
+    async loadAvailableSlots() {
         const dateInput = document.getElementById('appointment-date');
         const timeSelect = document.getElementById('appointment-time');
 
@@ -338,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(`/api/calendar/available-slots?date=${dateInput.value}`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -350,30 +429,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (data.availableSlots.length === 0) {
                     timeSelect.innerHTML = '<option value="">No slots available</option>';
-                    if (data.message) {
-                        showMessage(data.message, 'warning');
-                    }
                 } else {
                     data.availableSlots.forEach(slot => {
                         const option = document.createElement('option');
-                        option.value = slot.startTime;
-                        option.textContent = `${slot.startTime} (${slot.availableSpots} slots available)`;
+                        option.value = this.sanitizeInput(slot.startTime);
+
+                        const startTime = this.sanitizeInput(slot.startTime);
+                        const availableSpots = this.sanitizeInput(slot.availableSpots);
+                        option.textContent = `${startTime} (${availableSpots} slots available)`;
+
                         timeSelect.appendChild(option);
                     });
                 }
             } else {
                 timeSelect.innerHTML = '<option value="">Error loading</option>';
-                showMessage(data.message || 'Error loading slots', 'error');
             }
 
         } catch (error) {
             console.error('Error loading available slots:', error);
             timeSelect.innerHTML = '<option value="">Error loading</option>';
-            showMessage('Error loading available slots', 'error');
         }
     }
 
-    function clearNewVehicleForm() {
+    clearNewVehicleForm() {
         const fields = ['vehicle-type', 'brand', 'model', 'year', 'vehicle-notes'];
         fields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
@@ -384,11 +462,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isElectricCheckbox) isElectricCheckbox.checked = false;
     }
 
-    function resetForm() {
+    resetForm() {
         const form = document.getElementById('appointment-form');
         if (form) {
             form.reset();
-            clearNewVehicleForm();
+            this.clearNewVehicleForm();
 
             const timeSelect = document.getElementById('appointment-time');
             if (timeSelect) {
@@ -408,23 +486,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function handleFormSubmission(e) {
+    async handleFormSubmission(e) {
         e.preventDefault();
 
         try {
-
             // Collect form data
             const formData = new FormData(e.target);
             const appointmentData = Object.fromEntries(formData);
 
             // Validate required fields
             if (!appointmentData.date || !appointmentData.time || !appointmentData.description) {
-                showMessage('Please fill in all required fields', 'error');
+                console.error('Please fill in all required fields');
                 return;
             }
 
             if (appointmentData.description.length < 10) {
-                showMessage('Description must contain at least 10 characters', 'error');
+                console.error('Description must contain at least 10 characters');
                 return;
             }
 
@@ -445,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const vehicleResponse = await fetch('/api/vehicles', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        'Authorization': `Bearer ${this.token}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(vehicleData)
@@ -456,9 +533,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (vehicleResult.success) {
                     vehicleId = vehicleResult.vehicle.id;
                     // Refresh vehicles list
-                    await loadUserVehicles();
+                    await this.loadUserVehicles();
                 } else {
-                    showMessage(vehicleResult.message || 'Error creating vehicle', 'error');
+                    console.error(vehicleResult.message || 'Error creating vehicle');
                     return;
                 }
             }
@@ -475,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/api/appointments', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(appointmentPayload)
@@ -484,25 +561,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                showMessage('Appointment created successfully!', 'success');
-                resetForm();
-                loadAppointments();
+                console.log('Appointment created successfully!');
+                this.resetForm();
+                this.loadAppointments();
                 // Switch back to appointments tab
-                switchTab('appointments');
+                this.switchTab('appointments');
             } else {
-                showMessage(data.message || 'Error creating appointment', 'error');
+                console.error(data.message || 'Error creating appointment');
             }
-
 
         } catch (error) {
             console.error('Error creating appointment:', error);
-            showMessage('Network error. Please try again.', 'error');
         }
     }
 
-    async function loadAppointments() {
+    async loadAppointments() {
         try {
-
             const appointmentsContainer = document.getElementById('appointments-container');
             if (!appointmentsContainer) {
                 return;
@@ -511,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/api/appointments', {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -525,24 +599,23 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="empty-icon">Calendar</div>
                             <h4>No Appointments Yet</h4>
                             <p>You don't have any appointments scheduled. Create your first appointment to get started!</p>
-                            <button onclick="switchTabGlobal('new-appointment')" class="primary-btn">
+                            <button onclick="dashboard.switchTab('new-appointment')" class="primary-btn">
                                 <span class="btn-icon">+</span>
                                 <span class="btn-text">Schedule Now</span>
                             </button>
                         </div>
                     `;
                 } else {
-                    displayAppointments(data.appointments);
+                    this.displayAppointments(data.appointments);
                 }
             } else {
                 appointmentsContainer.innerHTML = `
                     <div class="error-message">
                         <p>Error loading appointments: ${data.message}</p>
-                        <button onclick="loadAppointmentsGlobal()" class="secondary-btn">Try again</button>
+                        <button onclick="dashboard.loadAppointments()" class="secondary-btn">Try again</button>
                     </div>
                 `;
             }
-
 
         } catch (error) {
             console.error('Error loading appointments:', error);
@@ -551,22 +624,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 appointmentsContainer.innerHTML = `
                     <div class="error-message">
                         <p>Connection error. Please check your internet connection.</p>
-                        <button onclick="loadAppointmentsGlobal()" class="secondary-btn">Try again</button>
+                        <button onclick="dashboard.loadAppointments()" class="secondary-btn">Try again</button>
                     </div>
                 `;
             }
         }
     }
 
-    function displayAppointments(appointments) {
-        window.currentAppointments = appointments;
+    displayAppointments(appointments) {
+        this.currentAppointments = appointments;
 
         const appointmentsContainer = document.getElementById('appointments-container');
         appointments.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
         appointmentsContainer.innerHTML = appointments.map(appointment => {
+            // Sanitize all appointment data
+            const sanitizedAppointment = this.sanitizeObject(appointment);
+
             // Parse date correctly without timezone issues
-            const [year, month, day] = appointment.date.split('-');
+            const [year, month, day] = sanitizedAppointment.date.split('-');
             const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 
             const formattedDate = appointmentDate.toLocaleDateString('en-US', {
@@ -576,58 +652,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 day: 'numeric'
             });
 
-            const statusText = getStatusText(appointment.status);
-            const statusClass = getStatusClass(appointment.status);
+            const statusText = this.getStatusText(sanitizedAppointment.status);
+            const statusClass = this.getStatusClass(sanitizedAppointment.status);
 
-            const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+            const appointmentDateTime = new Date(`${sanitizedAppointment.date}T${sanitizedAppointment.time}`);
             const now = new Date();
             const timeDiff = appointmentDateTime.getTime() - now.getTime();
             const hoursDiff = timeDiff / (1000 * 3600);
-            const canCancel = appointment.status === 'pending' && hoursDiff >= 24;
+            const canCancel = sanitizedAppointment.status === 'pending' && hoursDiff >= 24;
 
             return `
-                <div class="appointment-card" data-appointment-id="${appointment.id}">
+                <div class="appointment-card" data-appointment-id="${sanitizedAppointment.id}">
                     <div class="appointment-header">
                         <div class="appointment-date">
                             <h3>${formattedDate}</h3>
-                            <p class="appointment-time">${appointment.time}</p>
+                            <p class="appointment-time">${sanitizedAppointment.time}</p>
                         </div>
                         <div class="appointment-status ${statusClass}">
                             ${statusText}
                         </div>
                     </div>
                     <div class="appointment-details">
-                        ${appointment.serviceType ? `
+                        ${sanitizedAppointment.serviceType ? `
                             <div class="service-type">
-                                <strong>Service:</strong> ${getServiceTypeText(appointment.serviceType)}
+                                <strong>Service:</strong> ${this.getServiceTypeText(sanitizedAppointment.serviceType)}
                             </div>
                         ` : ''}
                         <div class="description">
-                            <strong>Description:</strong> ${appointment.description}
+                            <strong>Description:</strong> ${sanitizedAppointment.description}
                         </div>
-                        ${appointment.adminResponse ? `
+                        ${sanitizedAppointment.adminResponse ? `
                             <div class="admin-response">
-                                <strong>Admin response:</strong> ${appointment.adminResponse}
+                                <strong>Admin response:</strong> ${sanitizedAppointment.adminResponse}
                             </div>
                         ` : ''}
-                        ${appointment.estimatedPrice ? `
+                        ${sanitizedAppointment.estimatedPrice ? `
                             <div class="estimated-price">
-                                <strong>Estimated price:</strong> $${appointment.estimatedPrice}
+                                <strong>Estimated price:</strong> ${sanitizedAppointment.estimatedPrice}
                             </div>
                         ` : ''}
-                        ${appointment.vehicle ? `
+                        ${sanitizedAppointment.vehicle ? `
                             <div class="vehicle-info">
-                                <strong>Vehicle:</strong> ${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})${appointment.vehicle.is_electric ? ' Electric' : ''}
+                                <strong>Vehicle:</strong> ${sanitizedAppointment.vehicle.brand} ${sanitizedAppointment.vehicle.model} (${sanitizedAppointment.vehicle.year})${sanitizedAppointment.vehicle.is_electric ? ' Electric' : ''}
                             </div>
                         ` : ''}
                     </div>
                     <div class="appointment-actions">
                         ${canCancel ? `
-                            <button class="secondary-btn" onclick="cancelAppointment('${appointment.id}')">
+                            <button class="secondary-btn" onclick="dashboard.cancelAppointment('${sanitizedAppointment.id}')">
                                 Cancel
                             </button>
                         ` : ''}
-                       <button class="primary-btn" onclick="viewAppointmentDetails('${appointment.id}')">
+                       <button class="primary-btn" onclick="dashboard.viewAppointmentDetails('${sanitizedAppointment.id}')">
                             Details
                        </button>
                     </div>
@@ -636,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
     }
 
-    function getStatusText(status) {
+    getStatusText(status) {
         const statusMap = {
             'pending': 'Pending',
             'approved': 'Approved',
@@ -648,11 +724,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return statusMap[status] || status;
     }
 
-    function getStatusClass(status) {
+    getStatusClass(status) {
         return `status-${status}`;
     }
 
-    function getServiceTypeText(serviceType) {
+    getServiceTypeText(serviceType) {
         const serviceMap = {
             'mentenanta': 'General Maintenance',
             'reparatii': 'Repairs',
@@ -663,18 +739,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return serviceMap[serviceType] || serviceType;
     }
 
-    // Global functions for HTML buttons
-    window.cancelAppointment = async function(appointmentId) {
+    async cancelAppointment(appointmentId) {
         if (!confirm('Are you sure you want to cancel this appointment?')) {
             return;
         }
 
         try {
-
             const response = await fetch(`/api/appointments/${appointmentId}`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ status: 'cancelled' })
@@ -683,28 +757,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                showMessage('Appointment cancelled successfully', 'success');
-                loadAppointments();
+                console.log('Appointment cancelled successfully');
+                this.loadAppointments();
             } else {
-                showMessage(data.message || 'Error cancelling appointment', 'error');
+                console.error(data.message || 'Error cancelling appointment');
             }
-
 
         } catch (error) {
             console.error('Error cancelling appointment:', error);
-            showMessage('Network error. Please try again.', 'error');
-
         }
-    };
+    }
 
-    window.viewAppointmentDetails = function(appointmentId) {
-        const appointments = window.currentAppointments || [];
+    viewAppointmentDetails(appointmentId) {
+        const appointments = this.currentAppointments || [];
         const appointment = appointments.find(apt => apt.id == appointmentId);
 
         if (!appointment) {
             alert('Appointment not found');
             return;
         }
+
+        const sanitizedAppointment = this.sanitizeObject(appointment);
 
         const modal = document.getElementById('appointment-modal');
         const detailsContainer = document.getElementById('appointment-details');
@@ -713,22 +786,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const details = `
 Appointment Details:
 
-Date: ${appointment.date}
-Time: ${appointment.time}
-Service: ${getServiceTypeText(appointment.serviceType)}
-Status: ${getStatusText(appointment.status)}
-Description: ${appointment.description}
-${appointment.adminResponse ? '\nAdmin response: ' + appointment.adminResponse : ''}
-${appointment.estimatedPrice ? '\nEstimated price: RON' + appointment.estimatedPrice : ''}
-${appointment.vehicle ? '\nVehicle: ' + appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' (' + appointment.vehicle.year + ')' : ''}
-Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
-        `;
+Date: ${sanitizedAppointment.date}
+Time: ${sanitizedAppointment.time}
+Service: ${this.getServiceTypeText(sanitizedAppointment.serviceType)}
+Status: ${this.getStatusText(sanitizedAppointment.status)}
+Description: ${sanitizedAppointment.description}
+${sanitizedAppointment.adminResponse ? '\nAdmin response: ' + sanitizedAppointment.adminResponse : ''}
+${sanitizedAppointment.estimatedPrice ? '\nEstimated price: RON' + sanitizedAppointment.estimatedPrice : ''}
+${sanitizedAppointment.vehicle ? '\nVehicle: ' + sanitizedAppointment.vehicle.brand + ' ' + sanitizedAppointment.vehicle.model + ' (' + sanitizedAppointment.vehicle.year + ')' : ''}
+Created: ${new Date(sanitizedAppointment.createdAt).toLocaleDateString('en-US')}
+            `;
             alert(details);
             return;
         }
 
-        // Format date correctly for modal
-        const [year, month, day] = appointment.date.split('-');
+        const [year, month, day] = sanitizedAppointment.date.split('-');
         const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         const formattedDate = appointmentDate.toLocaleDateString('en-US', {
             weekday: 'long',
@@ -737,76 +809,76 @@ Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
             day: 'numeric'
         });
 
-        const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+        const appointmentDateTime = new Date(`${sanitizedAppointment.date}T${sanitizedAppointment.time}`);
         const now = new Date();
         const timeDiff = appointmentDateTime.getTime() - now.getTime();
         const hoursDiff = timeDiff / (1000 * 3600);
-        const canCancel = appointment.status === 'pending' && hoursDiff >= 1;
+        const canCancel = sanitizedAppointment.status === 'pending' && hoursDiff >= 1;
 
-        detailsContainer.innerHTML = `
+        const detailsHTML = `
         <div class="detail-item">
             <div class="detail-label">Date and Time:</div>
             <div class="detail-value">
-                <strong>${formattedDate}</strong> at <strong>${appointment.time}</strong>
+                <strong>${formattedDate}</strong> at <strong>${sanitizedAppointment.time}</strong>
             </div>
         </div>
 
         <div class="detail-item">
             <div class="detail-label">Status:</div>
             <div class="detail-value">
-                <span class="appointment-status ${getStatusClass(appointment.status)}">
-                    ${getStatusText(appointment.status)}
+                <span class="appointment-status ${this.getStatusClass(sanitizedAppointment.status)}">
+                    ${this.getStatusText(sanitizedAppointment.status)}
                 </span>
             </div>
         </div>
 
         <div class="detail-item">
             <div class="detail-label">Service Type:</div>
-            <div class="detail-value">${getServiceTypeText(appointment.serviceType)}</div>
+            <div class="detail-value">${this.getServiceTypeText(sanitizedAppointment.serviceType)}</div>
         </div>
 
         <div class="detail-item">
             <div class="detail-label">Problem Description:</div>
-            <div class="detail-value">${appointment.description}</div>
+            <div class="detail-value">${sanitizedAppointment.description}</div>
         </div>
 
-        ${appointment.adminResponse ? `
+        ${sanitizedAppointment.adminResponse ? `
             <div class="detail-item">
                 <div class="detail-label">Administrator Response:</div>
                 <div class="detail-value" style="background-color: #e8f5e8; border-left: 4px solid var(--success);">
-                    ${appointment.adminResponse}
+                    ${sanitizedAppointment.adminResponse}
                 </div>
             </div>
         ` : ''}
 
-        ${appointment.estimatedPrice ? `
+        ${sanitizedAppointment.estimatedPrice ? `
             <div class="detail-item">
                 <div class="detail-label">Estimated Price:</div>
                 <div class="detail-value">
                     <strong style="color: var(--success); font-size: 1.2em;">
-                        $${appointment.estimatedPrice}
+                        ${sanitizedAppointment.estimatedPrice}
                     </strong>
                 </div>
             </div>
         ` : ''}
 
-        ${appointment.estimatedCompletionTime ? `
+        ${sanitizedAppointment.estimatedCompletionTime ? `
             <div class="detail-item">
                 <div class="detail-label">Estimated Completion Date:</div>
                 <div class="detail-value">
-                    ${new Date(appointment.estimatedCompletionTime).toLocaleDateString('en-US')}
+                    ${new Date(sanitizedAppointment.estimatedCompletionTime).toLocaleDateString('en-US')}
                 </div>
             </div>
         ` : ''}
 
-        ${appointment.vehicle ? `
+        ${sanitizedAppointment.vehicle ? `
             <div class="detail-item">
                 <div class="detail-label">Vehicle:</div>
                 <div class="detail-value">
-                    <strong>${appointment.vehicle.brand} ${appointment.vehicle.model}</strong> 
-                    (${appointment.vehicle.year}) - ${appointment.vehicle.vehicle_type || appointment.vehicle.type}
-                    ${appointment.vehicle.is_electric ? ' Electric' : ''}
-                    ${appointment.vehicle.notes ? `<br><small>Notes: ${appointment.vehicle.notes}</small>` : ''}
+                    <strong>${sanitizedAppointment.vehicle.brand} ${sanitizedAppointment.vehicle.model}</strong> 
+                    (${sanitizedAppointment.vehicle.year}) - ${sanitizedAppointment.vehicle.vehicle_type || sanitizedAppointment.vehicle.type}
+                    ${sanitizedAppointment.vehicle.is_electric ? ' Electric' : ''}
+                    ${sanitizedAppointment.vehicle.notes ? `<br><small>Notes: ${sanitizedAppointment.vehicle.notes}</small>` : ''}
                 </div>
             </div>
         ` : ''}
@@ -814,7 +886,7 @@ Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
         <div class="detail-item">
             <div class="detail-label">Creation Date:</div>
             <div class="detail-value">
-                ${new Date(appointment.createdAt).toLocaleDateString('en-US', {
+                ${new Date(sanitizedAppointment.createdAt).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -826,29 +898,24 @@ Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
 
         ${canCancel ? `
             <div class="form-actions" style="margin-top: 20px;">
-                <button class="secondary-btn" onclick="cancelAppointmentFromModal('${appointment.id}')">
+                <button class="secondary-btn" onclick="dashboard.cancelAppointmentFromModal('${sanitizedAppointment.id}')">
                     Cancel Appointment
                 </button>
             </div>
         ` : ''}
-    `;
+        `;
 
+        detailsContainer.innerHTML = detailsHTML;
         modal.style.display = 'flex';
-    };
+    }
 
-    window.cancelAppointmentFromModal = function(appointmentId) {
+    cancelAppointmentFromModal(appointmentId) {
         const modal = document.getElementById('appointment-modal');
         modal.style.display = 'none';
-        cancelAppointment(appointmentId);
-    };
+        this.cancelAppointment(appointmentId);
+    }
 
-    // Make functions globally accessible
-    window.loadAppointments = loadAppointments;
-    window.loadAppointmentsGlobal = loadAppointments;
-    window.loadUserVehicles = loadUserVehicles;
-    window.switchTabGlobal = switchTab;
-
-    function logout() {
+    logout() {
         if (confirm('Are you sure you want to logout?')) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
@@ -856,30 +923,14 @@ Created: ${new Date(appointment.createdAt).toLocaleDateString('en-US')}
         }
     }
 
-
-
-    function showMessage(message, type = 'info') {
-        const toast = document.getElementById('message-toast');
-        const messageText = document.getElementById('message-text');
-
-        if (toast && messageText) {
-            messageText.textContent = message;
-            toast.className = `message-toast ${type}`;
-            toast.style.display = 'block';
-
-            setTimeout(() => {
-                toast.style.display = 'none';
-            }, 4000);
-        } else {
-            alert(message);
-        }
+    startTokenValidationInterval() {
+        setInterval(() => {
+            const currentToken = localStorage.getItem('token');
+            if (!currentToken) {
+                window.location.href = 'login.html';
+            }
+        }, 60000);
     }
+}
 
-    // Check token validity periodically
-    setInterval(function() {
-        const currentToken = localStorage.getItem('token');
-        if (!currentToken) {
-            window.location.href = 'login.html';
-        }
-    }, 60000);
-});
+const dashboard = new Dashboard();

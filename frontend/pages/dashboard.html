@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Dashboard - Repair Queens</title>
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self';
+                   script-src 'self' 'unsafe-inline';
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/dashboard.css">
 </head>
@@ -20,23 +28,6 @@
                     <h1 class="brand-name">Repair Queens</h1>
                 </div>
             </div>
-
-            <!-- Navigation -->
-            <nav class="main-nav">
-                <ul class="nav-list">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-tab="appointments">
-                            <span class="nav-text">My Appointments</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" id="contact-btn">
-                            <span class="nav-text">Contact</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
 
             <!-- User Menu -->
             <div class="user-menu">
@@ -92,9 +83,6 @@
                 <h2>Dashboard</h2>
                 <p class="dashboard-subtitle">Manage your vehicle service appointments</p>
             </div>
-            <button id="new-appointment-btn" class="primary-btn">
-                <span class="btn-text">New Appointment</span>
-            </button>
         </section>
 
         <section class="dashboard-content">
@@ -298,7 +286,6 @@
     </div>
 </div>
 
-
 <div id="appointment-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -310,16 +297,7 @@
     </div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loading" class="loading-overlay" style="display: none;">
-    <div class="loading-spinner"></div>
-    <p class="loading-text">Processing...</p>
-</div>
 
-<!-- Message Toast -->
-<div id="message-toast" class="message-toast" style="display: none;">
-    <span id="message-text"></span>
-</div>
 
 <script src="/js/dashboard.js"></script>
 </body>
