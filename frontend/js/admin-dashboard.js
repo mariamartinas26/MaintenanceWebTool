@@ -487,10 +487,14 @@ class AdminDashboard {
         const actions = this.createSafeElement('div', 'appointment-actions');
         const viewBtn = this.createSafeElement('button', 'view-btn', 'View Details');
         viewBtn.dataset.id = String(appointment.id);
-        const manageBtn = this.createSafeElement('button', 'manage-btn', 'Manage');
-        manageBtn.dataset.id = String(appointment.id);
         actions.appendChild(viewBtn);
-        actions.appendChild(manageBtn);
+
+
+        if (appointment.status === 'pending') {
+            const manageBtn = this.createSafeElement('button', 'manage-btn', 'Manage');
+            manageBtn.dataset.id = String(appointment.id);
+            actions.appendChild(manageBtn);
+        }
 
         card.appendChild(header);
         card.appendChild(clientName);
@@ -538,7 +542,7 @@ class AdminDashboard {
                 this.openModal('view-appointment-modal');
             }
         } catch (error) {
-            // Silent error handling
+
         }
     }
 
@@ -554,6 +558,15 @@ class AdminDashboard {
             hour: '2-digit',
             minute: '2-digit'
         });
+
+        if (appointment.status !== 'pending') {
+            const statusNotice = this.createSafeElement('div', `status-notice status-${appointment.status}`);
+            const statusText = appointment.status === 'approved' ? 'This appointment has been approved and cannot be modified.' :
+                appointment.status === 'rejected' ? 'This appointment has been rejected and cannot be modified.' :
+                    'This appointment has been processed and cannot be modified.';
+            this.safeSetText(statusNotice, statusText);
+            detailsContainer.appendChild(statusNotice);
+        }
 
         const clientSection = this.createDetailSection('Client Information', [
             { label: 'Name', value: appointment.clientInfo.name },
@@ -605,6 +618,21 @@ class AdminDashboard {
             }
             const approvalSection = this.createDetailSection('Approval Information', approvalItems);
             detailsContainer.appendChild(approvalSection);
+        }
+
+        if (appointment.selectedParts && appointment.selectedParts.length > 0) {
+            const partsSection = this.createDetailSection('Selected Parts', []);
+            const partsList = this.createSafeElement('div', 'selected-parts-list');
+
+            appointment.selectedParts.forEach(part => {
+                const partItem = this.createSafeElement('div', 'part-detail-item');
+                const partInfo = `${part.partName} (${part.partNumber}) - Quantity: ${part.quantity} × ${part.unitPrice} RON = ${part.subtotal} RON`;
+                this.safeSetText(partItem, partInfo);
+                partsList.appendChild(partItem);
+            });
+
+            partsSection.appendChild(partsList);
+            detailsContainer.appendChild(partsSection);
         }
 
         if (appointment.mediaFiles && appointment.mediaFiles.length > 0) {
@@ -677,13 +705,22 @@ class AdminDashboard {
             }
 
             if (data.success) {
-                this.populateManageForm(this.sanitizeObject(data.appointment));
+                const appointment = this.sanitizeObject(data.appointment);
+
+                if (appointment.status !== 'pending') {
+                    alert('This appointment cannot be modified as it has already been processed.');
+                    return;
+                }
+
+                this.populateManageForm(appointment);
                 this.openModal('edit-appointment-modal');
             }
         } catch (error) {
-            // Silent error handling
+            console.error('Error loading appointment details:', error);
+            alert('Error loading appointment details. Please try again.');
         }
     }
+
 
     populateManageForm(appointment) {
         this.safeSetValue(document.getElementById('appointment-id'), appointment.id);

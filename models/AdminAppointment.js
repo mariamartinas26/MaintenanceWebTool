@@ -163,11 +163,14 @@ class AdminAppointment {
 
             const currentAppointment = currentResult.rows[0];
 
+            if (currentAppointment.old_status === 'approved' || currentAppointment.old_status === 'rejected') {
+                throw new Error(`Cannot modify appointment: already ${currentAppointment.old_status}`);
+            }
+
             let stockUpdateResult = null;
             if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
-                console.log('Attempting to reduce stock for parts:', selectedParts);
 
-                // Validate stock availability first
+
                 const availability = await Part.checkAvailability(selectedParts);
                 if (!availability.available) {
                     const errorMessage = availability.unavailableParts
@@ -176,23 +179,9 @@ class AdminAppointment {
                     throw new Error(`Cannot approve appointment. Insufficient stock: ${errorMessage}`);
                 }
 
-                // Reduce stock for all selected parts
                 stockUpdateResult = await Part.updateMultipleStock(selectedParts, client);
-                console.log('Stock update successful:', stockUpdateResult);
             }
 
-            // If appointment was previously approved with parts and now being changed to another status,
-            if (currentAppointment.old_status === 'approved' && updateData.status !== 'approved') {
-                const existingParts = await AppointmentParts.getAppointmentParts(id);
-                if (existingParts.length > 0) {
-                    console.log('Restoring stock for previously approved appointment parts');
-                    for (const part of existingParts) {
-                        await Part.restoreStock(part.part_id, part.quantity, client);
-                    }
-                }
-            }
-
-            // Update appointment with all new fields
             const updateQuery = `
                 UPDATE "Appointments"
                 SET
@@ -204,7 +193,7 @@ class AdminAppointment {
                     warranty_info = $7,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $1
-                RETURNING *
+                    RETURNING *
             `;
 
             const updateResult = await client.query(updateQuery, [
@@ -219,15 +208,12 @@ class AdminAppointment {
 
             const updatedAppointment = updateResult.rows[0];
 
-            // Save selected parts if appointment is approved and parts are provided
             if (updateData.status === 'approved' && selectedParts && selectedParts.length > 0) {
                 await AppointmentParts.saveAppointmentParts(id, selectedParts, client);
             } else {
-                // Clear any existing parts if not approved or no parts selected
                 await AppointmentParts.saveAppointmentParts(id, [], client);
             }
 
-            // Update calendar if appointment is rejected or cancelled
             if (updateData.status === 'rejected' && currentAppointment.old_status !== 'rejected') {
                 const appointmentDateTime = currentAppointment.appointment_date;
                 const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
@@ -245,7 +231,6 @@ class AdminAppointment {
                 await client.query(updateCalendarQuery, [appointmentDateStr, appointmentTimeStr]);
             }
 
-            // Add to appointment history
             const historyQuery = `
                 INSERT INTO "AppointmentHistory"
                 (appointment_id, user_id, action, old_status, new_status, comment, created_at)
@@ -255,7 +240,6 @@ class AdminAppointment {
             const action = updateData.status === 'approved' ? 'approved' :
                 updateData.status === 'rejected' ? 'rejected' : 'updated';
 
-            // Use appropriate comment based on status
             let comment;
             if (updateData.status === 'rejected' && updateData.rejectionReason) {
                 comment = `Appointment rejected: ${updateData.rejectionReason}`;
@@ -265,7 +249,6 @@ class AdminAppointment {
                 comment = `Appointment ${action} by admin`;
             }
 
-            // Add parts info to comment if parts were selected and stock was updated
             if (updateData.status === 'approved' && stockUpdateResult && stockUpdateResult.updatedParts.length > 0) {
                 const partsCount = stockUpdateResult.updatedParts.length;
                 const totalPartsCost = selectedParts.reduce((sum, part) => sum + (part.quantity * part.unitPrice), 0);
@@ -287,7 +270,6 @@ class AdminAppointment {
 
             await client.query('COMMIT');
 
-            // Return the updated appointment with stock update info
             return {
                 ...updatedAppointment,
                 stockUpdateResult: stockUpdateResult

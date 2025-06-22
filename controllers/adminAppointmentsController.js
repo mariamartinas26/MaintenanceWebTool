@@ -198,13 +198,6 @@ class AdminAppointmentsController {
             setSecurityHeaders(res);
 
             const appointmentId = validateInteger(req.params.id, 1);
-            const status = validateInput(req.body.status);
-            const adminResponse = validateInput(req.body.adminResponse);
-            const estimatedPrice = validateNumber(req.body.estimatedPrice, 0);
-            const warranty = validateInteger(req.body.warranty, 0);
-            const rejectionReason = validateInput(req.body.rejectionReason);
-            const retryDays = validateInteger(req.body.retryDays, 1);
-            const selectedParts = Array.isArray(req.body.selectedParts) ? req.body.selectedParts : [];
 
             if (!appointmentId) {
                 return sendJSON(res, 400, {
@@ -212,6 +205,31 @@ class AdminAppointmentsController {
                     message: 'Invalid appointment id',
                 });
             }
+
+            const currentAppointment = await AdminAppointment.getByIdForAdmin(appointmentId);
+
+            if (!currentAppointment) {
+                return sendJSON(res, 404, {
+                    success: false,
+                    message: 'Appointment not found'
+                });
+            }
+
+            if (currentAppointment.status === 'approved' || currentAppointment.status === 'rejected') {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: `Cannot modify appointment: already ${currentAppointment.status}`,
+                    currentStatus: currentAppointment.status
+                });
+            }
+
+            const status = validateInput(req.body.status);
+            const adminResponse = validateInput(req.body.adminResponse);
+            const estimatedPrice = validateNumber(req.body.estimatedPrice, 0);
+            const warranty = validateInteger(req.body.warranty, 0);
+            const rejectionReason = validateInput(req.body.rejectionReason);
+            const retryDays = validateInteger(req.body.retryDays, 1);
+            const selectedParts = Array.isArray(req.body.selectedParts) ? req.body.selectedParts : [];
 
             if (!validateStatus(status)) {
                 return sendJSON(res, 400, {
@@ -318,13 +336,6 @@ class AdminAppointmentsController {
                 sanitizedParts
             );
 
-            if (!updatedAppointment) {
-                return sendJSON(res, 404, {
-                    success: false,
-                    message: 'Appointment was not found'
-                });
-            }
-
             const statusMessages = {
                 'approved': 'Appointment was approved successfully',
                 'rejected': 'Appointment was rejected',
@@ -397,6 +408,14 @@ class AdminAppointmentsController {
 
         } catch (error) {
             console.error('Error in updateAppointmentStatus:', error);
+
+            if (error.message.includes('Cannot modify appointment: already')) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: error.message,
+                    reason: 'appointment_finalized'
+                });
+            }
 
             if (error.message.includes('Insufficient stock') || error.message.includes('Stock validation failed')) {
                 return sendJSON(res, 400, {

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Repair Queens</title>
 
-    <!-- Security Headers (only CSP and Referrer Policy work in meta tags) -->
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self';
                    script-src 'self' 'unsafe-inline';
@@ -74,6 +73,7 @@
     </main>
 </div>
 
+
 <div class="modal" id="view-appointment-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -90,6 +90,12 @@
         <div class="modal-header">
             <h2>Manage Appointment</h2>
             <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-warning" id="readonly-warning" style="display: none;">
+            <div class="warning-content">
+                <span class="warning-icon">!</span>
+                <span class="warning-text">This appointment has been processed and cannot be modified.</span>
+            </div>
         </div>
         <div class="modal-body">
             <form id="appointment-form">
