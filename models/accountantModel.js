@@ -3,9 +3,6 @@ const db = require('../database/db');
 class AccountantModel {
     static async getDashboardStats() {
         try {
-
-
-            // Get recent imports (handle table not existing)
             let recentImports = 0;
             try {
                 const importsResult = await db.query(
