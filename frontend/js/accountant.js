@@ -9,33 +9,6 @@ class AccountantDashboard {
         if (!this.checkAuth()) return;
         this.currentUser = JSON.parse(localStorage.getItem('user') || '{}');
         this.createDashboard();
-        this.updateUserInfo();
-    }
-
-    getCurrentUserRole() {
-        try {
-            const user = localStorage.getItem('user');
-            if (user) {
-                const userData = JSON.parse(user);
-                return userData.role;
-            }
-            return null;
-        } catch (error) {
-            return null;
-        }
-    }
-
-    getCurrentUserName() {
-        try {
-            const user = localStorage.getItem('user');
-            if (user) {
-                const userData = JSON.parse(user);
-                return `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
-            }
-            return null;
-        } catch (error) {
-            return null;
-        }
     }
 
     logout() {
@@ -50,45 +23,17 @@ class AccountantDashboard {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
+        //daca nu am token redirectez la login
         if (!token) {
-            console.log('No token, redirecting to login');
             window.location.href = '/login';
             return false;
         }
 
-        if (!['admin', 'manager', 'accountant'].includes(user.role)) {
-            console.log('User not allowed on accountant dashboard:', user.role);
-
-            switch (user.role) {
-                case 'manager':
-                    window.location.href = '/manager/dashboard';
-                    break;
-                case 'client':
-                    window.location.href = '/client/dashboard';
-                    break;
-                default:
-                    window.location.href = '/login';
-            }
+        if (!['accountant'].includes(user.role)) {
             return false;
         }
 
         return true;
-    }
-
-    updateUserInfo() {
-        const userName = this.getCurrentUserName();
-        const userNameElement = document.getElementById('user-name');
-
-        if (userNameElement) {
-            if (userName) {
-                const roleLabel = this.currentUser.role === 'accountant' ? 'Accountant' :
-                    this.currentUser.role === 'admin' ? 'Administrator' :
-                        this.currentUser.role === 'manager' ? 'Manager' : this.currentUser.role;
-                userNameElement.textContent = `${roleLabel}: ${userName}`;
-            } else {
-                userNameElement.textContent = `${this.currentUser.role}: ${this.currentUser.email || 'User'}`;
-            }
-        }
     }
 
     createDashboard() {
@@ -97,7 +42,7 @@ class AccountantDashboard {
 
         dashboard.innerHTML = `
             <div class="manager-container">
-                <!-- Header Section -->
+                <!-- Header-->
                 <div class="manager-header">
                     <div class="header-content">
                         <div class="header-title">
@@ -107,7 +52,7 @@ class AccountantDashboard {
                     </div>
                 </div>
 
-                <!-- Quick Actions Section -->
+                <!--actions section -->
                 <div class="requests-section">
                     <div class="requests-grid">
                         <div class="request-card">
@@ -140,7 +85,6 @@ class AccountantDashboard {
                     <div class="section-header">
                         <h2>Suppliers</h2>
                         <div class="section-actions">
-                            <button class="btn btn-secondary" onclick="accountantDashboard.exportSuppliersFromAPI()">Export</button>
                             <button class="btn btn-secondary" onclick="accountantDashboard.hideSuppliersSection()">Back</button>
                         </div>
                     </div>
@@ -218,7 +162,6 @@ class AccountantDashboard {
         `;
     }
 
-    // Metodă pentru a ascunde toate secțiunile
     hideAllSections() {
         document.getElementById('suppliers-section').style.display = 'none';
         document.getElementById('import-export-section').style.display = 'none';
@@ -244,33 +187,29 @@ class AccountantDashboard {
     }
 
     async loadSuppliersFromAPI() {
-        try {
-            const response = await fetch('/api/accountant/suppliers', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
+        const response = await fetch('/api/accountant/suppliers', {
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
             }
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+        if (response.status === 401) {
+            this.handleAuthError();
+            return;
+        }
 
-            const result = await response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-            if (result.success) {
-                this.suppliers = result.data;
-                this.loadSuppliers();
-            } else {
-                throw new Error(result.message || 'Failed to load suppliers');
-            }
-        } catch (error) {
-            console.error('Error loading suppliers:', error);
+        const result = await response.json();
+
+        if (result.success) {
+            this.suppliers = result.data;
+            this.loadSuppliers();
+        } else {
+            throw new Error(result.message || 'Failed to load suppliers');
         }
     }
 
@@ -287,53 +226,18 @@ class AccountantDashboard {
         suppliersList.innerHTML = this.suppliers.map(supplier => `
             <div class="supplier-item">
                 <div class="supplier-info">
-                    <h3>${supplier.company_name || supplier.name}</h3>
+                    <h3>${supplier.company_name}</h3>
                     <p>Contact: ${supplier.contact_person}</p>
                     <p>Phone: ${supplier.phone || 'N/A'}</p>
                     <p>Email: ${supplier.email}</p>
-                    <p>Delivery: ${supplier.delivery_time_days || supplier.delivery_time || 7} days</p>
-                    <p>Address: ${supplier.address || 'N/A'}</p>
+                    <p>Delivery: ${supplier.delivery_time_days} days</p>
+                    <p>Address: ${supplier.address}</p>
                 </div>
             </div>
         `).join('');
     }
 
-    async exportSuppliersFromAPI() {
-        try {
-            const response = await fetch('/api/accountant/suppliers/export', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
-            }
-
-            const result = await response.json();
-
-            if (result.success) {
-                const dataStr = JSON.stringify(result.data, null, 2);
-                const dataBlob = new Blob([dataStr], {type: 'application/json'});
-
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `suppliers_export_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            } else {
-                throw new Error(result.message || 'Failed to export suppliers');
-            }
-        } catch (error) {
-            console.error('Error exporting suppliers:', error);
-        }
-    }
-
+    //metoda procesare import
     async processImport() {
         const dataType = document.getElementById('importDataType').value;
         const format = document.getElementById('importFormat').value;
@@ -380,7 +284,6 @@ class AccountantDashboard {
                 const failed = result.data?.failed || 0;
 
                 if (errors.length > 0) {
-                    console.warn('Import completed with errors:', errors);
                     alert(`Import completed!\nImported: ${imported}\nFailed: ${failed}\nCheck console for error details.`);
                 } else {
                     alert(`Import successful!\n`);
@@ -389,11 +292,11 @@ class AccountantDashboard {
                 throw new Error(result.message || 'Failed to import data');
             }
         } catch (error) {
-            console.error('Error importing data:', error);
             alert('Import failed: ' + error.message);
         }
     }
 
+    //procesare export
     async processExport() {
         const dataType = document.getElementById('exportDataType').value;
         const format = document.getElementById('exportFormat').value;
