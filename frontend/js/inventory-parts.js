@@ -4,7 +4,6 @@ let filteredParts = [];
 let currentPage = 1;
 let itemsPerPage = 12;
 let selectedParts = new Set();
-let deletePartId = null;
 let updatePartId = null;
 
 const SecurityUtils = window.SecurityUtils;
@@ -44,7 +43,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function setupEventListeners() {
     document.getElementById('stockFilter').addEventListener('change', applyFilters);
-
     document.getElementById('stockUpdateForm').addEventListener('submit', handleStockUpdate);
 
     document.querySelectorAll('.modal').forEach(modal => {
@@ -54,7 +52,6 @@ function setupEventListeners() {
             }
         });
     });
-
 
     setupNavigationListeners();
 }
@@ -164,7 +161,6 @@ function applyFilters() {
     });
 
     currentPage = 1;
-
     displayParts();
     updatePagination();
 }
@@ -254,20 +250,9 @@ function createPartCardElement(part) {
     orderIcon.className = 'fas fa-plus-circle';
     orderBtn.appendChild(orderIcon);
 
-    // Delete button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'action-btn delete';
-    deleteBtn.title = 'Delete Part';
-    deleteBtn.addEventListener('click', () => showDeleteModal(partId));
-
-    const deleteIcon = document.createElement('i');
-    deleteIcon.className = 'fas fa-trash';
-    deleteBtn.appendChild(deleteIcon);
-
     // Assemble everything
     actionsDiv.appendChild(viewBtn);
     actionsDiv.appendChild(orderBtn);
-    actionsDiv.appendChild(deleteBtn);
 
     header.appendChild(titleDiv);
     header.appendChild(actionsDiv);
@@ -434,7 +419,7 @@ async function showPartDetails(partId) {
     }
 }
 
-// Display part details using DOM methods
+// Display part details using DOM methods - simplified version
 function displayPartDetails(part) {
     const stockStatus = getStockStatus(part);
     const content = document.getElementById('partDetailsContent');
@@ -445,60 +430,44 @@ function displayPartDetails(part) {
         content.removeChild(content.firstChild);
     }
 
-    // Create main grid
-    const grid = document.createElement('div');
-    grid.className = 'part-details-grid';
+    // Create simple details container
+    const detailsContainer = document.createElement('div');
+    detailsContainer.className = 'part-details-simple';
 
-    // Basic Information Section
-    const basicSection = createDetailSection('Basic Information', [
-        { label: 'Name', value: part.name || '' },
-        { label: 'Part Number', value: part.partNumber || 'N/A' },
-        { label: 'Category', value: part.category || '' },
-        { label: 'Description', value: part.description || 'No description' }
-    ]);
+    // Create detail items
+    const details = [
+        { label: 'Name', value: part.name || '', className: '' },
+        { label: 'Part Number', value: part.partNumber || 'N/A', className: '' },
+        { label: 'Category', value: part.category || '', className: '' },
+        { label: 'Description', value: part.description || 'No description', className: '' },
+        { label: 'Price', value: formatCurrency(part.price), className: 'price' },
+        { label: 'Current Stock', value: part.stockQuantity, className: `stock ${stockStatus.toLowerCase().replace(' ', '-')}` },
+        { label: 'Minimum Level', value: part.minimumStockLevel, className: '' },
+        { label: 'Stock Status', value: stockStatus, className: `stock ${stockStatus.toLowerCase().replace(' ', '-')}` },
+        { label: 'Created', value: formatDate(part.createdAt), className: '' },
+        { label: 'Last Updated', value: formatDate(part.updatedAt), className: '' }
+    ];
 
-    // Pricing & Stock Section
-    const stockSection = createDetailSection('Pricing & Stock', [
-        { label: 'Price', value: formatCurrency(part.price), className: 'price-value' },
-        { label: 'Current Stock', value: part.stockQuantity, className: `stock-value ${stockStatus.toLowerCase().replace(' ', '-')}` },
-        { label: 'Minimum Level', value: part.minimumStockLevel },
-        { label: 'Stock Status', value: stockStatus, className: `stock-status ${stockStatus.toLowerCase().replace(' ', '-')}` }
-    ]);
+    details.forEach(detail => {
+        const detailItem = document.createElement('div');
+        detailItem.className = 'detail-item';
 
-    grid.appendChild(basicSection);
-    grid.appendChild(stockSection);
+        const label = document.createElement('span');
+        label.className = 'detail-label';
+        label.textContent = detail.label + ':';
 
-    // Supplier Information Section (if exists)
-    if (part.supplier && part.supplier.name) {
-        const supplierData = [
-            { label: 'Supplier', value: part.supplier.name }
-        ];
+        const value = document.createElement('span');
+        value.className = `detail-value ${detail.className}`;
+        value.textContent = SecurityUtils.sanitizeInput(String(detail.value));
 
-        if (part.supplier.contact) {
-            supplierData.push({ label: 'Contact', value: part.supplier.contact });
-        }
-        if (part.supplier.phone) {
-            supplierData.push({ label: 'Phone', value: part.supplier.phone });
-        }
-        if (part.supplier.email) {
-            supplierData.push({ label: 'Email', value: part.supplier.email });
-        }
-
-        const supplierSection = createDetailSection('Supplier Information', supplierData);
-        grid.appendChild(supplierSection);
-    }
-
-    // Audit Information Section
-    const auditSection = createDetailSection('Audit Information', [
-        { label: 'Created', value: formatDate(part.createdAt) },
-        { label: 'Last Updated', value: formatDate(part.updatedAt) }
-    ]);
-
-    grid.appendChild(auditSection);
+        detailItem.appendChild(label);
+        detailItem.appendChild(value);
+        detailsContainer.appendChild(detailItem);
+    });
 
     // Actions
     const actions = document.createElement('div');
-    actions.className = 'detail-actions';
+    actions.className = 'modal-actions';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn-secondary';
@@ -517,38 +486,8 @@ function displayPartDetails(part) {
     actions.appendChild(closeBtn);
     actions.appendChild(orderBtn);
 
-    content.appendChild(grid);
+    content.appendChild(detailsContainer);
     content.appendChild(actions);
-}
-
-// Helper function to create detail sections
-function createDetailSection(title, rows) {
-    const section = document.createElement('div');
-    section.className = 'detail-section';
-
-    const titleH4 = document.createElement('h4');
-    titleH4.textContent = title;
-    section.appendChild(titleH4);
-
-    rows.forEach(row => {
-        const detailRow = document.createElement('div');
-        detailRow.className = 'detail-row';
-
-        const label = document.createElement('label');
-        label.textContent = row.label + ':';
-
-        const span = document.createElement('span');
-        span.textContent = SecurityUtils.sanitizeInput(String(row.value));
-        if (row.className) {
-            span.className = row.className;
-        }
-
-        detailRow.appendChild(label);
-        detailRow.appendChild(span);
-        section.appendChild(detailRow);
-    });
-
-    return section;
 }
 
 function showStockUpdateModal(partId) {
@@ -650,82 +589,6 @@ async function handleStockUpdate(e) {
     }
 }
 
-function showDeleteModal(partId) {
-    const part = allParts.find(p => p.id === partId);
-    if (!part) return;
-
-    deletePartId = partId;
-
-    const deletePartInfoElement = document.getElementById('deletePartInfo');
-    if (deletePartInfoElement) {
-        // Clear and rebuild content safely
-        while (deletePartInfoElement.firstChild) {
-            deletePartInfoElement.removeChild(deletePartInfoElement.firstChild);
-        }
-
-        const title = document.createElement('h4');
-        title.textContent = SecurityUtils.sanitizeInput(part.name);
-
-        const partNumPara = document.createElement('p');
-        const partNumStrong = document.createElement('strong');
-        partNumStrong.textContent = 'Part Number:';
-        partNumPara.appendChild(partNumStrong);
-        partNumPara.appendChild(document.createTextNode(' ' + (SecurityUtils.sanitizeInput(part.partNumber) || 'N/A')));
-
-        const categoryPara = document.createElement('p');
-        const categoryStrong = document.createElement('strong');
-        categoryStrong.textContent = 'Category:';
-        categoryPara.appendChild(categoryStrong);
-        categoryPara.appendChild(document.createTextNode(' ' + SecurityUtils.sanitizeInput(part.category)));
-
-        const stockPara = document.createElement('p');
-        const stockStrong = document.createElement('strong');
-        stockStrong.textContent = 'Current Stock:';
-        stockPara.appendChild(stockStrong);
-        stockPara.appendChild(document.createTextNode(' ' + part.stockQuantity));
-
-        const pricePara = document.createElement('p');
-        const priceStrong = document.createElement('strong');
-        priceStrong.textContent = 'Price:';
-        pricePara.appendChild(priceStrong);
-        pricePara.appendChild(document.createTextNode(' ' + formatCurrency(part.price)));
-
-        deletePartInfoElement.appendChild(title);
-        deletePartInfoElement.appendChild(partNumPara);
-        deletePartInfoElement.appendChild(categoryPara);
-        deletePartInfoElement.appendChild(stockPara);
-        deletePartInfoElement.appendChild(pricePara);
-    }
-
-    const modal = document.getElementById('deleteModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
-}
-
-async function confirmDelete() {
-    if (!deletePartId) return;
-
-    try {
-        const headers = getAuthHeaders();
-        if (!headers) return;
-
-        const response = await fetch(`/inventory/api/parts/${encodeURIComponent(deletePartId)}`, {
-            method: 'DELETE',
-            headers
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            hideDeleteModal();
-            await loadParts();
-        }
-    } catch (error) {
-        console.error('Error deleting part:', error);
-    }
-}
-
 // Modal management functions
 function hidePartDetailsModal() {
     const modal = document.getElementById('partDetailsModal');
@@ -742,20 +605,11 @@ function hideStockUpdateModal() {
     updatePartId = null;
 }
 
-function hideDeleteModal() {
-    const modal = document.getElementById('deleteModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-    deletePartId = null;
-}
-
 function hideAllModals() {
     document.querySelectorAll('.modal').forEach(modal => {
         modal.style.display = 'none';
     });
     updatePartId = null;
-    deletePartId = null;
 }
 
 function formatCurrency(amount) {
