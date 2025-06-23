@@ -109,9 +109,10 @@
 
     <h3>3.1 Perspectiva produsului</h3>
     <p>
-      Perspectiva proiectului este de a dezvolta un instrument web util și ușor de utilizat
-      pentru vizualizarea datelor referitoare la nominalizările actorilor la premiile SAG,
-      oferind utilizatorilor posibilitatea de a explora aceste date în mod flexibil și interactiv.
+    <p>
+      Perspectiva proiectului este de a dezvolta un sistem web modern și eficient
+      pentru gestionarea programărilor și operațiunilor din cadrul unui service de trotinete, motociclete și scutere.
+    </p>
     </p>
     <p>
       Următoarea diagramă prezintă componentele majore ale sistemului aplicației:
@@ -226,72 +227,51 @@
 
   <section id="application-interface">
     <h2>4. Interfața aplicației</h2>
-
     <h3>4.1 Interfața cu utilizatorul</h3>
     <p>
-      Interacțiunile și interfața utilizatorului pentru proiectul FireStream pentru vizualizare a datelor nominalizărilor actorilor la SAG Awards ar putea fi următoarele:
+      Interacțiunile și interfața utilizatorului pentru proiectul Service Auto pentru gestionarea programărilor și serviciilor de mentenanță ar putea fi următoarele:
     </p>
     <ul>
       <li>
-        <h4>Pagina "Home"</h4>
+        <h4>Client Dashboard</h4>
+        <ul>
+          <li>Pagina principală pentru clienți afișează o imagine de ansamblu asupra programărilor active și istoricul serviciilor.</li>
+          <li><i>Programări active</i>: Clientul poate vizualiza programările viitoare cu detalii despre dată, oră, tipul serviciului și statusul current.</li>
+          <li><i>Istoric servicii</i>: Acces la istoricul complet al serviciilor efectuate, cu detalii despre costurile și reparațiile realizate.</li>
+          <li><i>Programare nouă</i>: Funcționalitate pentru crearea unei programări noi cu selecția vehiculului și descrierea problemei.</li>
+          <li><i>Vehicule înregistrate</i>: Gestionarea vehiculelor personale cu posibilitatea adăugării de vehicule noi.</li>
+        </ul>
         <div class="interface">
-          <img src="view/index.png" typeof="sa:image" alt="Captură de ecran: Pagina Home a aplicației">
-          <img src="view/header.png" typeof="sa:image" alt="Captură de ecran: Antetul aplicației">
+          <img src="../documentatie/clientDashboard.png" typeof="sa:image">
         </div>
       </li>
       <li>
-        <h4>Pagina "Statistics"</h4>
+        <h4>Manager Dashboard</h4>
         <ul>
-          <li>Ecranul principal trebuie să afișeze diverse statistici despre popularitatea actorilor, evoluția / involuția
-            unor actori în funcție de producțiile de film în care au jucat și impactul acestora asupra publicului larg.</li>
-          <li><i>Grafice și diagrame</i>: Utilizatorul va putea alege dintr-o varietate de grafice și diagrame pentru a
-            vizualiza datele. Acestea pot include grafice de bare, diagrame circulare, grafice de linie etc.</li>
-          <li><i>Tabeluri</i>: Utilizatorul va putea vizualiza datele sub formă de tabel și va avea opțiunea de a sorta
-            datele în funcție de diferite coloane.</li>
-          <li><i>Filtrare și sortare</i>: Utilizatorul va putea folosi diverse filtre pentru a personaliza vizualizarea
-            datelor. De exemplu, utilizatorul poate filtra nominalizările după an, categorie, gen, producător etc. De
-            asemenea, utilizatorul va avea opțiunea de a sorta nominalizările în funcție de diferite criterii, cum ar
-            fi numărul de nominalizări, numărul de premii câștigate etc.</li>
-          <li>Pentru exportul statisticilor, utilizatorul va avea 3 formate diferite pentru a exporta fișierul în
-            formatele <i>CSV</i>, <i>WebP</i> sau <i>SVG</i>, astfel încât acestea să poată fi utilizate în alte aplicații.</li>
+          <li>Interfață dedicată managerilor pentru gestionarea conturilor și distribuirea rolurilor în sistem.</li>
+          <li><i>Gestionarea cererilor de cont</i>: Vizualizarea și procesarea cererilor de înregistrare ale utilizatorilor noi.</li>
+          <li><i>Aprobare/Respingere conturi</i>: Acceptarea sau refuzarea cererilor de cont cu posibilitatea de a adăuga comentarii explicative.</li>
+          <li><i>Distribuirea rolurilor</i>: Atribuirea rolurilor specifice pentru utilizatorii acceptați (client, contabil, admin).</li>
+          <li><i>Monitorizarea conturilor</i>: Urmărirea statusului conturilor și istoricul deciziilor luate.</li>
         </ul>
         <div class="interface">
-          <img src="view/statistics.png" typeof="sa:image" alt="Captură de ecran: Pagina Statistics a aplicației">
+          <img src="../documentatie/managerDashboard.png" typeof="sa:image">
         </div>
       </li>
       <li>
-        <h4>Pagina "Nominations"</h4>
+        <h4>Admin Dashboard</h4>
         <ul>
-          <li>Pe ecranul principal ar trebui să existe un meniu pentru a naviga prin categoriile de nominalizări, cum
-            ar fi cel mai bun actor sau cea mai bună actriță în rol principal, etc. În plus, trebuie să existe un mod
-            de căutare pentru a găsi nominalizările specifice.</li>
-          <li>După selectarea unei nominalizări, utilizatorul ar trebui să poată vedea informații detaliate despre actor
-            sau producția cinematografică, precum și posibilitatea de a accesa știri referitoare la această nominalizare.
-            De asemenea, ar trebui să fie disponibilă o opțiune pentru a filtra informațiile după diverse criterii, cum ar
-            fi anul sau studio-ul.</li>
-          <li>Selectarea unei nominalizări pentru a accesa pagina dedicată acelei nominalizări, unde utilizatorul poate
-            vedea mai multe detalii despre actor, producție și nominalizare.</li>
+          <li>Panoul de control pentru administratorii sistemului cu acces la gestionarea programărilor și inventarului.</li>
+          <li><i>Gestionarea programărilor</i>: Aprobare sau respingere programări cu stabilirea prețului estimativ și garantiei oferite.</li>
+          <li><i>Estimări și prețuri</i>: Setarea costurilor estimate pentru servicii și oferirea de garanții pentru lucrările efectuate.</li>
+          <li><i>Gestionarea stocurilor</i>: Vizualizarea inventarului disponibil de piese și componente pentru reparații.</li>
+          <li><i>Comenzi de piese</i>: Plasarea comenzilor pentru piese noi când stocul este insuficient sau lipsesc componente necesare.</li>
+          <li><i>Actualizarea comenzilor</i>: Monitorizarea și actualizarea statusului comenzilor de piese în timp real.</li>
         </ul>
         <div class="interface">
-          <img src="view/nominations-1.png" typeof="sa:image" alt="Captură de ecran: Pagina Nominations - vedere generală">
-          <img src="view/nominations-2.png" typeof="sa:image" alt="Captură de ecran: Pagina Nominations - detalii nominalizare">
+          <img src="../documentatie/adminDashboard.png" typeof="sa:image">
         </div>
       </li>
-      <li>
-        <h4>Pagina "News"</h4>
-        <ul>
-          <li>Căutarea de știri: utilizatorul poate introduce un nume de nominalizat în câmpul de căutare și apăsa
-            butonul de căutare pentru a căuta știrile care conțin numele respectivului nominalizat.</li>
-          <li>Sortarea știrilor după data publicării sau popularitate: utilizatorul poate alege opțiunea de sortare și
-            paginile de știri se vor reîncărca pentru a reflecta sortarea aleasă.</li>
-          <li>Vizualizarea detaliilor știrii: utilizatorul poate da click pe titlul știrii pentru a vedea detalii
-            suplimentare despre știre.</li>
-        </ul>
-        <div class="interface">
-          <img src="view/news1.png" typeof="sa:image" alt="Captură de ecran: Pagina News a aplicației">
-        </div>
-      </li>
-      <li><p>Un buton "<i>Ajutor</i>" va fi disponibil pe fiecare pagină, cu informații despre utilizarea aplicației și cu răspunsuri la întrebări frecvente.</p></li>
     </ul>
 
     <h3>4.2 Interfața hardware</h3>
@@ -305,39 +285,53 @@
 
     <h3>4.3 Interfața software</h3>
     <p>
-      Interfețele software ale proiectului sunt:
+      Interfețele software ale proiectului Maintenance Web Tool sunt:
     </p>
     <ul>
-      <li><b>API-ul REST/GraphQL propriu dezvoltat</b>: Acesta va fi folosit pentru a prelua și trimite date între server
-        și client referitoare la nominalizările actorilor și filmelor la SAG Awards. Acesta va avea definiții clare pentru
-        endpoint-uri, verbe HTTP și tipuri de date acceptate și returnate.</li>
-      <li><b>API-ul REST/GraphQL</b>: Acesta va fi folosit pentru a prelua și controla datele referitoare la redarea
-        știriilor privitoare la fiecare nominalizat în parte la SAG Awards. Acesta va avea definiții clare pentru
-        endpoint-uri, verbe HTTP și tipuri de date acceptate și returnate.</li>
-      <li><b>API-ul TMDb (The Movie Database)</b>: Acesta va fi folosit pentru a prelua informații suplimentare despre
-        actori și producții cinematografice, care vor fi afișate pe site-ul web. Interacțiunea cu acest API va implica
-        cereri HTTP (de ex. GET) pentru a prelua datele necesare și procesarea răspunsurilor API.</li>
-      <li><b>Baza de date pentru datele utilizatorilor</b>: Aceasta va fi folosită pentru stocarea datelor utilizatorilor,
-        cum ar fi informațiile de autentificare, preferințele utilizatorilor. Această interfață software va implica conexiunea
-        cu o bază de date, definirea schemelor și operații CRUD (Create, Read, Update, Delete).</li>
-      <li><b>Sistemele de operare și bibliotecile utilizate</b>: Acestea vor fi folosite pentru a asigura funcționarea
-        corectă a aplicației pe diferite platforme. De exemplu Node.js va fi folosit pentru a implementa serverul web.</li>
-      <li><b>Protocoale de comunicare</b>: Aplicația va utiliza protocoale de comunicare standard, cum ar fi HTTPS, pentru
-        a comunica cu API-urile și cu baza de date.</li>
+      <li><b>API-ul REST propriu dezvoltat</b>: Implementat în Node.js vanilla pentru gestionarea cererilor HTTP
+        și răspunsurilor JSON. Include endpoint-uri pentru programări (/api/appointments),
+        vehicule (/api/vehicles) și inventar (/api/inventory), cu routing manual și parsarea request-urilor.</li>
+
+      <li><b>Sistem de autentificare JWT</b>: Va fi folosit pentru gestionarea sesiunilor utilizatorilor și controlul
+        accesului bazat pe roluri (client, admin, manager, contabil). Interfața va include middleware-ul de autentificare
+        și verificarea permisiunilor pentru fiecare endpoint.</li>
+
+      <li><b>Interfața cu baza de date PostgreSQL</b>: Aceasta va fi folosită pentru stocarea și gestionarea tuturor
+        datelor aplicației: utilizatori, programări, vehicule, piese, furnizori și comenzi. Interfața va include
+        conexiunea la baza de date, definirea schemelor și operații CRUD (Create, Read, Update, Delete) cu
+        query-uri parametrizate pentru prevenirea SQL Injection.</li>
+
+      <li><b>Module de import/export</b>: Interfețe software pentru procesarea fișierelor în formatele CSV, JSON și PDF.
+        Acestea vor permite importul precum si exportul datelor despre furnizori, piese si programări.</li>
+
+      <li><b>Sistemul de validare și securitate</b>: Implementat cu funcții personalizate pentru validarea
+        input-urilor, sanitizarea datelor și prevenirea atacurilor XSS și SQL Injection, folosind doar
+        expresii regulate și validări manuale.</li>
     </ul>
 
     <h3>4.4 Interfața de comunicații</h3>
     <p>
-      Interfața de comunicare asociată proiectului include o serie de funcții de comunicare, cum ar fi:
+      Interfața de comunicare asociată proiectului Maintenance Web Tool include următoarele funcții de comunicare:
     </p>
     <ul>
-      <li>comunicare prin email, pentru trimiterea de notificări și mesaje</li>
-      <li>comunicare prin browsere web, pentru accesarea și interacționarea cu interfața utilizatorului</li>
-      <li>comunicare prin REST și GraphQL, pentru a interoga și accesa datele furnizate de API-ul propriu dezvoltat</li>
-      <li>utilizarea formularelor pentru a colecta și procesa datele introduse de utilizator.</li>
+      <li><b>Comunicare prin browsere web</b>: Pentru accesarea interfețelor specifice fiecărui rol de utilizator
+        (client dashboard, admin dashboard, manager dashboard) și interacțiunea cu funcționalitățile aplicației
+        prin interfața web responsive.</li>
+
+      <li><b>Comunicare prin API REST</b>: Pentru schimbul de date între frontend și backend prin endpoint-uri
+        dedicate pentru gestionarea programărilor, utilizatorilor, vehiculelor, inventarului și comenzilor.
+        API-ul folosește metode HTTP standard (GET, POST, PUT, DELETE).</li>
+
+      <li><b>Comunicare prin formulare web</b>: Pentru colectarea și procesarea datelor de la utilizatori prin
+        formulare de înregistrare, autentificare, creare programări, adăugare vehicule și gestionare inventar,
+        cu validare în timp real.</li>
+
+      <li><b>Comunicare cu baza de date</b>: Pentru accesarea și manipularea datelor stocate în PostgreSQL prin
+        conexiuni sigure, query-uri parametrizate și gestionarea tranzacțiilor pentru operațiuni complexe.</li>
+
+      <li><b>Transfer de fișiere</b>: Pentru funcționalitățile de import/export în formatele CSV, JSON și PDF,
+        permitând schimbul de date cu sisteme externe și generarea rapoartelor.</li>
     </ul>
-    <p>Standardul de comunicare utilizat pentru accesarea datelor este HTTP, prin intermediul căruia se trimit cereri și se primesc răspunsuri de la serverul web.
-      În plus, se vor implementa mecanisme de securitate suplimentare, cum ar fi autentificarea și autorizarea utilizatorilor, pentru a proteja datele personale și a preveni accesul neautorizat la sistem.</p>
   </section>
 
   <section id="system-features">

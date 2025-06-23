@@ -5,11 +5,11 @@ body {
     line-height: 1.6;
     margin: 0 auto;
     padding: 2rem;
-    max-width: 800px;
+    max-width: 1200px;
 }
 
 article {
-    padding: 1rem 2rem;
+    padding: 2rem;
     border-left: 4px solid #0072c6;
     background: #fafafa;
     margin-bottom: 2rem;
@@ -67,4 +67,16 @@ footer {
     border-top: 1px solid #ccc;
     font-size: 0.9em;
     color: #666;
+}
+
+.interface {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.interface img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }

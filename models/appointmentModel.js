@@ -42,7 +42,6 @@ class AppointmentModel {
                 VALUES ($1, $2, $3, $4, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 RETURNING *
             `;
-
             const result = await pool.query(query, [userId, vehicleId, appointmentDateTime, description]);
 
             return result.rows[0];
@@ -50,7 +49,6 @@ class AppointmentModel {
             throw error;
         }
     }
-
 
     //verific daca utilizatorul are deja o programare la aceasi ora
     static async checkExistingAppointment(userId, appointmentDateTime) {

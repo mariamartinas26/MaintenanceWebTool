@@ -99,33 +99,66 @@ function validateLoginData(data) {
     };
 }
 
-/**
- * Validate appointment data
- */
 function validateAppointmentData(data) {
-    const { date, time, description } = data;
+    const { date, time, description, vehicleId } = data;
     const errors = [];
 
+    // Validare dată
     if (!date) {
         errors.push('Appointment date is required');
     } else {
-        const appointmentDate = new Date(date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Verifică formatul YYYY-MM-DD
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            errors.push('Invalid date format. Use YYYY-MM-DD');
+        } else {
+            // Verifică că data e validă și nu e în trecut
+            const appointmentDate = new Date(date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
 
-        if (appointmentDate < today) {
-            errors.push('Appointment date cannot be in the past');
+            if (isNaN(appointmentDate.getTime())) {
+                errors.push('Invalid date');
+            } else if (appointmentDate < today) {
+                errors.push('Appointment date cannot be in the past');
+            }
         }
     }
 
+    // Validare oră
     if (!time) {
         errors.push('Appointment time is required');
+    } else {
+        // Verifică formatul HH:MM sau HH:MM:SS
+        if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
+            errors.push('Invalid time format. Use HH:MM');
+        } else {
+            // Verifică că ora e în intervalul de lucru
+            const hour = parseInt(time.split(':')[0]);
+            if (hour < 8 || hour >= 17) {
+                errors.push('Appointment time must be between 08:00 and 17:00');
+            }
+            // Verifică că nu e în pauza de masă
+            if (hour >= 12 && hour < 13) {
+                errors.push('No appointments available during lunch break (12:00-13:00)');
+            }
+        }
     }
 
+    // Validare descriere
     if (!description) {
         errors.push('Problem description is required');
     } else if (description.trim().length < 10) {
         errors.push('Problem description must be at least 10 characters long');
+    } else if (description.trim().length > 500) {
+        errors.push('Problem description cannot exceed 500 characters');
+    }
+
+    // Validare vehicleId
+    if (vehicleId !== undefined) {
+        const vehicleIdNum = parseInt(vehicleId);
+        if (isNaN(vehicleIdNum) || vehicleIdNum < 1) {
+            errors.push('Valid vehicle ID is required');
+        }
     }
 
     return {
@@ -134,6 +167,36 @@ function validateAppointmentData(data) {
     };
 }
 
+/**
+ * Validate appointment time format specifically
+ */
+function isValidAppointmentTime(time) {
+    if (!time || typeof time !== 'string') return false;
+
+    // Format HH:MM sau HH:MM:SS
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) return false;
+
+    const [hours, minutes] = time.split(':').map(Number);
+
+    // Verifică limite valide
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return false;
+
+    return true;
+}
+
+/**
+ * Validate appointment date format specifically
+ */
+function isValidAppointmentDate(date) {
+    if (!date || typeof date !== 'string') return false;
+
+    // Format YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+
+    // Verifică că e o dată validă
+    const dateObj = new Date(date);
+    return !isNaN(dateObj.getTime());
+}
 /**
  * Validate vehicle data
  */
@@ -208,5 +271,7 @@ module.exports = {
     validateAppointmentData,
     validateVehicleData,
     sanitizeString,
-    sanitizeUserInput
+    sanitizeUserInput,
+    isValidAppointmentTime,
+    isValidAppointmentDate
 };

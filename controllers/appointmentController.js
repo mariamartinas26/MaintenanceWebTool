@@ -2,7 +2,8 @@ const { pool } = require('../database/db');
 const AppointmentModel = require('../models/appointmentModel');
 const CalendarModel = require('../models/calendarModel');
 const { getUserIdFromToken } = require('../middleware/auth');
-const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+const { sanitizeInput, setSecurityHeaders } = require('../middleware/auth');
+const { validateAppointmentData, sanitizeUserInput } = require('../utils/validation');
 
 class AppointmentController {
     static async getAppointments(req, res) {
@@ -10,8 +11,10 @@ class AppointmentController {
             const userId = getUserIdFromToken(req.headers.authorization);
             if (!userId) return sendError(res, 401, 'Invalid or missing token');
 
+            //extragem toate programarile user-ului din bd
             const appointments = await AppointmentModel.getUserAppointments(userId);
 
+            //formateaza datele pentru a fi trimise la client
             const formattedAppointments = appointments.map(row => ({
                 id: row.id,
                 date: row.appointment_date.toISOString().split('T')[0],
@@ -27,12 +30,10 @@ class AppointmentController {
                     type: validateInput(row.vehicle_type),
                     brand: validateInput(row.brand),
                     model: validateInput(row.model),
-                    year: validateInteger(row.year, 1900, new Date().getFullYear() + 10)
+                    year: validateInteger(row.year)
                 } : null
             }));
-
             sendSuccess(res, { appointments: formattedAppointments }, 'Appointments loaded successfully');
-
         } catch (error) {
             sendError(res, 500, 'Error getting appointments: ' + validateInput(error.message));
         }
@@ -45,32 +46,32 @@ class AppointmentController {
 
             if (!userId) return sendError(res, 401, 'Invalid or missing token');
 
-            const { date, time, description, vehicleId } = body;
+            const sanitizedData = sanitizeUserInput(body);
+            const validation = validateAppointmentData(sanitizedData);
 
-            // Validate and create datetime
-            const appointmentDateTime = AppointmentController.validateAndCreateDateTime(
-                validateInput(date),
-                validateInput(time)
-            );
+            if (!validation.isValid) {
+                return sendError(res, 400, validation.errors.join(', '));
+            }
 
-            //validare descriere min 10 caractere
-            AppointmentController.validateDescription(validateInput(description));
+            const { date, time, description, vehicleId } = sanitizedData;
 
-            // Validate business rules
+            const appointmentDateTime = AppointmentController.validateAndCreateDateTime(date, time);
+
             await AppointmentController.validateAppointmentRules(userId, appointmentDateTime, date, time);
 
+            //incepem o tranzactie in bd
             const client = await pool.connect();
 
             try {
                 await client.query('BEGIN');
-
+                //creez programarea in bd
                 const newAppointment = await AppointmentModel.createAppointment(
                     userId,
                     validateInteger(vehicleId, 1),
                     appointmentDateTime,
                     description
                 );
-
+                //updatez calendarul
                 await CalendarModel.updateSlotAppointments(date, time, 1);
 
                 await AppointmentModel.addAppointmentHistory(
@@ -108,38 +109,20 @@ class AppointmentController {
     }
 
     static validateAndCreateDateTime(date, time) {
-        if (!date || !time) {
-            throw new Error('Date and time are required');
-        }
+        const appointmentDateTime = new Date(`${date}`);
 
-        // Simple format validation
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            throw new Error('Invalid date format. Use YYYY-MM-DD');
-        }
-
-        // Accept both HH:MM and HH:MM:SS formats
-        if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
-            throw new Error('Invalid time format. Use HH:MM');
-        }
-
-        // Ensure time has seconds for proper datetime construction
-        const timeWithSeconds = time.includes(':') && time.split(':').length === 2
-            ? `${time}:00`
-            : time;
-
-        const appointmentDateTime = new Date(`${date}T${timeWithSeconds}`);
-
+        //returneaza true daca nu e un nr valid
         if (isNaN(appointmentDateTime.getTime())) {
             throw new Error('Invalid date or time');
         }
 
-        // Check if in future
-        const now = new Date();
+        //verificam daca programarea e in viitor
+        const now = new Date(); //data curenta
         if (appointmentDateTime <= now) {
             throw new Error('Appointment must be in the future');
         }
 
-        // Check if not too far in future
+        //sa nu putem programa cu mai mult de 1 an in avans
         const maxFuture = new Date();
         maxFuture.setFullYear(maxFuture.getFullYear() + 1);
         if (appointmentDateTime > maxFuture) {
@@ -147,17 +130,6 @@ class AppointmentController {
         }
 
         return appointmentDateTime;
-    }
-
-    static validateDescription(description) {
-        if (!description) {
-            throw new Error('Description is required');
-        }
-
-        const cleanDescription = description.trim();
-        if (cleanDescription.length < 10) {
-            throw new Error('Description should be at least 10 characters long');
-        }
     }
 
     static async validateAppointmentRules(userId, appointmentDateTime, date, time) {
@@ -170,13 +142,14 @@ class AppointmentController {
         //ne asiguram ca avem solt-uri disponibile
         await AppointmentController.ensureSlotsExistForDate(date);
         const slot = await CalendarModel.getSlotByDateTime(date, time);
-
+        //verificam sa fie valabil slot-ul
         if (!slot || !slot.is_available || slot.current_appointments >= slot.max_appointments) {
             throw new Error('Time slot is not available');
         }
     }
 
     static async ensureSlotsExistForDate(date) {
+        //verific daca exista deja sloturi pentru acea data
         const existingCount = await CalendarModel.getSlotsCountForDate(date);
         if (existingCount > 0) return;
 
@@ -187,14 +160,14 @@ class AppointmentController {
         if (dayOfWeek === 0 || dayOfWeek === 6) return;
 
         const workingHours = [
-            { start: '08:00:00', end: '09:00:00', maxAppointments: 2 },
-            { start: '09:00:00', end: '10:00:00', maxAppointments: 2 },
-            { start: '10:00:00', end: '11:00:00', maxAppointments: 2 },
-            { start: '11:00:00', end: '12:00:00', maxAppointments: 2 },
-            { start: '13:00:00', end: '14:00:00', maxAppointments: 2 },
-            { start: '14:00:00', end: '15:00:00', maxAppointments: 2 },
-            { start: '15:00:00', end: '16:00:00', maxAppointments: 2 },
-            { start: '16:00:00', end: '17:00:00', maxAppointments: 2 }
+            { start: '08:00:00', end: '09:00:00', maxAppointments: 3 },
+            { start: '09:00:00', end: '10:00:00', maxAppointments: 3 },
+            { start: '10:00:00', end: '11:00:00', maxAppointments: 3 },
+            { start: '11:00:00', end: '12:00:00', maxAppointments: 3 },
+            { start: '13:00:00', end: '14:00:00', maxAppointments: 3 },
+            { start: '14:00:00', end: '15:00:00', maxAppointments: 3 },
+            { start: '15:00:00', end: '16:00:00', maxAppointments: 3 },
+            { start: '16:00:00', end: '17:00:00', maxAppointments: 3 }
         ];
 
         const client = await pool.connect();
@@ -210,6 +183,7 @@ class AppointmentController {
         }
     }
 }
+
 function validateInput(input) {
     if (typeof input !== 'string') return input;
     return sanitizeInput(input);
@@ -241,32 +215,21 @@ function sendCreated(res, data, message) {
 
 async function getRequestBody(req) {
     return new Promise((resolve, reject) => {
+        //toate datele pe care le primim
         let body = '';
-        let totalSize = 0;
-        const maxSize = 10 * 1024 * 1024;
 
         req.on('data', chunk => {
-            totalSize += chunk.length;
-            if (totalSize > maxSize) {
-                reject(new Error('Request body too large'));
-                return;
-            }
             body += chunk.toString();
         });
 
         req.on('end', () => {
             try {
+                //procesam datele complete
                 if (!body.trim()) {
                     resolve({});
                     return;
                 }
-
-                const parsed = safeJsonParse(body);
-                if (parsed === null) {
-                    reject(new Error('Invalid or potentially malicious JSON'));
-                    return;
-                }
-
+                const parsed = JSON.parse(body);
                 resolve(parsed);
             } catch (error) {
                 reject(new Error('Invalid JSON in request body'));

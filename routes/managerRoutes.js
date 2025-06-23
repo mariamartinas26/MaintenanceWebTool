@@ -4,6 +4,7 @@ const ManagerContoller = require('../controllers/managerController');
 
 async function getRequestBody(req) {
     return new Promise((resolve, reject) => {
+        //toate datele pe care le primim
         let body = '';
 
         req.on('data', chunk => {
@@ -12,6 +13,7 @@ async function getRequestBody(req) {
 
         req.on('end', () => {
             try {
+                //procesam datele complete
                 if (!body.trim()) {
                     resolve({});
                     return;
@@ -48,7 +50,9 @@ async function handleManagerRoutes(req, res) {
 
         // POST /api/manager/requests/:id/approve aproba o cerere
         else if (pathname.startsWith('/api/manager/requests/') && pathname.endsWith('/approve') && method === 'POST') {
+            //extragem id din url
             const id = pathname.split('/')[4];
+            //adaug id la request
             req.params = { id: id };
 
             const body = await getRequestBody(req);
