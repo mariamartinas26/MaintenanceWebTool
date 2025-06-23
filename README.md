@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="assets/logo.png" alt="logo" width="200" height="auto" />
+  <img src="frontend/images/logo.png" alt="logo" width="200" height="auto" />
   <h1>Maintenance Web Tool - Repair Queens</h1>
 
   <p>
@@ -9,23 +9,23 @@
 
 <!-- Badges -->
 <p>
-  <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/graphs/contributors">
-    <img src="https://img.shields.io/github/contributors/YOUR_USERNAME/maintenance-web-tool" alt="contributors" />
+  <a href="https://github.com/mariamartinas26/MaintenanceWebTool/graphs/contributors">
+    <img src="https://img.shields.io/github/contributors/mariamartinas26/MaintenanceWebTool" alt="contributors" />
   </a>
   <a href="">
-    <img src="https://img.shields.io/github/last-commit/YOUR_USERNAME/maintenance-web-tool" alt="last update" />
+    <img src="https://img.shields.io/github/last-commit/mariamartinas26/MaintenanceWebTool" alt="last update" />
   </a>
-  <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/network/members">
-    <img src="https://img.shields.io/github/forks/YOUR_USERNAME/maintenance-web-tool" alt="forks" />
+  <a href="https://github.com/mariamartinas26/MaintenanceWebTool/network/members">
+    <img src="https://img.shields.io/github/forks/mariamartinas26/MaintenanceWebTool" alt="forks" />
   </a>
-  <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/stargazers">
-    <img src="https://img.shields.io/github/stars/YOUR_USERNAME/maintenance-web-tool" alt="stars" />
+  <a href="https://github.com/mariamartinas26/MaintenanceWebTool/stargazers">
+    <img src="https://img.shields.io/github/stars/mariamartinas26/MaintenanceWebTool" alt="stars" />
   </a>
-  <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/issues/">
-    <img src="https://img.shields.io/github/issues/YOUR_USERNAME/maintenance-web-tool" alt="open issues" />
+  <a href="https://github.com/mariamartinas26/MaintenanceWebTool/issues/">
+    <img src="https://img.shields.io/github/issues/mariamartinas26/MaintenanceWebTool" alt="open issues" />
   </a>
-  <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/YOUR_USERNAME/maintenance-web-tool.svg" alt="license" />
+  <a href="https://github.com/mariamartinas26/MaintenanceWebTool/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/mariamartinas26/MaintenanceWebTool.svg" alt="license" />
   </a>
 </p>
 
@@ -34,9 +34,9 @@
   <span> · </span>
     <a href="documentatie/documentatie.html">Documentation</a>
   <span> · </span>
-    <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/issues/">Report Bug</a>
+    <a href="https://github.com/mariamartinas26/MaintenanceWebTool/issues/">Report Bug</a>
   <span> · </span>
-    <a href="https://github.com/YOUR_USERNAME/maintenance-web-tool/issues/">Request Feature</a>
+    <a href="https://github.com/mariamartinas26/MaintenanceWebTool/issues/">Request Feature</a>
   </h4>
 </div>
 
@@ -162,8 +162,8 @@ psql --version
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/maintenance-web-tool.git
-cd maintenance-web-tool
+git clone https://github.com/mariamartinas26/MaintenanceWebTool.git
+cd MaintenanceWebTool
 ```
 
 2. Install dependencies:
@@ -270,7 +270,7 @@ Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
 
 **Sacarescu Rebecca Maria** - rebeccasacarescu@yahoo.com
 
-**Project Link**: [https://github.com/YOUR_USERNAME/maintenance-web-tool](https://github.com/YOUR_USERNAME/maintenance-web-tool)
+**Project Link**: https://github.com/mariamartinas26/MaintenanceWebTool.git
 
 **Documentation**: [Scholarly HTML Documentation](documentatie/documentatie.html)
 
