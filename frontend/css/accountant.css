@@ -31,8 +31,6 @@ body {
     text-align: center !important;
 }
 
-
-/* Layout */
 .main-content,
 .manager-container {
     max-width: 1200px;
@@ -40,7 +38,6 @@ body {
     padding: 30px 20px;
 }
 
-/* Header */
 .manager-header {
     background: #101c5a;
     color: white;
@@ -67,7 +64,6 @@ body {
     font-weight: 600;
 }
 
-/* Butoane */
 .btn,
 button,
 .action-btn {
@@ -124,7 +120,6 @@ button,
     justify-content: flex-end;
 }
 
-/* Request Grid */
 .requests-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -138,7 +133,6 @@ button,
     border: 1px solid #e9ecef;
 }
 
-/* Dashboard Cards */
 .dashboard-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -173,7 +167,6 @@ button,
     justify-content: flex-end;
 }
 
-/* Modal */
 .modal {
     display: none;
     position: fixed;
@@ -230,7 +223,6 @@ button,
     padding: 30px;
 }
 
-/* Forms */
 .form-group {
     margin-bottom: 20px;
 }
@@ -274,7 +266,6 @@ button,
     border-top: 1px solid #e9ecef;
 }
 
-/* Import/Export Forms */
 .import-section,
 .export-section {
     margin-bottom: 40px;
@@ -307,7 +298,6 @@ button,
     grid-template-columns: 1fr 1fr auto;
 }
 
-/* Suppliers */
 .suppliers-list {
     padding: 20px 0;
 }
@@ -334,7 +324,6 @@ button,
     color: #555;
 }
 
-/* Section Headers */
 .section-header {
     display: flex !important;
     justify-content: space-between !important;
@@ -358,7 +347,6 @@ button,
     gap: 10px;
 }
 
-/* Suppliers Section */
 #suppliers-section {
     background: white !important;
     border-radius: 8px !important;
@@ -372,7 +360,6 @@ button,
     display: none !important;
 }
 
-/* Empty State */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -388,7 +375,6 @@ button,
     font-size: 16px;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
     .manager-container,
     .main-content {

@@ -11,7 +11,6 @@ body {
     line-height: 1.6;
 }
 
-/* Font styles */
 .tabs-header .tab,
 .tab-button,
 .nav-tab,
@@ -30,13 +29,11 @@ h1, h2, h3, h4, h5, h6,
     font-weight: 600;
 }
 
-/* Dashboard Layout */
 .dashboard-container {
     display: flex;
     min-height: 100vh;
 }
 
-/* Main Content */
 .main-content {
     flex: 1;
     margin-left: 260px;
@@ -44,7 +41,6 @@ h1, h2, h3, h4, h5, h6,
     min-height: 100vh;
 }
 
-/* Navigation Tabs */
 .nav-tabs {
     display: flex;
     background: white;
@@ -68,8 +64,6 @@ h1, h2, h3, h4, h5, h6,
     background-color: #101c5a;
     color: white;
 }
-
-/* Tab Content */
 .tab-content {
     display: none;
 }
@@ -78,7 +72,6 @@ h1, h2, h3, h4, h5, h6,
     display: block;
 }
 
-/* Page Header */
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -96,7 +89,6 @@ h1, h2, h3, h4, h5, h6,
     gap: 10px;
 }
 
-/* Suppliers Grid */
 .suppliers-grid {
     background-color: white;
     border-radius: 8px;
@@ -168,7 +160,6 @@ h1, h2, h3, h4, h5, h6,
     gap: 10px;
 }
 
-/* Parts dropdown */
 .part-select {
     width: 100%;
     padding: 10px;
@@ -201,7 +192,6 @@ h1, h2, h3, h4, h5, h6,
     flex: 1;
 }
 
-/* Orders List */
 .orders-section {
     background-color: white;
     border-radius: 8px;
@@ -297,7 +287,6 @@ h1, h2, h3, h4, h5, h6,
     font-size: 12px;
 }
 
-/* Modal Styles */
 .modal {
     display: none;
     position: fixed;
@@ -347,7 +336,6 @@ h1, h2, h3, h4, h5, h6,
     overflow-y: auto;
 }
 
-/* Form Styles */
 .form-group {
     margin-bottom: 20px;
 }
@@ -398,7 +386,6 @@ textarea {
     margin-top: 20px;
 }
 
-/* Button Styles */
 .btn {
     padding: 10px 20px;
     border-radius: 4px;
@@ -432,7 +419,6 @@ textarea {
     font-size: 12px;
 }
 
-/* Order Status Modal Styles */
 .status-options {
     display: flex;
     flex-direction: column;
@@ -536,7 +522,6 @@ textarea {
     font-weight: 600;
 }
 
-/* Order Summary */
 .order-summary {
     background-color: #f8f9fa;
     padding: 15px;
@@ -549,7 +534,6 @@ textarea {
     font-size: 18px;
 }
 
-/* Responsive Design */
 @media (max-width: 1024px) {
     .main-content {
         margin-left: 80px;

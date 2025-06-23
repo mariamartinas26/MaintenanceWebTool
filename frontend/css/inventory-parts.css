@@ -1,4 +1,3 @@
-/* Base & Utilities */
 * {
     margin: 0;
     padding: 0;
@@ -16,7 +15,6 @@ ul { list-style: none; }
 a { text-decoration: none; color: inherit; }
 input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 
-/* Button Styles */
 .btn, .action-btn, .page-btn {
     border: none;
     cursor: pointer;
@@ -49,7 +47,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 }
 .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Layout */
 .dashboard-container { display: flex; min-height: 100vh; }
 
 .main-content {
@@ -59,7 +56,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
     min-height: 100vh;
 }
 
-/* Cards & Sections */
 .dashboard-nav, .filters-section, .part-card, .modal-content {
     background: white;
     border-radius: 8px;
@@ -97,7 +93,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 }
 .filters-group { display: flex; gap: 12px; align-items: center; }
 
-/* Form Controls */
 .filters-group select, .form-group input, .form-group select, .form-group textarea {
     width: 100%;
     padding: 12px 16px;
@@ -114,7 +109,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
     box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
 }
 
-/* Parts */
 .parts-section { flex: 1; }
 .parts-header {
     display: flex;
@@ -168,7 +162,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 
 .part-actions { display: flex; gap: 8px; margin-left: 16px; }
 
-/* Modal */
 .modal {
     display: none;
     position: fixed;
@@ -193,11 +186,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
     max-height: 90vh;
     overflow-y: auto;
     margin-bottom: 0;
-}
-
-@keyframes modalSlideIn {
-    from { opacity: 0; transform: translateY(-50px); }
-    to { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
@@ -236,7 +224,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
     margin-top: 20px;
 }
 
-/* Forms */
 .form-group { margin-bottom: 16px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-group label {
@@ -248,7 +235,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 }
 .form-group textarea { resize: vertical; min-height: 80px; }
 
-/* Part Info */
 .part-info {
     background: #f0f9ff;
     border: 1px solid #bae6fd;
@@ -260,13 +246,11 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 .part-info p { color: #075985; margin: 4px 0; font-size: 14px; }
 .part-info .part-number { background: #dbeafe; color: #1e40af; }
 
-/* Empty State */
 .empty-state { text-align: center; padding: 60px 20px; color: #6c757d; }
 .empty-state i { font-size: 48px; margin-bottom: 16px; color: #e9ecef; }
 .empty-state h3 { margin-bottom: 8px; color: #333333; font-weight: 600; }
 .empty-state p { margin-bottom: 24px; }
 
-/* Details */
 .part-details-simple { font-size: 14px; line-height: 1.6; }
 .detail-item {
     display: flex;
@@ -283,7 +267,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
 .detail-value.stock.low-stock { color: #ffc107; }
 .detail-value.stock.out-of-stock { color: #dc3545; }
 
-/* Utilities */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -296,7 +279,6 @@ input, select, textarea, button { font-family: 'Poppins', sans-serif; }
     border: 0;
 }
 
-/* Responsive */
 @media (max-width: 992px) {
     .main-content { margin-left: 80px; }
     .filters-container { flex-direction: column; align-items: stretch; gap: 16px; }

@@ -21,7 +21,6 @@ body {
     padding: 0 15px;
 }
 
-/* Header */
 .main-header {
     background-color: #fff;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -55,7 +54,6 @@ body {
     color: #101c5a;
 }
 
-/* User Menu */
 .user-menu {
     display: flex;
     align-items: center;
@@ -84,7 +82,6 @@ body {
     font-weight: 500;
 }
 
-/* Main Content */
 main {
     padding: 30px 0;
     min-height: calc(100vh - 140px);
@@ -111,7 +108,6 @@ main {
     margin: 0;
 }
 
-/* Tabs */
 .tabs {
     display: flex;
     background-color: #fff;
@@ -143,7 +139,6 @@ main {
     background-color: #101c5a;
 }
 
-/* Tab Content */
 .tab-content {
     background-color: #fff;
     border-radius: 0 0 8px 8px;
@@ -159,7 +154,6 @@ main {
     display: block;
 }
 
-/* Section Header */
 .section-header {
     margin-bottom: 30px;
     padding-bottom: 20px;
@@ -176,7 +170,6 @@ main {
     margin: 0;
 }
 
-/* Buttons */
 .primary-btn {
     background-color: #101c5a;
     color: #fff;
@@ -188,9 +181,6 @@ main {
     font-weight: 500;
 }
 
-
-
-/* Form Sections */
 .form-section {
     background: #f8f9fa;
     border-radius: 8px;
@@ -211,7 +201,6 @@ main {
     font-size: 13px;
 }
 
-/* Form Groups */
 .form-group {
     margin-bottom: 20px;
 }
@@ -229,7 +218,6 @@ main {
     gap: 20px;
 }
 
-/* Checkbox */
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -238,7 +226,6 @@ main {
     font-weight: 500;
 }
 
-/* Form Inputs */
 input[type="text"],
 input[type="number"],
 input[type="date"],
@@ -259,7 +246,6 @@ input[type="checkbox"] {
     accent-color: #101c5a;
 }
 
-/* Vehicle Selection */
 .or-divider {
     text-align: center;
     margin: 24px 0;
@@ -273,7 +259,6 @@ input[type="checkbox"] {
     background: #fff;
 }
 
-/* Form Actions */
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -283,7 +268,6 @@ input[type="checkbox"] {
     border-top: 1px solid #e9ecef;
 }
 
-/* Appointments List */
 .appointments-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -316,7 +300,6 @@ input[type="checkbox"] {
     margin: 0;
 }
 
-/* Status Badges */
 .appointment-status {
     padding: 6px 12px;
     border-radius: 20px;
@@ -346,8 +329,6 @@ input[type="checkbox"] {
     color: #fff;
 }
 
-
-/* Appointment Details */
 .appointment-details {
     margin-bottom: 20px;
 }
@@ -388,7 +369,6 @@ input[type="checkbox"] {
     border-radius: 6px;
 }
 
-/* Appointment Actions */
 .appointment-actions {
     display: flex;
     gap: 10px;
@@ -400,8 +380,6 @@ input[type="checkbox"] {
     font-size: 13px;
 }
 
-
-/* Responsive */
 @media (max-width: 768px) {
     .container {
         width: 95%;
