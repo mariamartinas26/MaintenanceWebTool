@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Dashboard - Repair Queens</title>
 
-    <!-- Security Headers -->
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self';
                    script-src 'self' 'unsafe-inline';
@@ -17,11 +16,10 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/inventory-dashboard.css">
-    <!-- Removed Font Awesome since we're not using icons -->
 </head>
 <body>
 <div class="dashboard-container">
-    <!-- Sidebar -->
+
     <aside class="sidebar">
         <div class="logo">
             <h2>Repair Queens</h2>
@@ -52,9 +50,8 @@
             </button>
         </div>
     </aside>
-    <!-- Main Content -->
+
     <main class="main-content">
-        <!-- Navigation Tabs -->
         <nav class="dashboard-nav">
             <div class="nav-content">
                 <a href="/inventory/dashboard" class="nav-link active">
@@ -66,13 +63,10 @@
             </div>
         </nav>
 
-        <!-- Main Content Area -->
         <div class="content">
-            <!-- Statistics Cards -->
             <section class="stats-section">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <!-- Removed icon div completely -->
                         <div class="stat-content">
                             <h3 id="totalParts">-</h3>
                             <p>Total Parts</p>
@@ -80,7 +74,6 @@
                     </div>
 
                     <div class="stat-card success">
-                        <!-- Removed icon div completely -->
                         <div class="stat-content">
                             <h3 id="inventoryValue">-</h3>
                             <p>Total Value (RON)</p>
@@ -88,7 +81,6 @@
                     </div>
 
                     <div class="stat-card info">
-                        <!-- Removed icon div completely -->
                         <div class="stat-content">
                             <h3 id="totalCategories">-</h3>
                             <p>Categories</p>
@@ -97,21 +89,18 @@
                 </div>
             </section>
 
-            <!-- Quick Actions -->
             <section class="actions-section">
                 <div class="section-header">
                     <h2> Quick Actions</h2>
                 </div>
                 <div class="actions-grid">
                     <a href="/inventory/parts" class="action-card">
-                        <!-- Removed icon -->
                         <h3>Search Parts</h3>
                         <p>Find and manage existing parts</p>
                     </a>
                 </div>
             </section>
 
-            <!-- Categories Overview -->
             <section class="categories-section">
                 <div class="section-header">
                     <h2>Parts by Category</h2>
@@ -123,13 +112,6 @@
     </main>
 </div>
 
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-spinner">
-        <!-- Kept this icon for loading spinner -->
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>Loading...</p>
-    </div>
-</div>
 
 <script src="/js/security-utils.js"></script>
 <script src="/js/inventory-dashboard.js"></script>
