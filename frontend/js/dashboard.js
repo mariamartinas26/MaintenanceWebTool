@@ -571,6 +571,7 @@ class Dashboard {
     logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.clear();
         window.location.href = '/homepage';
     }
 

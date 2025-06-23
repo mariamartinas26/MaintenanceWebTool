@@ -208,7 +208,7 @@ class OrderManager {
 
     async updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
         try {
-            const body = { status: this.sanitizeInput(status) };
+            const body = {status: this.sanitizeInput(status)};
             if (actualDeliveryDate) {
                 body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
             }
@@ -642,10 +642,10 @@ class OrderManager {
         statusSelect.appendChild(defaultStatusOption);
 
         const statuses = [
-            { value: 'ordered', label: 'Ordered' },
-            { value: 'in_transit', label: 'In Transit' },
-            { value: 'delivered', label: 'Delivered' },
-            { value: 'cancelled', label: 'Cancelled' }
+            {value: 'ordered', label: 'Ordered'},
+            {value: 'in_transit', label: 'In Transit'},
+            {value: 'delivered', label: 'Delivered'},
+            {value: 'cancelled', label: 'Cancelled'}
         ];
 
         statuses.filter(s => s.value !== order.status).forEach(status => {
@@ -918,9 +918,8 @@ class OrderManager {
     }
 
     handleLogout() {
-        if (confirm('Are you sure you want to log out?')) {
-            window.location.href = '/homepage';
-        }
+        window.location.href = '/homepage';
+        localStorage.clear();
     }
 
     handleAuthError() {
@@ -936,11 +935,34 @@ const orderManager = new OrderManager();
 document.addEventListener('DOMContentLoaded', () => orderManager.init());
 
 // Global functions for HTML onclick events
-function openOrderModal() { orderManager.openOrderModal(); }
-function closeOrderModal() { orderManager.closeOrderModal(); }
-function addOrderItem() { orderManager.addOrderItem(); }
-function removeOrderItem(button) { orderManager.removeOrderItem(button); }
-function saveOrder() { orderManager.saveOrder(); }
-function updatePartPrice(selectElement) { orderManager.updatePartPrice(selectElement); }
-function calculateOrderTotal() { orderManager.calculateOrderTotal(); }
-function updateOrderStatus(orderId) { orderManager.updateOrderStatus(orderId); }
+function openOrderModal() {
+    orderManager.openOrderModal();
+}
+
+function closeOrderModal() {
+    orderManager.closeOrderModal();
+}
+
+function addOrderItem() {
+    orderManager.addOrderItem();
+}
+
+function removeOrderItem(button) {
+    orderManager.removeOrderItem(button);
+}
+
+function saveOrder() {
+    orderManager.saveOrder();
+}
+
+function updatePartPrice(selectElement) {
+    orderManager.updatePartPrice(selectElement);
+}
+
+function calculateOrderTotal() {
+    orderManager.calculateOrderTotal();
+}
+
+function updateOrderStatus(orderId) {
+    orderManager.updateOrderStatus(orderId);
+}

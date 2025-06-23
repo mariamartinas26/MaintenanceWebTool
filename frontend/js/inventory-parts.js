@@ -29,7 +29,7 @@ function checkAuthentication() {
     return true;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (!checkAuthentication()) {
         return;
     }
@@ -46,7 +46,7 @@ function setupEventListeners() {
     document.getElementById('stockUpdateForm').addEventListener('submit', handleStockUpdate);
 
     document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', function(e) {
+        modal.addEventListener('click', function (e) {
             if (e.target === this) {
                 hideAllModals();
             }
@@ -59,7 +59,7 @@ function setupEventListeners() {
 function setupNavigationListeners() {
     const providersLink = document.getElementById('providers-link');
     if (providersLink) {
-        providersLink.addEventListener('click', function(e) {
+        providersLink.addEventListener('click', function (e) {
             e.preventDefault();
             window.location.href = '/suppliers';
         });
@@ -67,7 +67,7 @@ function setupNavigationListeners() {
 
     const ordersLink = document.getElementById('orders-link');
     if (ordersLink) {
-        ordersLink.addEventListener('click', function(e) {
+        ordersLink.addEventListener('click', function (e) {
             e.preventDefault();
             window.location.href = '/suppliers#orders';
         });
@@ -75,7 +75,7 @@ function setupNavigationListeners() {
 
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
+        logoutBtn.addEventListener('click', function () {
             logout();
         });
     }
@@ -97,11 +97,11 @@ async function loadAdminInfo() {
 }
 
 function logout() {
-    if (confirm('Are you sure you want to log out?')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/homepage';
-    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.clear();
+    window.location.href = '/homepage';
+
 }
 
 function initializePage() {
@@ -121,7 +121,7 @@ async function loadParts() {
         const headers = getAuthHeaders();
         if (!headers) return;
 
-        const response = await fetch('/inventory/api/parts', { headers });
+        const response = await fetch('/inventory/api/parts', {headers});
         const data = await response.json();
 
         if (data.success && Array.isArray(data.parts)) {
@@ -400,7 +400,7 @@ async function showPartDetails(partId) {
         const headers = getAuthHeaders();
         if (!headers) return;
 
-        const response = await fetch(`/inventory/api/parts/${encodeURIComponent(partId)}`, { headers });
+        const response = await fetch(`/inventory/api/parts/${encodeURIComponent(partId)}`, {headers});
         const data = await response.json();
 
         if (data.success && data.part) {
@@ -435,16 +435,20 @@ function displayPartDetails(part) {
 
     // Create detail items
     const details = [
-        { label: 'Name', value: part.name || '', className: '' },
-        { label: 'Part Number', value: part.partNumber || 'N/A', className: '' },
-        { label: 'Category', value: part.category || '', className: '' },
-        { label: 'Description', value: part.description || 'No description', className: '' },
-        { label: 'Price', value: formatCurrency(part.price), className: 'price' },
-        { label: 'Current Stock', value: part.stockQuantity, className: `stock ${stockStatus.toLowerCase().replace(' ', '-')}` },
-        { label: 'Minimum Level', value: part.minimumStockLevel, className: '' },
-        { label: 'Stock Status', value: stockStatus, className: `stock ${stockStatus.toLowerCase().replace(' ', '-')}` },
-        { label: 'Created', value: formatDate(part.createdAt), className: '' },
-        { label: 'Last Updated', value: formatDate(part.updatedAt), className: '' }
+        {label: 'Name', value: part.name || '', className: ''},
+        {label: 'Part Number', value: part.partNumber || 'N/A', className: ''},
+        {label: 'Category', value: part.category || '', className: ''},
+        {label: 'Description', value: part.description || 'No description', className: ''},
+        {label: 'Price', value: formatCurrency(part.price), className: 'price'},
+        {
+            label: 'Current Stock',
+            value: part.stockQuantity,
+            className: `stock ${stockStatus.toLowerCase().replace(' ', '-')}`
+        },
+        {label: 'Minimum Level', value: part.minimumStockLevel, className: ''},
+        {label: 'Stock Status', value: stockStatus, className: `stock ${stockStatus.toLowerCase().replace(' ', '-')}`},
+        {label: 'Created', value: formatDate(part.createdAt), className: ''},
+        {label: 'Last Updated', value: formatDate(part.updatedAt), className: ''}
     ];
 
     details.forEach(detail => {

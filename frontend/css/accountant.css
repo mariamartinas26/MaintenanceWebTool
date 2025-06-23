@@ -122,11 +122,6 @@ body {
     text-align: center;
 }
 
-.approve-btn {
-    background: #28a745;
-    color: white;
-}
-
 .view-btn {
     background: #f8f9fa;
     color: #333;
@@ -315,12 +310,6 @@ body {
     min-height: 100px;
 }
 
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: #101c5a;
-}
 
 .form-actions {
     display: flex;
@@ -329,36 +318,6 @@ body {
     margin-top: 25px;
     padding-top: 20px;
     border-top: 1px solid #e9ecef;
-}
-
-/* Notification */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 25px;
-    border-radius: 6px;
-    color: white;
-    z-index: 1100;
-    font-weight: 500;
-    min-width: 300px;
-}
-
-.notification.success {
-    background: #28a745;
-}
-
-.notification.error {
-    background: #dc3545;
-}
-
-.notification.warning {
-    background: #ffc107;
-    color: #333;
-}
-
-.notification.info {
-    background: #17a2b8;
 }
 
 /* Empty State */

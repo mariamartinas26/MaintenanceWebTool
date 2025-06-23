@@ -481,11 +481,10 @@ class ManagerDashboard {
     }
 
     handleLogout() {
-        if (confirm('Are you sure you want to logout?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/homepage';
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.clear();
+        window.location.href = '/homepage';
     }
 
     formatDate(dateString) {

@@ -12,11 +12,10 @@ class AccountantDashboard {
     }
 
     logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/homepage';
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.clear();
+        window.location.href = '/homepage';
     }
 
     checkAuth() {
@@ -202,10 +201,10 @@ class AccountantDashboard {
         importDataTypeSelect.id = 'importDataType';
 
         const importDataTypeOptions = [
-            { value: '', text: 'Select data type' },
-            { value: 'suppliers', text: 'Suppliers' },
-            { value: 'parts', text: 'Parts' },
-            { value: 'appointments', text: 'Appointments' }
+            {value: '', text: 'Select data type'},
+            {value: 'suppliers', text: 'Suppliers'},
+            {value: 'parts', text: 'Parts'},
+            {value: 'appointments', text: 'Appointments'}
         ];
 
         importDataTypeOptions.forEach(option => {
@@ -226,9 +225,9 @@ class AccountantDashboard {
         importFormatSelect.id = 'importFormat';
 
         const importFormatOptions = [
-            { value: '', text: 'Select format' },
-            { value: 'csv', text: 'CSV' },
-            { value: 'json', text: 'JSON' }
+            {value: '', text: 'Select format'},
+            {value: 'csv', text: 'CSV'},
+            {value: 'json', text: 'JSON'}
         ];
 
         importFormatOptions.forEach(option => {
@@ -278,10 +277,10 @@ class AccountantDashboard {
         exportDataTypeSelect.id = 'exportDataType';
 
         const exportDataTypeOptions = [
-            { value: '', text: 'Select data type' },
-            { value: 'suppliers', text: 'Suppliers' },
-            { value: 'parts', text: 'Parts' },
-            { value: 'appointments', text: 'Appointments' }
+            {value: '', text: 'Select data type'},
+            {value: 'suppliers', text: 'Suppliers'},
+            {value: 'parts', text: 'Parts'},
+            {value: 'appointments', text: 'Appointments'}
         ];
 
         exportDataTypeOptions.forEach(option => {
@@ -302,10 +301,10 @@ class AccountantDashboard {
         exportFormatSelect.id = 'exportFormat';
 
         const exportFormatOptions = [
-            { value: '', text: 'Select format' },
-            { value: 'csv', text: 'CSV' },
-            { value: 'json', text: 'JSON' },
-            { value: 'pdf', text: 'PDF' }
+            {value: '', text: 'Select format'},
+            {value: 'csv', text: 'CSV'},
+            {value: 'json', text: 'JSON'},
+            {value: 'pdf', text: 'PDF'}
         ];
 
         exportFormatOptions.forEach(option => {

@@ -579,25 +579,25 @@ class AdminDashboard {
         }
 
         const clientSection = this.createDetailSection('Client Information', [
-            { label: 'Name', value: appointment.clientInfo.name },
-            { label: 'Email', value: appointment.clientInfo.email },
-            { label: 'Phone', value: appointment.clientInfo.phone || 'Not specified' }
+            {label: 'Name', value: appointment.clientInfo.name},
+            {label: 'Email', value: appointment.clientInfo.email},
+            {label: 'Phone', value: appointment.clientInfo.phone || 'Not specified'}
         ]);
 
         const appointmentSection = this.createDetailSection('Appointment Details', [
-            { label: 'Date and Time', value: formattedDate },
-            { label: 'Status', value: this.getStatusText(appointment.status), isStatus: true, status: appointment.status }
+            {label: 'Date and Time', value: formattedDate},
+            {label: 'Status', value: this.getStatusText(appointment.status), isStatus: true, status: appointment.status}
         ]);
 
         const vehicleSection = this.createDetailSection('Vehicle Information', [
-            { label: 'Type', value: appointment.vehicleInfo.type || 'Not specified' },
-            { label: 'Brand and Model', value: `${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}` },
-            { label: 'Year', value: appointment.vehicleInfo.year || 'Not specified' },
-            { label: 'Electric', value: appointment.vehicleInfo.isElectric ? 'Yes' : 'No' }
+            {label: 'Type', value: appointment.vehicleInfo.type || 'Not specified'},
+            {label: 'Brand and Model', value: `${appointment.vehicleInfo.brand} ${appointment.vehicleInfo.model}`},
+            {label: 'Year', value: appointment.vehicleInfo.year || 'Not specified'},
+            {label: 'Electric', value: appointment.vehicleInfo.isElectric ? 'Yes' : 'No'}
         ]);
 
         const problemSection = this.createDetailSection('Problem Description', [
-            { label: '', value: appointment.problemDescription, isDescription: true }
+            {label: '', value: appointment.problemDescription, isDescription: true}
         ]);
 
         detailsContainer.appendChild(clientSection);
@@ -607,24 +607,24 @@ class AdminDashboard {
 
         if (appointment.adminResponse) {
             const adminSection = this.createDetailSection('Admin Response', [
-                { label: '', value: appointment.adminResponse, isDescription: true }
+                {label: '', value: appointment.adminResponse, isDescription: true}
             ]);
             detailsContainer.appendChild(adminSection);
         }
 
         if (appointment.status === 'rejected' && appointment.rejectionReason) {
-            const rejectionItems = [{ label: 'Reason', value: appointment.rejectionReason }];
+            const rejectionItems = [{label: 'Reason', value: appointment.rejectionReason}];
             if (appointment.retryDays) {
-                rejectionItems.push({ label: 'Retry After', value: `${appointment.retryDays} days` });
+                rejectionItems.push({label: 'Retry After', value: `${appointment.retryDays} days`});
             }
             const rejectionSection = this.createDetailSection('Rejection Details', rejectionItems);
             detailsContainer.appendChild(rejectionSection);
         }
 
         if (appointment.estimatedPrice) {
-            const approvalItems = [{ label: 'Estimated Price', value: `${appointment.estimatedPrice} RON` }];
+            const approvalItems = [{label: 'Estimated Price', value: `${appointment.estimatedPrice} RON`}];
             if (appointment.warrantyInfo) {
-                approvalItems.push({ label: 'Warranty', value: appointment.warrantyInfo });
+                approvalItems.push({label: 'Warranty', value: appointment.warrantyInfo});
             }
             const approvalSection = this.createDetailSection('Approval Information', approvalItems);
             detailsContainer.appendChild(approvalSection);
@@ -751,7 +751,7 @@ class AdminDashboard {
         const statusRadio = document.querySelector(`input[name="status"][value="${appointment.status}"]`);
         if (statusRadio) {
             statusRadio.checked = true;
-            this.handleStatusChange({ target: statusRadio });
+            this.handleStatusChange({target: statusRadio});
         }
 
         if (appointment.estimatedPrice) {
@@ -812,7 +812,7 @@ class AdminDashboard {
             console.log('New Status:', status);
             console.log('Selected Parts:', this.selectedParts);
 
-            const updateData = { status: status };
+            const updateData = {status: status};
 
             const adminMessage = document.getElementById('admin-message').value;
             if (adminMessage && adminMessage.trim()) {
@@ -986,11 +986,10 @@ class AdminDashboard {
     }
 
     handleLogout() {
-        if (confirm('Are you sure you want to log out?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/homepage';
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.clear();
+        window.location.href = '/homepage';
     }
 
     handleAuthError() {

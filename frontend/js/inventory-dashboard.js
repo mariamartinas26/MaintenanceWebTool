@@ -2,6 +2,7 @@ class InventoryDashboard {
     constructor() {
         this.init();
     }
+
     sanitizeInput(input) {
         return window.SecurityUtils.sanitizeInput(input);
     }
@@ -222,12 +223,11 @@ class InventoryDashboard {
     }
 
     logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('adminName');
-            window.location.href = '/admin/login';
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('adminName');
+        localStorage.clear();
+        window.location.href = '/admin/login';
     }
 
     handleAuthError() {
