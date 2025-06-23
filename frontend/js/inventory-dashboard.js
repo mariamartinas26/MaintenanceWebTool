@@ -171,7 +171,6 @@ class InventoryDashboard {
                 );
             }
         } catch (error) {
-            // Handle error silently - no loading message shown
         }
     }
 
@@ -179,20 +178,21 @@ class InventoryDashboard {
         const container = document.getElementById('categoriesGrid');
         if (!container) return;
 
-        // Extract unique categories from parts instead of using the broken categories endpoint
         const uniqueCategories = [...new Set(parts.map(part => part.category))].filter(Boolean);
 
         if (uniqueCategories.length === 0) {
-            return; // Don't show anything if no categories
+            return;
         }
 
-        // Count parts by category
+
         const categoryCounts = {};
         uniqueCategories.forEach(categoryName => {
             categoryCounts[categoryName] = parts.filter(part => part.category === categoryName).length;
         });
 
-        container.innerHTML = '';
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
 
         uniqueCategories.forEach(categoryName => {
             const categoryCard = this.createSafeElement('div', 'category-card');

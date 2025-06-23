@@ -195,14 +195,15 @@ class AdminDashboard {
     renderPartsDropdown(parts) {
         const dropdown = document.getElementById('parts-dropdown');
 
+        while (dropdown.firstChild) {
+            dropdown.removeChild(dropdown.firstChild);
+        }
+
         if (parts.length === 0) {
             const option = this.createSafeElement('div', 'part-option', 'No parts found');
-            dropdown.innerHTML = '';
             dropdown.appendChild(option);
             return;
         }
-
-        dropdown.innerHTML = '';
 
         parts.forEach(part => {
             const option = this.createSafeElement('div', 'part-option');
@@ -273,8 +274,11 @@ class AdminDashboard {
     renderSelectedParts() {
         const container = document.getElementById('selected-parts');
 
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
         if (this.selectedParts.length === 0) {
-            container.innerHTML = '';
             const span = this.createSafeElement('span', '', 'No parts selected');
             container.appendChild(span);
             container.classList.add('empty');
@@ -282,7 +286,6 @@ class AdminDashboard {
         }
 
         container.classList.remove('empty');
-        container.innerHTML = '';
 
         this.selectedParts.forEach(part => {
             const item = this.createSafeElement('div', 'selected-part-item');
@@ -443,8 +446,12 @@ class AdminDashboard {
     renderAppointments() {
         const container = document.getElementById('appointments-container');
 
+        // Clear existing content safely
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
         if (this.appointments.length === 0) {
-            container.innerHTML = '';
             const noAppointments = this.createSafeElement('div', 'no-appointments');
             const p = this.createSafeElement('p', '', 'No appointments found for the selected filter.');
             noAppointments.appendChild(p);
@@ -452,7 +459,6 @@ class AdminDashboard {
             return;
         }
 
-        container.innerHTML = '';
         this.appointments.forEach(appointment => {
             const card = this.createAppointmentCard(appointment);
             container.appendChild(card);
@@ -548,7 +554,11 @@ class AdminDashboard {
 
     displayAppointmentDetails(appointment) {
         const detailsContainer = document.getElementById('appointment-details');
-        detailsContainer.innerHTML = '';
+
+        // Clear existing content safely
+        while (detailsContainer.firstChild) {
+            detailsContainer.removeChild(detailsContainer.firstChild);
+        }
 
         const appointmentDate = new Date(appointment.appointmentDate);
         const formattedDate = appointmentDate.toLocaleDateString('en-US', {

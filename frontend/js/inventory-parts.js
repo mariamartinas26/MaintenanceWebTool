@@ -188,7 +188,6 @@ function displayParts() {
     });
 }
 
-// Create part card using DOM methods instead of innerHTML
 function createPartCardElement(part) {
     const stockStatus = getStockStatus(part);
     const stockClass = stockStatus.toLowerCase().replace(' ', '-');

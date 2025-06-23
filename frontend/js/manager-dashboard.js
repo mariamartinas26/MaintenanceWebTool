@@ -47,6 +47,52 @@ class ManagerDashboard {
         }
     }
 
+    sanitizeInput(input) {
+        if (typeof input !== 'string') return input;
+        return input
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+
+    sanitizeObject(obj) {
+        if (obj === null || typeof obj !== 'object') {
+            return typeof obj === 'string' ? this.sanitizeInput(obj) : obj;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.sanitizeObject(item));
+        }
+
+        const sanitized = {};
+        for (const [key, value] of Object.entries(obj)) {
+            const sanitizedKey = this.sanitizeInput(key);
+            sanitized[sanitizedKey] = this.sanitizeObject(value);
+        }
+
+        return sanitized;
+    }
+
+    createSafeElement(tag, className = '', textContent = '') {
+        const element = document.createElement(tag);
+        if (className) {
+            element.className = this.sanitizeInput(className);
+        }
+        if (textContent) {
+            element.textContent = String(textContent);
+        }
+        return element;
+    }
+
+    safeSetText(element, text) {
+        if (element && text !== null && text !== undefined) {
+            element.textContent = String(text);
+        }
+    }
+
     async loadRequests() {
         try {
             const token = localStorage.getItem('token');
@@ -69,7 +115,7 @@ class ManagerDashboard {
 
             const data = await response.json();
 
-            this.allRequests = data.requests || data.data || [];
+            this.allRequests = (data.requests || data.data || []).map(request => this.sanitizeObject(request));
             this.renderRequests();
             this.updateStats();
 
@@ -107,17 +153,21 @@ class ManagerDashboard {
     }
 
     renderRequests() {
-        if (this.allRequests.length === 0) {
-            this.requestsContainer.innerHTML = `
-                <div class="empty-state">
-                    <h3>No requests found</h3>
-                    <p>There are currently no registration requests to review.</p>
-                </div>
-            `;
-            return;
+        // Clear existing content safely
+        while (this.requestsContainer.firstChild) {
+            this.requestsContainer.removeChild(this.requestsContainer.firstChild);
         }
 
-        this.requestsContainer.innerHTML = '';
+        if (this.allRequests.length === 0) {
+            const emptyState = this.createSafeElement('div', 'empty-state');
+            const h3 = this.createSafeElement('h3', '', 'No requests found');
+            const p = this.createSafeElement('p', '', 'There are currently no registration requests to review.');
+
+            emptyState.appendChild(h3);
+            emptyState.appendChild(p);
+            this.requestsContainer.appendChild(emptyState);
+            return;
+        }
 
         this.allRequests.forEach(request => {
             const card = this.createRequestCard(request);
@@ -126,52 +176,87 @@ class ManagerDashboard {
     }
 
     createRequestCard(request) {
-        const card = document.createElement('div');
-        card.className = 'request-card';
+        const card = this.createSafeElement('div', 'request-card');
+
+        // Request header
+        const requestHeader = this.createSafeElement('div', 'request-header');
+        const requestInfo = this.createSafeElement('div', 'request-info');
+
+        const h4 = this.createSafeElement('h4', '', `${request.first_name || ''} ${request.last_name || ''}`);
+        const requestEmail = this.createSafeElement('div', 'request-email', request.email || '');
+
+        requestInfo.appendChild(h4);
+        requestInfo.appendChild(requestEmail);
+        requestHeader.appendChild(requestInfo);
+
+        // Request details
+        const requestDetails = this.createSafeElement('div', 'request-details');
+
+        // Phone detail row
+        const phoneRow = this.createSafeElement('div', 'detail-row');
+        const phoneLabel = this.createSafeElement('span', 'detail-label', 'Phone:');
+        const phoneValue = this.createSafeElement('span', 'detail-value', request.phone || 'N/A');
+        phoneRow.appendChild(phoneLabel);
+        phoneRow.appendChild(phoneValue);
+
+        // Status detail row
+        const statusRow = this.createSafeElement('div', 'detail-row');
+        const statusLabel = this.createSafeElement('span', 'detail-label', 'Status:');
+        const statusValueContainer = this.createSafeElement('span', 'detail-value');
+        const statusBadge = this.createSafeElement('span', `status-badge status-${request.status}`, request.status || '');
+        statusValueContainer.appendChild(statusBadge);
+        statusRow.appendChild(statusLabel);
+        statusRow.appendChild(statusValueContainer);
+
+        requestDetails.appendChild(phoneRow);
+        requestDetails.appendChild(statusRow);
+
+        // Assigned role row (if exists)
+        if (request.assigned_role) {
+            const roleRow = this.createSafeElement('div', 'detail-row');
+            const roleLabel = this.createSafeElement('span', 'detail-label', 'Assigned Role:');
+            const roleValue = this.createSafeElement('span', 'detail-value', request.assigned_role);
+            roleRow.appendChild(roleLabel);
+            roleRow.appendChild(roleValue);
+            requestDetails.appendChild(roleRow);
+        }
+
+        // Request message (if exists)
+        let requestMessage = null;
+        if (request.message) {
+            requestMessage = this.createSafeElement('div', 'request-message');
+            const p = this.createSafeElement('p', '', request.message);
+            requestMessage.appendChild(p);
+        }
+
+        // Request actions
+        const requestActions = this.createSafeElement('div', 'request-actions');
+
+        const viewBtn = this.createSafeElement('button', 'action-btn view-btn', 'View Details');
+        viewBtn.type = 'button';
+        viewBtn.onclick = () => this.viewRequest(request.id);
+        requestActions.appendChild(viewBtn);
 
         const isPending = request.status === 'pending';
-        const approveBtn = isPending ? `<button type="button" class="action-btn approve-btn" onclick="dashboard.showApproveModal(${request.id})">Approve</button>` : '';
-        const rejectBtn = isPending ? `<button type="button" class="action-btn reject-btn" onclick="dashboard.showRejectModal(${request.id})">Reject</button>` : '';
+        if (isPending) {
+            const approveBtn = this.createSafeElement('button', 'action-btn approve-btn', 'Approve');
+            approveBtn.type = 'button';
+            approveBtn.onclick = () => this.showApproveModal(request.id);
+            requestActions.appendChild(approveBtn);
 
-        card.innerHTML = `
-            <div class="request-header">
-                <div class="request-info">
-                    <h4>${this.escapeHtml(request.first_name)} ${this.escapeHtml(request.last_name)}</h4>
-                    <div class="request-email">${this.escapeHtml(request.email)}</div>
-                </div>
-            </div>
+            const rejectBtn = this.createSafeElement('button', 'action-btn reject-btn', 'Reject');
+            rejectBtn.type = 'button';
+            rejectBtn.onclick = () => this.showRejectModal(request.id);
+            requestActions.appendChild(rejectBtn);
+        }
 
-            <div class="request-details">
-                <div class="detail-row">
-                    <span class="detail-label">Phone:</span>
-                    <span class="detail-value">${this.escapeHtml(request.phone || 'N/A')}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status:</span>
-                    <span class="detail-value">
-                        <span class="status-badge status-${request.status}">${this.escapeHtml(request.status)}</span>
-                    </span>
-                </div>
-                ${request.assigned_role ? `
-                <div class="detail-row">
-                    <span class="detail-label">Assigned Role:</span>
-                    <span class="detail-value">${this.escapeHtml(request.assigned_role)}</span>
-                </div>
-                ` : ''}
-            </div>
-
-            ${request.message ? `
-            <div class="request-message">
-                <p>${this.escapeHtml(request.message)}</p>
-            </div>
-            ` : ''}
-
-            <div class="request-actions">
-                <button type="button" class="action-btn view-btn" onclick="dashboard.viewRequest(${request.id})">View Details</button>
-                ${approveBtn}
-                ${rejectBtn}
-            </div>
-        `;
+        // Assemble the card
+        card.appendChild(requestHeader);
+        card.appendChild(requestDetails);
+        if (requestMessage) {
+            card.appendChild(requestMessage);
+        }
+        card.appendChild(requestActions);
 
         return card;
     }
@@ -181,9 +266,9 @@ class ManagerDashboard {
         const approved = this.allRequests.filter(r => r.status === 'approved').length;
         const rejected = this.allRequests.filter(r => r.status === 'rejected').length;
 
-        this.pendingCount.textContent = pending;
-        this.approvedCount.textContent = approved;
-        this.rejectedCount.textContent = rejected;
+        this.safeSetText(this.pendingCount, pending);
+        this.safeSetText(this.approvedCount, approved);
+        this.safeSetText(this.rejectedCount, rejected);
     }
 
     viewRequest(requestId) {
@@ -191,28 +276,93 @@ class ManagerDashboard {
         if (!request) return;
 
         const modalBody = document.getElementById('request-details');
-        modalBody.innerHTML = `
-            <div class="basic-info">
-                <h3>Personal Info</h3>
-                <p><strong>Name:</strong> ${this.escapeHtml(request.first_name)} ${this.escapeHtml(request.last_name)}</p>
-                <p><strong>Email:</strong> ${this.escapeHtml(request.email)}</p>
-                <p><strong>Phone:</strong> ${this.escapeHtml(request.phone || 'N/A')}</p>
-                <p><strong>Requested Role:</strong> ${this.escapeHtml(request.requested_role || request.role)}</p>
-                ${request.assigned_role ? `<p><strong>Assigned Role:</strong> ${this.escapeHtml(request.assigned_role)}</p>` : ''}
-                
-                ${request.message ? `
-                <h3>Message</h3>
-                <p>${this.escapeHtml(request.message)}</p>
-                ` : ''}
-                
-                <h3>Details</h3>
-                <p><strong>Status:</strong> <span class="status-badge status-${request.status}">${this.escapeHtml(request.status)}</span></p>
-                <p><strong>Requested:</strong> ${this.formatDate(request.created_at)}</p>
-                ${request.processed_at ? `<p><strong>Processed:</strong> ${this.formatDate(request.processed_at)}</p>` : ''}
-                ${request.manager_message ? `<p><strong>Manager Note:</strong> ${this.escapeHtml(request.manager_message)}</p>` : ''}
-            </div>
-        `;
 
+        // Clear existing content safely
+        while (modalBody.firstChild) {
+            modalBody.removeChild(modalBody.firstChild);
+        }
+
+        const basicInfo = this.createSafeElement('div', 'basic-info');
+
+        // Personal Info section
+        const personalInfoH3 = this.createSafeElement('h3', '', 'Personal Info');
+        basicInfo.appendChild(personalInfoH3);
+
+        const nameP = this.createSafeElement('p');
+        const nameStrong = this.createSafeElement('strong', '', 'Name: ');
+        nameP.appendChild(nameStrong);
+        nameP.appendChild(document.createTextNode(`${request.first_name || ''} ${request.last_name || ''}`));
+        basicInfo.appendChild(nameP);
+
+        const emailP = this.createSafeElement('p');
+        const emailStrong = this.createSafeElement('strong', '', 'Email: ');
+        emailP.appendChild(emailStrong);
+        emailP.appendChild(document.createTextNode(request.email || ''));
+        basicInfo.appendChild(emailP);
+
+        const phoneP = this.createSafeElement('p');
+        const phoneStrong = this.createSafeElement('strong', '', 'Phone: ');
+        phoneP.appendChild(phoneStrong);
+        phoneP.appendChild(document.createTextNode(request.phone || 'N/A'));
+        basicInfo.appendChild(phoneP);
+
+        const requestedRoleP = this.createSafeElement('p');
+        const requestedRoleStrong = this.createSafeElement('strong', '', 'Requested Role: ');
+        requestedRoleP.appendChild(requestedRoleStrong);
+        requestedRoleP.appendChild(document.createTextNode(request.requested_role || request.role || ''));
+        basicInfo.appendChild(requestedRoleP);
+
+        if (request.assigned_role) {
+            const assignedRoleP = this.createSafeElement('p');
+            const assignedRoleStrong = this.createSafeElement('strong', '', 'Assigned Role: ');
+            assignedRoleP.appendChild(assignedRoleStrong);
+            assignedRoleP.appendChild(document.createTextNode(request.assigned_role));
+            basicInfo.appendChild(assignedRoleP);
+        }
+
+        // Message section (if exists)
+        if (request.message) {
+            const messageH3 = this.createSafeElement('h3', '', 'Message');
+            basicInfo.appendChild(messageH3);
+
+            const messageP = this.createSafeElement('p', '', request.message);
+            basicInfo.appendChild(messageP);
+        }
+
+        // Details section
+        const detailsH3 = this.createSafeElement('h3', '', 'Details');
+        basicInfo.appendChild(detailsH3);
+
+        const statusP = this.createSafeElement('p');
+        const statusStrong = this.createSafeElement('strong', '', 'Status: ');
+        statusP.appendChild(statusStrong);
+        const statusSpan = this.createSafeElement('span', `status-badge status-${request.status}`, request.status || '');
+        statusP.appendChild(statusSpan);
+        basicInfo.appendChild(statusP);
+
+        const requestedP = this.createSafeElement('p');
+        const requestedStrong = this.createSafeElement('strong', '', 'Requested: ');
+        requestedP.appendChild(requestedStrong);
+        requestedP.appendChild(document.createTextNode(this.formatDate(request.created_at)));
+        basicInfo.appendChild(requestedP);
+
+        if (request.processed_at) {
+            const processedP = this.createSafeElement('p');
+            const processedStrong = this.createSafeElement('strong', '', 'Processed: ');
+            processedP.appendChild(processedStrong);
+            processedP.appendChild(document.createTextNode(this.formatDate(request.processed_at)));
+            basicInfo.appendChild(processedP);
+        }
+
+        if (request.manager_message) {
+            const managerNoteP = this.createSafeElement('p');
+            const managerNoteStrong = this.createSafeElement('strong', '', 'Manager Note: ');
+            managerNoteP.appendChild(managerNoteStrong);
+            managerNoteP.appendChild(document.createTextNode(request.manager_message));
+            basicInfo.appendChild(managerNoteP);
+        }
+
+        modalBody.appendChild(basicInfo);
         this.showModal(this.viewModal);
     }
 
@@ -221,7 +371,10 @@ class ManagerDashboard {
 
         const request = this.allRequests.find(r => r.id === requestId);
         if (request) {
-            document.getElementById('assign-role').value = request.requested_role || request.role;
+            const assignRoleSelect = document.getElementById('assign-role');
+            if (assignRoleSelect) {
+                assignRoleSelect.value = request.requested_role || request.role || '';
+            }
         }
 
         this.showModal(this.approveModal);
@@ -229,7 +382,10 @@ class ManagerDashboard {
 
     showRejectModal(requestId) {
         this.currentRequestId = requestId;
-        document.getElementById('reject-message').value = '';
+        const rejectMessageTextarea = document.getElementById('reject-message');
+        if (rejectMessageTextarea) {
+            rejectMessageTextarea.value = '';
+        }
         this.showModal(this.rejectModal);
     }
 
@@ -253,7 +409,7 @@ class ManagerDashboard {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    assigned_role: assignedRole
+                    assigned_role: this.sanitizeInput(assignedRole)
                 })
             });
 
@@ -293,7 +449,7 @@ class ManagerDashboard {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    manager_message: rejectionMessage
+                    manager_message: this.sanitizeInput(rejectionMessage)
                 })
             });
 
@@ -341,16 +497,9 @@ class ManagerDashboard {
         }
     }
 
+    // Legacy method kept for compatibility but now uses sanitizeInput
     escapeHtml(text) {
-        if (typeof text !== 'string') return text;
-
-        return text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;')
-            .replace(/\//g, '&#x2F;');
+        return this.sanitizeInput(text);
     }
 }
 

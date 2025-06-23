@@ -58,6 +58,23 @@ class Dashboard {
         };
     }
 
+    createSafeElement(tag, className = '', textContent = '') {
+        const element = document.createElement(tag);
+        if (className) {
+            element.className = this.sanitizeInput(className);
+        }
+        if (textContent) {
+            element.textContent = String(textContent);
+        }
+        return element;
+    }
+
+    safeSetText(element, text) {
+        if (element && text !== null && text !== undefined) {
+            element.textContent = String(text);
+        }
+    }
+
     init() {
         this.checkAuth();
         this.setupEventListeners();
@@ -79,7 +96,6 @@ class Dashboard {
         }
     }
 
-    //data de azi - ca nu poti programa in trecut
     setMinDate() {
         const dateInput = document.getElementById('appointment-date');
         if (dateInput) {
@@ -90,11 +106,10 @@ class Dashboard {
     loadUserInfo() {
         const userNameElement = document.getElementById('user-name');
         if (userNameElement && this.user.first_name) {
-            userNameElement.textContent = this.sanitizeInput(this.user.first_name);
+            this.safeSetText(userNameElement, this.user.first_name);
         }
     }
 
-    //navigare tabs
     setupEventListeners() {
         document.querySelectorAll('.tab-btn[data-tab]').forEach(button => {
             button.addEventListener('click', () => {
@@ -102,13 +117,11 @@ class Dashboard {
             });
         });
 
-        // Logout
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => this.logout());
         }
 
-        // Form handlers
         const appointmentForm = document.getElementById('appointment-form');
         if (appointmentForm) {
             appointmentForm.addEventListener('submit', (e) => this.handleFormSubmission(e));
@@ -133,14 +146,12 @@ class Dashboard {
     }
 
     switchTab(targetTab) {
-        // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         const targetTabBtn = document.querySelector(`[data-tab="${targetTab}"].tab-btn`);
         if (targetTabBtn) {
             targetTabBtn.classList.add('active');
         }
 
-        // Switch tab panes
         document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
         const targetPane = document.getElementById(targetTab);
         if (targetPane) {
@@ -158,26 +169,35 @@ class Dashboard {
 
         const data = await response.json();
         if (data.success) {
-            this.populateVehicleSelect(data.vehicles);
+            this.populateVehicleSelect(data.vehicles.map(vehicle => this.sanitizeObject(vehicle)));
         }
-
     }
 
     populateVehicleSelect(vehicles) {
         const select = document.getElementById('existing-vehicle');
         if (!select) return;
 
-        select.innerHTML = '<option value="">Select vehicle or add a new one</option>';
+        // Clear existing content safely
+        while (select.firstChild) {
+            select.removeChild(select.firstChild);
+        }
+
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        this.safeSetText(defaultOption, 'Select vehicle or add a new one');
+        select.appendChild(defaultOption);
 
         vehicles.forEach(vehicle => {
             const option = document.createElement('option');
-            option.value = this.sanitizeInput(vehicle.id);
-            const brand = this.sanitizeInput(vehicle.brand || '');
-            const model = this.sanitizeInput(vehicle.model || '');
-            const year = this.sanitizeInput(vehicle.year || '');
-            const vehicleType = this.sanitizeInput(vehicle.vehicle_type || '');
+            option.value = String(vehicle.id);
+
+            const brand = vehicle.brand || '';
+            const model = vehicle.model || '';
+            const year = vehicle.year || '';
+            const vehicleType = vehicle.vehicle_type || '';
             const electricText = vehicle.is_electric ? ' Electric' : '';
-            option.textContent = `${brand} ${model} (${year}) - ${vehicleType}${electricText}`;
+
+            this.safeSetText(option, `${brand} ${model} (${year}) - ${vehicleType}${electricText}`);
             select.appendChild(option);
         });
     }
@@ -189,9 +209,17 @@ class Dashboard {
         if (!dateInput || !timeSelect || !dateInput.value) return;
 
         try {
-            timeSelect.innerHTML = '<option value="">Loading...</option>';
+            // Clear existing content safely
+            while (timeSelect.firstChild) {
+                timeSelect.removeChild(timeSelect.firstChild);
+            }
 
-            const response = await fetch(`/api/calendar/available-slots?date=${dateInput.value}`, {
+            const loadingOption = document.createElement('option');
+            loadingOption.value = '';
+            this.safeSetText(loadingOption, 'Loading...');
+            timeSelect.appendChild(loadingOption);
+
+            const response = await fetch(`/api/calendar/available-slots?date=${encodeURIComponent(dateInput.value)}`, {
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
@@ -200,25 +228,47 @@ class Dashboard {
 
             const data = await response.json();
 
+            // Clear loading option
+            while (timeSelect.firstChild) {
+                timeSelect.removeChild(timeSelect.firstChild);
+            }
+
             if (data.success) {
-                timeSelect.innerHTML = '<option value="">Select time</option>';
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                this.safeSetText(defaultOption, 'Select time');
+                timeSelect.appendChild(defaultOption);
+
                 if (data.availableSlots.length === 0) {
-                    timeSelect.innerHTML = '<option value="">No slots available</option>';
+                    const noSlotsOption = document.createElement('option');
+                    noSlotsOption.value = '';
+                    this.safeSetText(noSlotsOption, 'No slots available');
+                    timeSelect.appendChild(noSlotsOption);
                 } else {
                     data.availableSlots.forEach(slot => {
+                        const sanitizedSlot = this.sanitizeObject(slot);
                         const option = document.createElement('option');
-                        option.value = this.sanitizeInput(slot.startTime);
-                        const startTime = this.sanitizeInput(slot.startTime);
-                        const availableSpots = this.sanitizeInput(slot.availableSpots);
-                        option.textContent = `${startTime} (${availableSpots} slots available)`;
+                        option.value = sanitizedSlot.startTime;
+                        this.safeSetText(option, `${sanitizedSlot.startTime} (${sanitizedSlot.availableSpots} slots available)`);
                         timeSelect.appendChild(option);
                     });
                 }
             } else {
-                timeSelect.innerHTML = '<option value="">Error loading</option>';
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                this.safeSetText(errorOption, 'Error loading');
+                timeSelect.appendChild(errorOption);
             }
         } catch (error) {
-            timeSelect.innerHTML = '<option value="">Error loading</option>';
+            // Clear existing content safely
+            while (timeSelect.firstChild) {
+                timeSelect.removeChild(timeSelect.firstChild);
+            }
+
+            const errorOption = document.createElement('option');
+            errorOption.value = '';
+            this.safeSetText(errorOption, 'Error loading');
+            timeSelect.appendChild(errorOption);
         }
     }
 
@@ -241,16 +291,15 @@ class Dashboard {
 
             let vehicleId = appointmentData.vehicleId;
 
-            // Create new vehicle if needed
             if (!vehicleId && appointmentData.vehicle_type) {
-                const vehicleData = {
+                const vehicleData = this.sanitizeObject({
                     vehicle_type: appointmentData.vehicle_type,
                     brand: appointmentData.brand,
                     model: appointmentData.model,
                     year: parseInt(appointmentData.year),
                     is_electric: appointmentData.is_electric === 'on',
                     notes: appointmentData.notes || null
-                };
+                });
 
                 const vehicleResponse = await fetch('/api/vehicles', {
                     method: 'POST',
@@ -271,14 +320,13 @@ class Dashboard {
                 }
             }
 
-            // Create appointment
-            const appointmentPayload = {
+            const appointmentPayload = this.sanitizeObject({
                 date: appointmentData.date,
                 time: appointmentData.time,
                 serviceType: appointmentData.serviceType,
                 description: appointmentData.description,
                 vehicleId: vehicleId || null
-            };
+            });
 
             const response = await fetch('/api/appointments', {
                 method: 'POST',
@@ -309,10 +357,20 @@ class Dashboard {
         const form = document.getElementById('appointment-form');
         if (form) {
             form.reset();
+
             const timeSelect = document.getElementById('appointment-time');
             if (timeSelect) {
-                timeSelect.innerHTML = '<option value="">Select date first</option>';
+                // Clear existing content safely
+                while (timeSelect.firstChild) {
+                    timeSelect.removeChild(timeSelect.firstChild);
+                }
+
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                this.safeSetText(defaultOption, 'Select date first');
+                timeSelect.appendChild(defaultOption);
             }
+
             const newVehicleSection = document.getElementById('new-vehicle-section');
             if (newVehicleSection) {
                 newVehicleSection.style.display = 'block';
@@ -336,101 +394,154 @@ class Dashboard {
 
             if (data.success) {
                 if (data.appointments.length === 0) {
-                    appointmentsContainer.innerHTML = `
-                        <div class="empty-message">
-                            <h4>No Appointments Yet</h4>
-                            <p>You don't have any appointments scheduled.</p>
-                            <button onclick="dashboard.switchTab('new-appointment')" class="primary-btn">
-                                Schedule Now
-                            </button>
-                        </div>
-                    `;
+                    this.displayEmptyAppointments(appointmentsContainer);
                 } else {
-                    this.displayAppointments(data.appointments);
+                    this.displayAppointments(data.appointments.map(appointment => this.sanitizeObject(appointment)));
                 }
             } else {
-                appointmentsContainer.innerHTML = `
-                    <div class="error-message">
-                        <p>Error loading appointments: ${data.message}</p>
-                        <button onclick="dashboard.loadAppointments()" class="secondary-btn">Try again</button>
-                    </div>
-                `;
+                this.displayAppointmentsError(appointmentsContainer, data.message);
             }
         } catch (error) {
             console.error('Error loading appointments:', error);
             const appointmentsContainer = document.getElementById('appointments-container');
             if (appointmentsContainer) {
-                appointmentsContainer.innerHTML = `
-                    <div class="error-message">
-                        <p>Connection error. Please try again.</p>
-                        <button onclick="dashboard.loadAppointments()" class="secondary-btn">Try again</button>
-                    </div>
-                `;
+                this.displayAppointmentsError(appointmentsContainer, 'Connection error. Please try again.');
             }
         }
+    }
+
+    displayEmptyAppointments(container) {
+        // Clear existing content safely
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        const emptyMessage = this.createSafeElement('div', 'empty-message');
+        const h4 = this.createSafeElement('h4', '', 'No Appointments Yet');
+        const p = this.createSafeElement('p', '', "You don't have any appointments scheduled.");
+        const button = this.createSafeElement('button', 'primary-btn', 'Schedule Now');
+        button.onclick = () => this.switchTab('new-appointment');
+
+        emptyMessage.appendChild(h4);
+        emptyMessage.appendChild(p);
+        emptyMessage.appendChild(button);
+        container.appendChild(emptyMessage);
+    }
+
+    displayAppointmentsError(container, message) {
+        // Clear existing content safely
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        const errorMessage = this.createSafeElement('div', 'error-message');
+        const p = this.createSafeElement('p', '', `Error loading appointments: ${message}`);
+        const button = this.createSafeElement('button', 'secondary-btn', 'Try again');
+        button.onclick = () => this.loadAppointments();
+
+        errorMessage.appendChild(p);
+        errorMessage.appendChild(button);
+        container.appendChild(errorMessage);
     }
 
     displayAppointments(appointments) {
         this.currentAppointments = appointments;
         const appointmentsContainer = document.getElementById('appointments-container');
 
+        // Clear existing content safely
+        while (appointmentsContainer.firstChild) {
+            appointmentsContainer.removeChild(appointmentsContainer.firstChild);
+        }
+
         appointments.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
-        appointmentsContainer.innerHTML = appointments.map(appointment => {
-            const sanitizedAppointment = this.sanitizeObject(appointment);
+        appointments.forEach(appointment => {
+            const appointmentCard = this.createAppointmentCard(appointment);
+            appointmentsContainer.appendChild(appointmentCard);
+        });
+    }
 
-            const [year, month, day] = sanitizedAppointment.date.split('-');
-            const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            const formattedDate = appointmentDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+    createAppointmentCard(appointment) {
+        const appointmentCard = this.createSafeElement('div', 'appointment-card');
+        appointmentCard.setAttribute('data-appointment-id', String(appointment.id));
 
-            const statusText = this.getStatusText(sanitizedAppointment.status);
-            const statusClass = this.getStatusClass(sanitizedAppointment.status);
+        // Parse and format date
+        const [year, month, day] = appointment.date.split('-');
+        const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const formattedDate = appointmentDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
 
-            return `
-                <div class="appointment-card" data-appointment-id="${sanitizedAppointment.id}">
-                    <div class="appointment-header">
-                        <div class="appointment-date">
-                            <h3>${formattedDate}</h3>
-                            <p class="appointment-time">${sanitizedAppointment.time}</p>
-                        </div>
-                        <div class="appointment-status ${statusClass}">
-                            ${statusText}
-                        </div>
-                    </div>
-                    <div class="appointment-details">
-                        ${sanitizedAppointment.serviceType ? `
-                            <div class="service-type">
-                                <strong>Service:</strong> ${this.getServiceTypeText(sanitizedAppointment.serviceType)}
-                            </div>
-                        ` : ''}
-                        <div class="description">
-                            <strong>Description:</strong> ${sanitizedAppointment.description}
-                        </div>
-                        ${sanitizedAppointment.adminResponse ? `
-                            <div class="admin-response">
-                                <strong>Admin response:</strong> ${sanitizedAppointment.adminResponse}
-                            </div>
-                        ` : ''}
-                        ${sanitizedAppointment.estimatedPrice ? `
-                            <div class="estimated-price">
-                                <strong>Estimated price:</strong> ${sanitizedAppointment.estimatedPrice}
-                            </div>
-                        ` : ''}
-                        ${sanitizedAppointment.vehicle ? `
-                            <div class="vehicle-info">
-                                <strong>Vehicle:</strong> ${sanitizedAppointment.vehicle.brand} ${sanitizedAppointment.vehicle.model} (${sanitizedAppointment.vehicle.year})${sanitizedAppointment.vehicle.is_electric ? ' Electric' : ''}
-                            </div>
-                        ` : ''}
-                    </div>
-                  
-                </div>
-            `;
-        }).join('');
+        // Appointment header
+        const appointmentHeader = this.createSafeElement('div', 'appointment-header');
+
+        const appointmentDateDiv = this.createSafeElement('div', 'appointment-date');
+        const h3 = this.createSafeElement('h3', '', formattedDate);
+        const timeP = this.createSafeElement('p', 'appointment-time', appointment.time);
+        appointmentDateDiv.appendChild(h3);
+        appointmentDateDiv.appendChild(timeP);
+
+        const statusText = this.getStatusText(appointment.status);
+        const statusClass = this.getStatusClass(appointment.status);
+        const appointmentStatus = this.createSafeElement('div', `appointment-status ${statusClass}`, statusText);
+
+        appointmentHeader.appendChild(appointmentDateDiv);
+        appointmentHeader.appendChild(appointmentStatus);
+
+        // Appointment details
+        const appointmentDetails = this.createSafeElement('div', 'appointment-details');
+
+        // Service type (if exists)
+        if (appointment.serviceType) {
+            const serviceTypeDiv = this.createSafeElement('div', 'service-type');
+            const serviceStrong = this.createSafeElement('strong', '', 'Service: ');
+            serviceTypeDiv.appendChild(serviceStrong);
+            serviceTypeDiv.appendChild(document.createTextNode(this.getServiceTypeText(appointment.serviceType)));
+            appointmentDetails.appendChild(serviceTypeDiv);
+        }
+
+        // Description
+        const descriptionDiv = this.createSafeElement('div', 'description');
+        const descStrong = this.createSafeElement('strong', '', 'Description: ');
+        descriptionDiv.appendChild(descStrong);
+        descriptionDiv.appendChild(document.createTextNode(appointment.description));
+        appointmentDetails.appendChild(descriptionDiv);
+
+        // Admin response (if exists)
+        if (appointment.adminResponse) {
+            const adminResponseDiv = this.createSafeElement('div', 'admin-response');
+            const adminStrong = this.createSafeElement('strong', '', 'Admin response: ');
+            adminResponseDiv.appendChild(adminStrong);
+            adminResponseDiv.appendChild(document.createTextNode(appointment.adminResponse));
+            appointmentDetails.appendChild(adminResponseDiv);
+        }
+
+        // Estimated price (if exists)
+        if (appointment.estimatedPrice) {
+            const estimatedPriceDiv = this.createSafeElement('div', 'estimated-price');
+            const priceStrong = this.createSafeElement('strong', '', 'Estimated price: ');
+            estimatedPriceDiv.appendChild(priceStrong);
+            estimatedPriceDiv.appendChild(document.createTextNode(appointment.estimatedPrice));
+            appointmentDetails.appendChild(estimatedPriceDiv);
+        }
+
+        // Vehicle info (if exists)
+        if (appointment.vehicle) {
+            const vehicleInfoDiv = this.createSafeElement('div', 'vehicle-info');
+            const vehicleStrong = this.createSafeElement('strong', '', 'Vehicle: ');
+            const vehicleText = `${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})${appointment.vehicle.is_electric ? ' Electric' : ''}`;
+            vehicleInfoDiv.appendChild(vehicleStrong);
+            vehicleInfoDiv.appendChild(document.createTextNode(vehicleText));
+            appointmentDetails.appendChild(vehicleInfoDiv);
+        }
+
+        appointmentCard.appendChild(appointmentHeader);
+        appointmentCard.appendChild(appointmentDetails);
+
+        return appointmentCard;
     }
 
     getStatusText(status) {
