@@ -2,9 +2,11 @@ const { pool } = require('../database/db');
 const bcrypt = require('bcryptjs');
 
 class AccountRequest {
+    //primesc ca parametru un obiect cu datele cererii
     static async create(requestData) {
         try {
             let finalPasswordHash;
+            //daca requestData contine deja hash il folosesc
             if (requestData.password_hash) {
                 finalPasswordHash = requestData.password_hash;
             } else if (requestData.password) {
@@ -13,7 +15,7 @@ class AccountRequest {
             } else {
                 throw new Error('Password or password_hash required');
             }
-
+            //inseram o cerere noua
             const query = `
                 INSERT INTO "AccountRequests" (
                     email, password_hash, first_name, last_name, phone,
@@ -32,8 +34,9 @@ class AccountRequest {
                 requestData.message,
                 requestData.status || 'pending'
             ];
-
+            //execut interogarea
             const result = await pool.query(query, values);
+            //returnez un obiect care contine un id si datele cererii
             return { id: result.rows[0].id, ...requestData };
 
         } catch (error) {
@@ -51,6 +54,7 @@ class AccountRequest {
         }
     }
 
+    //cautam un request dupa id
     static async findById(id) {
         try {
             const query = 'SELECT * FROM "AccountRequests" WHERE id = $1';
@@ -78,6 +82,7 @@ class AccountRequest {
         }
     }
 
+    //statusul cererii: pending, approved, rejected
     static async updateStatus(id, status, additionalData = {}) {
         try {
             let query = 'UPDATE "AccountRequests" SET status = $1';
@@ -88,12 +93,6 @@ class AccountRequest {
                 paramCount++;
                 query += `, manager_message = $${paramCount}`;
                 values.push(additionalData.manager_message);
-            }
-
-            if (additionalData.processed_at) {
-                paramCount++;
-                query += `, processed_at = $${paramCount}`;
-                values.push(additionalData.processed_at);
             }
 
             if (additionalData.approved_user_id) {
@@ -115,49 +114,6 @@ class AccountRequest {
             const result = await pool.query(query, values);
             return result.rowCount > 0;
 
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async getStats() {
-        try {
-            const query = `
-                SELECT
-                    status,
-                    COUNT(*) as count
-                FROM "AccountRequests"
-                GROUP BY status
-            `;
-            const result = await pool.query(query);
-
-            const stats = {
-                pending: 0,
-                approved: 0,
-                rejected: 0,
-                total: 0
-            };
-
-            result.rows.forEach(row => {
-                stats[row.status] = parseInt(row.count);
-                stats.total += parseInt(row.count);
-            });
-
-            return stats;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    static async deleteOldRejected(daysOld = 30) {
-        try {
-            const query = `
-                DELETE FROM "AccountRequests"
-                WHERE status = 'rejected'
-                  AND processed_at < NOW() - INTERVAL '${daysOld} days'
-            `;
-            const result = await pool.query(query);
-            return result.rowCount;
         } catch (error) {
             throw error;
         }

@@ -1,14 +1,11 @@
 const AccountRequest = require('../models/AccountRequest');
 const User = require('../models/User');
 const { sendSuccess, sendBadRequest, sendServerError, sendNotFound } = require('../utils/response');
-const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+const { setSecurityHeaders } = require('../middleware/auth');
+//functii de validare
+const {isValidEmail, isValidName, isValidPhone, sanitizeString, sanitizeUserInput} = require('../utils/validation');
 
 class AccountRequestController {
-
-    static validateInput(input) {
-        if (typeof input !== 'string') return input;
-        return sanitizeInput(input);
-    }
 
     static validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
         const num = parseInt(input);
@@ -17,26 +14,20 @@ class AccountRequestController {
     }
 
     static validateRole(role) {
-        const validRoles = ['client', 'admin', 'accountant', 'manager'];
-        const cleanRole = sanitizeInput(role);
+        const validRoles = ['client', 'admin', 'accountant'];
+        const cleanRole = sanitizeString(role);
         return validRoles.includes(cleanRole) ? cleanRole : null;
     }
 
     static validateStatus(status) {
         const validStatuses = ['pending', 'approved', 'rejected'];
-        const cleanStatus = sanitizeInput(status);
+        const cleanStatus = sanitizeString(status);
         return validStatuses.includes(cleanStatus) ? cleanStatus : null;
-    }
-
-    static validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const cleanEmail = sanitizeInput(email);
-        return emailRegex.test(cleanEmail) && !/<|>|script/i.test(cleanEmail) ? cleanEmail : null;
     }
 
     static validateTextLength(text, minLength = 0, maxLength = 1000) {
         if (!text || typeof text !== 'string') return null;
-        const cleanText = sanitizeInput(text.trim());
+        const cleanText = sanitizeString(text.trim());
         if (cleanText.length < minLength || cleanText.length > maxLength) return null;
         if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanText)) return null;
         return cleanText;
@@ -45,19 +36,19 @@ class AccountRequestController {
     static sanitizeRequest(request) {
         if (!request) return null;
 
+        const sanitized = sanitizeUserInput(request);
+
         return {
             id: request.id,
-            email: this.validateInput(request.email),
-            first_name: this.validateInput(request.first_name),
-            last_name: this.validateInput(request.last_name),
-            phone: this.validateInput(request.phone),
-            role: this.validateInput(request.role),
-            company_name: this.validateInput(request.company_name),
-            experience_years: this.validateInteger(request.experience_years, 0, 50),
-            message: this.validateInput(request.message),
-            status: this.validateInput(request.status),
-            manager_message: this.validateInput(request.manager_message),
-            assigned_role: this.validateInput(request.assigned_role),
+            email: sanitized.email,
+            first_name: sanitized.first_name,
+            last_name: sanitized.last_name,
+            phone: sanitized.phone,
+            role: sanitized.role,
+            message: sanitized.message,
+            status: sanitized.status,
+            manager_message: sanitized.manager_message,
+            assigned_role: sanitized.assigned_role,
             created_at: request.created_at,
             processed_at: request.processed_at,
             approved_user_id: request.approved_user_id
@@ -68,19 +59,9 @@ class AccountRequestController {
         try {
             setSecurityHeaders(res);
 
-            const status = this.validateStatus(req.query.status);
-            const role = this.validateRole(req.query.role);
-
             let requests;
-
-            if (status || role) {
-                const filters = {};
-                if (status && status !== 'all') filters.status = status;
-                if (role && role !== 'all') filters.role = role;
-                requests = await AccountRequest.findByFilters(filters);
-            } else {
-                requests = await AccountRequest.findAll();
-            }
+            //toate requesturile din bd
+            requests = await AccountRequest.findAll();
 
             const sanitizedRequests = requests ? requests.map(req => this.sanitizeRequest(req)).filter(req => req !== null) : [];
 
@@ -93,13 +74,11 @@ class AccountRequestController {
         }
     }
 
-
     static async approveAccountRequest(req, res) {
         try {
             setSecurityHeaders(res);
 
             const id = this.validateInteger(req.params.id, 1);
-            const manager_message = this.validateTextLength(req.body.manager_message, 0, 500);
             const assigned_role = this.validateRole(req.body.assigned_role);
 
             if (!id) {
@@ -112,9 +91,10 @@ class AccountRequestController {
 
             const validApprovalRoles = ['client', 'admin', 'accountant'];
             if (!validApprovalRoles.includes(assigned_role)) {
-                return sendBadRequest(res, 'Invalid role');
+                return sendBadRequest(res, 'Invalid role for approval');
             }
 
+            //caut requestul dupa id in bd
             const request = await AccountRequest.findById(id);
 
             if (!request) {
@@ -125,37 +105,40 @@ class AccountRequestController {
                 return sendBadRequest(res, 'This request has already been processed');
             }
 
-            const email = this.validateEmail(request.email);
-            if (!email) {
+            if (!isValidEmail(request.email)) {
                 return sendBadRequest(res, 'Invalid email in request');
             }
 
-            const existingUser = await User.findByEmail(email);
+            const existingUser = await User.findByEmail(request.email);
             if (existingUser) {
                 return sendBadRequest(res, 'A user with this email already exists');
             }
 
-            const first_name = this.validateTextLength(request.first_name, 1, 50);
-            const last_name = this.validateTextLength(request.last_name, 1, 50);
-            const phone = this.validateInput(request.phone);
+            if (!isValidName(request.first_name)) {
+                return sendBadRequest(res, 'Invalid first name in request');
+            }
 
-            if (!first_name || !last_name) {
-                return sendBadRequest(res, 'Invalid name data in request');
+            if (!isValidName(request.last_name)) {
+                return sendBadRequest(res, 'Invalid last name in request');
+            }
+
+            if (!isValidPhone(request.phone)) {
+                return sendBadRequest(res, 'Invalid phone number in request');
             }
 
             const userData = {
-                email: email,
+                email: request.email,
                 password_hash: request.password_hash,
-                first_name: first_name,
-                last_name: last_name,
-                phone: phone,
+                first_name: request.first_name,
+                last_name: request.last_name,
+                phone: request.phone,
                 role: assigned_role
             };
 
+            //creez un nou user
             const newUser = await User.create(userData);
 
             const updateData = {
-                manager_message: manager_message || null,
                 processed_at: new Date(),
                 approved_user_id: newUser.id,
                 assigned_role: assigned_role
@@ -163,17 +146,17 @@ class AccountRequestController {
 
             await AccountRequest.updateStatus(id, 'approved', updateData);
 
-            const sanitizedUser = {
+            const sanitizedUserData = sanitizeUserInput({
                 id: newUser.id,
-                email: this.validateInput(newUser.email),
-                first_name: this.validateInput(newUser.first_name),
-                last_name: this.validateInput(newUser.last_name),
-                role: this.validateInput(newUser.role)
-            };
+                email: newUser.email,
+                first_name: newUser.first_name,
+                last_name: newUser.last_name,
+                role: newUser.role
+            });
 
             sendSuccess(res, {
                 message: 'Account request approved successfully',
-                user: sanitizedUser
+                user: sanitizedUserData
             }, `Account created with role: ${assigned_role}`);
 
         } catch (error) {
@@ -186,14 +169,13 @@ class AccountRequestController {
             setSecurityHeaders(res);
 
             const id = this.validateInteger(req.params.id, 1);
-            const manager_message = this.validateTextLength(req.body.manager_message, 5, 500);
 
             if (!id) {
                 return sendBadRequest(res, 'Invalid request ID');
             }
 
             if (!manager_message) {
-                return sendBadRequest(res, 'Manager message is required');
+                return sendBadRequest(res, 'Manager message is required and must be at least 5 characters');
             }
 
             const request = await AccountRequest.findById(id);
@@ -210,7 +192,7 @@ class AccountRequestController {
                 manager_message: manager_message,
                 processed_at: new Date()
             };
-
+            //updatam statusul requestului
             await AccountRequest.updateStatus(id, 'rejected', updateData);
 
             sendSuccess(res, {
