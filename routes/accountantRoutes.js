@@ -29,7 +29,7 @@ const accountantRoutes = async (req, res) => {
             });
         });
 
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
             requireAccountant(req, res, (error) => {
                 if (error) {
                     return securePath.sendJSON(res, error.statusCode || 403, {

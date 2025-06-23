@@ -63,7 +63,7 @@ class AccountantController {
                 });
             }
 
-            // Apelează getAllSuppliers din supplierController
+            //apeleaza getAllSuppliers din supplierController
             await SupplierController.getAllSuppliers(req, res, req.query || {});
 
         } catch (error) {
@@ -191,7 +191,7 @@ class AccountantController {
                 });
             }
 
-            // Obține date reale din baza de date
+            //obtinem datele din bd
             let exportData;
 
             switch (dataType) {
@@ -207,7 +207,7 @@ class AccountantController {
                 default:
                     return this.sendJSON(res, 400, {
                         success: false,
-                        message: 'Invalid data type. Supported: suppliers, parts, appointments'
+                        message: 'Invalid data type'
                     });
             }
 
@@ -218,7 +218,7 @@ class AccountantController {
                 });
             }
 
-            // Returnează datele în formatul cerut
+            //returnam datele in formatul cerut
             if (format === 'json') {
                 return this.sendJSON(res, 200, {
                     success: true,
@@ -250,7 +250,7 @@ class AccountantController {
             } else {
                 return this.sendJSON(res, 400, {
                     success: false,
-                    message: 'Invalid format. Supported: json, csv, pdf'
+                    message: 'Invalid format'
                 });
             }
 

@@ -4,15 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Accountant Dashboard</title>
-
     <link rel="stylesheet" href="../css/suppliers.css">
-
     <link rel="stylesheet" href="../css/accountant.css">
 </head>
 <body>
 
 <main class="main-content">
-    <div id="dashboard-content">
+    <div class="manager-container">
+        <!-- Header -->
+        <header class="manager-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <button class="btn btn-secondary" id="logout-btn">Logout</button>
+                    <h1>Accountant Dashboard</h1>
+                </div>
+            </div>
+        </header>
+
+        <!--Dashboard-->
+        <section class="requests-section" id="main-dashboard">
+            <div class="requests-grid">
+                <!-- Suppliers Card -->
+                <div class="request-card">
+                    <div class="request-header">
+                        <div class="request-info">
+                            <h4>Suppliers</h4>
+                            <div class="request-email">View and manage suppliers</div>
+                        </div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="btn" id="suppliers-view-btn">View</button>
+                    </div>
+                </div>
+
+                <!-- Import/Export buton -->
+                <div class="request-card">
+                    <div class="request-header">
+                        <div class="request-info">
+                            <h4>Import/Export</h4>
+                            <div class="request-email">Import and export data</div>
+                        </div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="btn" id="import-export-manage-btn">Manage</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--Suppliers-->
+        <section id="suppliers-section" style="display: none;">
+            <div class="section-header">
+                <h2>Suppliers</h2>
+                <div class="section-actions">
+                    <button class="btn btn-secondary" id="suppliers-back-btn">Back</button>
+                </div>
+            </div>
+            <div class="suppliers-list" id="suppliers-list">
+                <!-- suppliers din js -->
+            </div>
+        </section>
+
+        <!--Import/Export-->
+        <section id="import-export-section" style="display: none;">
+            <div class="section-header">
+                <h2>Import/Export Data</h2>
+                <div class="section-actions">
+                    <button class="btn btn-secondary" id="import-export-back-btn">Back</button>
+                </div>
+            </div>
+
+            <!--Import-->
+            <div class="import-section">
+                <h3>Import Data</h3>
+                <div class="import-form">
+                    <div class="form-group">
+                        <label for="importDataType">Data Type</label>
+                        <select id="importDataType">
+                            <option value="">Select data type</option>
+                            <option value="suppliers">Suppliers</option>
+                            <option value="parts">Parts</option>
+                            <option value="appointments">Appointments</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="importFormat">Format</label>
+                        <select id="importFormat">
+                            <option value="">Select format</option>
+                            <option value="csv">CSV</option>
+                            <option value="json">JSON</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="importFile">File</label>
+                        <input type="file" id="importFile" accept=".csv,.json">
+                    </div>
+
+                    <button class="btn btn-primary" id="import-btn">Import Data</button>
+                </div>
+            </div>
+
+            <!--Export-->
+            <div class="export-section">
+                <h3>Export Data</h3>
+                <div class="export-form">
+                    <div class="form-group">
+                        <label for="exportDataType">Data Type</label>
+                        <select id="exportDataType">
+                            <option value="">Select data type</option>
+                            <option value="suppliers">Suppliers</option>
+                            <option value="parts">Parts</option>
+                            <option value="appointments">Appointments</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exportFormat">Format</label>
+                        <select id="exportFormat">
+                            <option value="">Select format</option>
+                            <option value="csv">CSV</option>
+                            <option value="json">JSON</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" id="export-btn">Export Data</button>
+                </div>
+            </div>
+        </section>
     </div>
 </main>
 
