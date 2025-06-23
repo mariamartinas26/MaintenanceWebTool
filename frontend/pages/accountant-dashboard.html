@@ -6,6 +6,25 @@
     <title>Accountant Dashboard</title>
     <link rel="stylesheet" href="../css/suppliers.css">
     <link rel="stylesheet" href="../css/accountant.css">
+    <style>
+        /* Stiluri pentru butonul de documentație */
+        .documentation-card .btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            transition: background 0.3s ease;
+        }
+
+        .documentation-card .btn:hover {
+            background: #138496;
+        }
+
+        /* Pentru a face grid-ul să arate bine cu 3 carduri */
+        .requests-grid {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+    </style>
 </head>
 <body>
 
@@ -47,6 +66,19 @@
                     </div>
                     <div class="request-actions">
                         <button class="btn" id="import-export-manage-btn">Manage</button>
+                    </div>
+                </div>
+
+                <!-- Documentation Card -->
+                <div class="request-card documentation-card">
+                    <div class="request-header">
+                        <div class="request-info">
+                            <h4>Documentation</h4>
+                            <div class="request-email">System documentation and specifications</div>
+                        </div>
+                    </div>
+                    <div class="request-actions">
+                        <button class="btn" id="documentation-view-btn">View Docs</button>
                     </div>
                 </div>
             </div>
@@ -138,5 +170,18 @@
 </main>
 
 <script src="../js/accountant.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const documentationBtn = document.getElementById('documentation-view-btn');
+
+        if (documentationBtn) {
+            documentationBtn.addEventListener('click', function() {
+                const documentationUrl = 'http://localhost:63342/MaintenanceWebTool/documentatie/documentatie.html?_ijt=lmmguvj2sjfi43bc5ou6p3p0f9&_ij_reload=RELOAD_ON_SAVE';
+
+                window.open(documentationUrl, '_blank');
+            });
+        }
+    });
+</script>
 </body>
 </html>
