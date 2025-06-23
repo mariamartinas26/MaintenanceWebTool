@@ -3,7 +3,6 @@ class PartsManager {
         this.allParts = [];
         this.filteredParts = [];
         this.selectedParts = new Set();
-        this.updatePartId = null;
         this.SecurityUtils = window.SecurityUtils;
 
         this.init();
