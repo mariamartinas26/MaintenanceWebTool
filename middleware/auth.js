@@ -416,6 +416,64 @@ async function requireManager(req, res, next) {
     }
 }
 
+function requireAuth(req, res) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: 'No token provided'
+        }));
+        return false;
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                success: false,
+                message: 'Server configuration error'
+            }));
+            return false;
+        }
+
+        const decoded = jwt.verify(token, secret);
+        req.userId = decoded.userId || decoded.user_id;
+        req.user = decoded;
+        return true;
+    } catch (error) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            success: false,
+            message: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
+        }));
+        return false;
+    }
+}
+
+function getUserIdFromToken(authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) return null;
+
+        const decoded = jwt.verify(token, secret);
+        const userId = decoded.userId || decoded.user_id;
+        return userId ? parseInt(userId) : null;
+    } catch (error) {
+        return null;
+    }
+}
+
 module.exports = {
     verifyToken,
     authenticateToken,
@@ -424,5 +482,7 @@ module.exports = {
     requireManager,
     sanitizeInput,
     safeJsonParse,
-    setSecurityHeaders
+    setSecurityHeaders,
+    requireAuth,
+    getUserIdFromToken
 };

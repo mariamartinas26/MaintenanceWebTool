@@ -1,7 +1,7 @@
 const { pool } = require('../database/db');
 const AppointmentModel = require('../models/appointmentModel');
 const CalendarModel = require('../models/calendarModel');
-const { getUserIdFromToken } = require('../utils/authUtils');
+const { getUserIdFromToken } = require('../middleware/auth');
 const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
 
 function validateInput(input) {

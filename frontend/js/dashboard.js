@@ -194,10 +194,8 @@ class Dashboard {
             const brand = vehicle.brand || '';
             const model = vehicle.model || '';
             const year = vehicle.year || '';
-            const vehicleType = vehicle.vehicle_type || '';
-            const electricText = vehicle.is_electric ? ' Electric' : '';
 
-            this.safeSetText(option, `${brand} ${model} (${year}) - ${vehicleType}${electricText}`);
+            this.safeSetText(option, `${brand} ${model} (${year})`);
             select.appendChild(option);
         });
     }

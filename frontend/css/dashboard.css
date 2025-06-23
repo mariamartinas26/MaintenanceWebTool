@@ -188,16 +188,6 @@ main {
     font-weight: 500;
 }
 
-.secondary-btn {
-    background-color: #e9ecef;
-    color: #333;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: inherit;
-    font-weight: 500;
-}
 
 
 /* Form Sections */

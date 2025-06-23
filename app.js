@@ -139,7 +139,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             return await accountantRoutes(req, res);
         }
         else if (pathname.startsWith('/api/manager')) {
-            const { requireAuth } = require('./utils/authUtils');
+            const { requireAuth } = require('./middleware/auth');
 
             if (!requireAuth(req, res)) {
                 return;

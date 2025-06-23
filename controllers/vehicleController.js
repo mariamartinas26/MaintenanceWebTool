@@ -1,5 +1,5 @@
 const VehicleModel = require('../models/vehicleModel');
-const { getUserIdFromToken } = require('../utils/authUtils');
+const { getUserIdFromToken } = require('../middleware/auth');
 const { sendSuccess, sendError, sendCreated } = require('../utils/response');
 const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
 
