@@ -5,9 +5,7 @@ async function handleAppointmentRoutes(req, res) {
     const parsedUrl = url.parse(req.url, true);
     const path = parsedUrl.pathname;
     const method = req.method;
-
-    const pathParts = path.split('/');
-    const appointmentId = pathParts[3];
+    path.split('/');
 
     try {
         if (method === 'GET' && path === '/api/appointments') {
@@ -15,9 +13,6 @@ async function handleAppointmentRoutes(req, res) {
         }
         else if (method === 'POST' && path === '/api/appointments') {
             await AppointmentController.createAppointment(req, res);
-        }
-        else if (method === 'PUT' && appointmentId && pathParts.length === 4) {
-            await AppointmentController.updateAppointment(req, res, appointmentId);
         }
         else {
             res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -34,7 +29,6 @@ async function handleAppointmentRoutes(req, res) {
         }));
     }
 }
-
 module.exports = {
     handleAppointmentRoutes
 };

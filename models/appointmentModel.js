@@ -1,11 +1,9 @@
 const { pool } = require('../database/db');
 
 class AppointmentModel {
-    // Get all appointments for a specific user (this is what your controller needs)
+    //toate programarile unui user
     static async getUserAppointments(userId) {
         try {
-            console.log('[DEBUG] AppointmentModel.getUserAppointments called with userId:', userId);
-
             const query = `
                 SELECT 
                     a.id,
@@ -28,22 +26,16 @@ class AppointmentModel {
                 ORDER BY a.appointment_date DESC
             `;
 
-            console.log('[DEBUG] Executing query for user:', userId);
             const result = await pool.query(query, [userId]);
-            console.log('[DEBUG] Query result:', result.rows.length, 'appointments found');
-
             return result.rows;
         } catch (error) {
-            console.error('[ERROR] Error in getUserAppointments:', error);
             throw error;
         }
     }
 
-    // Create a new appointment
+    //creare noua programare
     static async createAppointment(userId, vehicleId, appointmentDateTime, description) {
         try {
-            console.log('[DEBUG] Creating appointment for user:', userId);
-
             const query = `
                 INSERT INTO "Appointments" 
                 (user_id, vehicle_id, appointment_date, problem_description, status, created_at, updated_at)
@@ -52,50 +44,15 @@ class AppointmentModel {
             `;
 
             const result = await pool.query(query, [userId, vehicleId, appointmentDateTime, description]);
-            console.log('[DEBUG] Appointment created with ID:', result.rows[0].id);
 
             return result.rows[0];
         } catch (error) {
-            console.error('[ERROR] Error in createAppointment:', error);
             throw error;
         }
     }
 
-    // Get appointment by ID and user ID (for security - ensures user can only access their own appointments)
-    static async getAppointmentById(appointmentId, userId) {
-        try {
-            const query = `
-                SELECT * FROM "Appointments" 
-                WHERE id = $1 AND user_id = $2
-            `;
 
-            const result = await pool.query(query, [appointmentId, userId]);
-            return result.rows[0] || null;
-        } catch (error) {
-            console.error('[ERROR] Error in getAppointmentById:', error);
-            throw error;
-        }
-    }
-
-    // Update appointment status (for client cancellations)
-    static async updateAppointmentStatus(appointmentId, status) {
-        try {
-            const query = `
-                UPDATE "Appointments" 
-                SET status = $2, updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1
-                RETURNING *
-            `;
-
-            const result = await pool.query(query, [appointmentId, status]);
-            return result.rows[0];
-        } catch (error) {
-            console.error('[ERROR] Error in updateAppointmentStatus:', error);
-            throw error;
-        }
-    }
-
-    // Check if user has existing appointment at the same time
+    //verific daca utilizatorul are deja o programare la aceasi ora
     static async checkExistingAppointment(userId, appointmentDateTime) {
         try {
             const query = `
@@ -106,12 +63,10 @@ class AppointmentModel {
             const result = await pool.query(query, [userId, appointmentDateTime]);
             return result.rows.length > 0;
         } catch (error) {
-            console.error('[ERROR] Error in checkExistingAppointment:', error);
             throw error;
         }
     }
 
-    // Add appointment history
     static async addAppointmentHistory(client, appointmentId, userId, action, newStatus, comment, oldStatus = null) {
         try {
             const query = `
@@ -122,7 +77,6 @@ class AppointmentModel {
 
             await client.query(query, [appointmentId, userId, action, oldStatus, newStatus, comment]);
         } catch (error) {
-            console.error('[ERROR] Error in addAppointmentHistory:', error);
             throw error;
         }
     }

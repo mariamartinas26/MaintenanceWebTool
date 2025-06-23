@@ -47,7 +47,7 @@ const accountantRoutes = async (req, res) => {
             return await accountantController.getDashboard(req, res);
         }
 
-        //routes suppliers
+        //rute suppliers
         if (path === '/api/accountant/suppliers' && method === 'GET') {
             req.query = query;
             return await accountantController.getSuppliers(req, res);
@@ -57,7 +57,6 @@ const accountantRoutes = async (req, res) => {
             return await parseBodyAndExecute(req, res, accountantController.addSupplier);
         }
 
-        // Supplier by ID routes
         const supplierByIdMatch = path.match(/^\/api\/accountant\/suppliers\/(\d+)$/);
         if (supplierByIdMatch) {
             req.params = { id: supplierByIdMatch[1] };

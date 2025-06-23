@@ -2,7 +2,6 @@ class Dashboard {
     constructor() {
         this.token = null;
         this.user = {};
-        this.currentAppointments = [];
         this.initSecurityUtils();
         this.init();
     }
@@ -23,7 +22,6 @@ class Dashboard {
             try {
                 if (!jsonString || typeof jsonString !== 'string') return null;
                 if (/<script|javascript:|on\w+\s*=|data:/i.test(jsonString)) {
-                    console.warn('Potentially malicious content detected in JSON');
                     return null;
                 }
                 const parsed = JSON.parse(jsonString);
@@ -32,7 +30,6 @@ class Dashboard {
                 }
                 return parsed;
             } catch (error) {
-                console.error('Error parsing JSON safely:', error);
                 return null;
             }
         }.bind(this);
@@ -96,8 +93,8 @@ class Dashboard {
         }
     }
 
+    //navigare tabs
     setupEventListeners() {
-        // Tab navigation
         document.querySelectorAll('.tab-btn[data-tab]').forEach(button => {
             button.addEventListener('click', () => {
                 this.switchTab(button.getAttribute('data-tab'));
@@ -132,14 +129,6 @@ class Dashboard {
                 }
             });
         }
-
-        // Schedule now button
-        const scheduleBtn = document.querySelector('.schedule-now-btn');
-        if (scheduleBtn) {
-            scheduleBtn.addEventListener('click', () => {
-                this.switchTab('new-appointment');
-            });
-        }
     }
 
     switchTab(targetTab) {
@@ -159,21 +148,18 @@ class Dashboard {
     }
 
     async loadVehicles() {
-        try {
-            const response = await fetch('/api/vehicles', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                this.populateVehicleSelect(data.vehicles);
+        const response = await fetch('/api/vehicles', {
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
             }
-        } catch (error) {
-            console.error('Error loading vehicles:', error);
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            this.populateVehicleSelect(data.vehicles);
         }
+
     }
 
     populateVehicleSelect(vehicles) {
@@ -231,7 +217,6 @@ class Dashboard {
                 timeSelect.innerHTML = '<option value="">Error loading</option>';
             }
         } catch (error) {
-            console.error('Error loading available slots:', error);
             timeSelect.innerHTML = '<option value="">Error loading</option>';
         }
     }

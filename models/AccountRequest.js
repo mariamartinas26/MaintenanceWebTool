@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 class AccountRequest {
     static async create(requestData) {
         try {
-
             let finalPasswordHash;
             if (requestData.password_hash) {
                 finalPasswordHash = requestData.password_hash;
@@ -38,7 +37,6 @@ class AccountRequest {
             return { id: result.rows[0].id, ...requestData };
 
         } catch (error) {
-            console.error('Error creating account request:', error);
             throw error;
         }
     }
@@ -49,7 +47,6 @@ class AccountRequest {
             const result = await pool.query(query, [email]);
             return result.rows[0] || null;
         } catch (error) {
-            console.error('Error finding request by email:', error);
             throw error;
         }
     }
@@ -60,7 +57,6 @@ class AccountRequest {
             const result = await pool.query(query, [id]);
             return result.rows[0] || null;
         } catch (error) {
-            console.error('Error finding request by ID:', error);
             throw error;
         }
     }
@@ -78,7 +74,6 @@ class AccountRequest {
             const result = await pool.query(query);
             return result.rows;
         } catch (error) {
-            console.error('Error finding all requests:', error);
             throw error;
         }
     }
@@ -121,7 +116,6 @@ class AccountRequest {
             return result.rowCount > 0;
 
         } catch (error) {
-            console.error('Error updating request status:', error);
             throw error;
         }
     }
@@ -151,7 +145,6 @@ class AccountRequest {
 
             return stats;
         } catch (error) {
-            console.error('Error getting request stats:', error);
             throw error;
         }
     }
@@ -166,7 +159,6 @@ class AccountRequest {
             const result = await pool.query(query);
             return result.rowCount;
         } catch (error) {
-            console.error('Error deleting old rejected requests:', error);
             throw error;
         }
     }
