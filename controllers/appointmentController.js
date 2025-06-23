@@ -4,75 +4,6 @@ const CalendarModel = require('../models/calendarModel');
 const { getUserIdFromToken } = require('../middleware/auth');
 const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
 
-function validateInput(input) {
-    if (typeof input !== 'string') return input;
-    return sanitizeInput(input);
-}
-
-function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
-    const num = parseInt(input);
-    if (isNaN(num) || num < min || num > max) return null;
-    return num;
-}
-
-function sendJSON(res, statusCode, data) {
-    setSecurityHeaders(res);
-    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(data));
-}
-
-function sendSuccess(res, data, message) {
-    sendJSON(res, 200, { success: true, message: validateInput(message), ...data });
-}
-
-function sendError(res, statusCode, message) {
-    sendJSON(res, statusCode, { success: false, message: validateInput(message) });
-}
-
-function sendCreated(res, data, message) {
-    sendJSON(res, 201, { success: true, message: validateInput(message), ...data });
-}
-
-async function getRequestBody(req) {
-    return new Promise((resolve, reject) => {
-        let body = '';
-        let totalSize = 0;
-        const maxSize = 10 * 1024 * 1024;
-
-        req.on('data', chunk => {
-            totalSize += chunk.length;
-            if (totalSize > maxSize) {
-                reject(new Error('Request body too large'));
-                return;
-            }
-            body += chunk.toString();
-        });
-
-        req.on('end', () => {
-            try {
-                if (!body.trim()) {
-                    resolve({});
-                    return;
-                }
-
-                const parsed = safeJsonParse(body);
-                if (parsed === null) {
-                    reject(new Error('Invalid or potentially malicious JSON'));
-                    return;
-                }
-
-                resolve(parsed);
-            } catch (error) {
-                reject(new Error('Invalid JSON in request body'));
-            }
-        });
-
-        req.on('error', (error) => {
-            reject(error);
-        });
-    });
-}
-
 class AppointmentController {
     static async getAppointments(req, res) {
         try {
@@ -122,7 +53,7 @@ class AppointmentController {
                 validateInput(time)
             );
 
-            // Validate description
+            //validare descriere min 10 caractere
             AppointmentController.validateDescription(validateInput(description));
 
             // Validate business rules
@@ -230,13 +161,13 @@ class AppointmentController {
     }
 
     static async validateAppointmentRules(userId, appointmentDateTime, date, time) {
-        // Check for existing appointment at same time
+        //verific daca mai exista o programare a aceluiasi client la aceasi ora
         const hasExistingAppointment = await AppointmentModel.checkExistingAppointment(userId, appointmentDateTime);
         if (hasExistingAppointment) {
             throw new Error('You already have an appointment at this time!');
         }
 
-        // Ensure slots exist and check availability
+        //ne asiguram ca avem solt-uri disponibile
         await AppointmentController.ensureSlotsExistForDate(date);
         const slot = await CalendarModel.getSlotByDateTime(date, time);
 
@@ -278,6 +209,74 @@ class AppointmentController {
             client.release();
         }
     }
+}
+function validateInput(input) {
+    if (typeof input !== 'string') return input;
+    return sanitizeInput(input);
+}
+
+function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseInt(input);
+    if (isNaN(num) || num < min || num > max) return null;
+    return num;
+}
+
+function sendJSON(res, statusCode, data) {
+    setSecurityHeaders(res);
+    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(data));
+}
+
+function sendSuccess(res, data, message) {
+    sendJSON(res, 200, { success: true, message: validateInput(message), ...data });
+}
+
+function sendError(res, statusCode, message) {
+    sendJSON(res, statusCode, { success: false, message: validateInput(message) });
+}
+
+function sendCreated(res, data, message) {
+    sendJSON(res, 201, { success: true, message: validateInput(message), ...data });
+}
+
+async function getRequestBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        let totalSize = 0;
+        const maxSize = 10 * 1024 * 1024;
+
+        req.on('data', chunk => {
+            totalSize += chunk.length;
+            if (totalSize > maxSize) {
+                reject(new Error('Request body too large'));
+                return;
+            }
+            body += chunk.toString();
+        });
+
+        req.on('end', () => {
+            try {
+                if (!body.trim()) {
+                    resolve({});
+                    return;
+                }
+
+                const parsed = safeJsonParse(body);
+                if (parsed === null) {
+                    reject(new Error('Invalid or potentially malicious JSON'));
+                    return;
+                }
+
+                resolve(parsed);
+            } catch (error) {
+                reject(new Error('Invalid JSON in request body'));
+            }
+        });
+
+        req.on('error', (error) => {
+            reject(error);
+        });
+    });
 }
 
 module.exports = AppointmentController;
