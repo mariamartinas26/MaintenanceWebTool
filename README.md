@@ -55,6 +55,7 @@
     * [Installation](#installation)
     * [Run Locally](#run-locally)
 - [Usage](#usage)
+- [Database Schema](#database-schema)
 - [API Documentation](#api-documentation)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -88,6 +89,12 @@ Maintenance Web Tool is a web application designed for efficient management of a
 </details>
 
 <details>
+<summary>Database</summary>
+  <ul>
+    <li><a href="https://www.postgresql.org/">PostgreSQL</a></li>
+    <li><a href="https://www.npmjs.com/package/pg">node-postgres (pg)</a></li>
+  </ul>
+</details>
 
 ### Features
 
@@ -201,6 +208,18 @@ http://localhost:8083
 1. **Manage appointments**: Approve/reject requests with price estimates
 2. **Inventory management**: Monitor parts stock and orders
 3. **Reports**: Generate analytics about service center activity
+
+## Database Schema
+
+The application uses the following main tables:
+
+- `users` - User information and authentication
+- `vehicles` - Vehicles registered by clients
+- `appointments` - Appointments and their statuses
+- `appointment_history` - History of appointment changes
+- `inventory` - Parts and components stock
+- `suppliers` - Suppliers and contact information
+- `orders` - Parts orders to suppliers
 
 ## API Documentation
 
