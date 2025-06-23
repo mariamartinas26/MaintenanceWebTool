@@ -228,7 +228,7 @@ class PartsManager {
             const partNumberSpan = document.createElement('span');
             partNumberSpan.className = 'part-number';
             partNumberSpan.textContent = partNumber;
-            titleDiv.appendChild(partNumberSpan);
+            //titleDiv.appendChild(partNumberSpan);
         }
 
         // Create actions section
@@ -451,60 +451,6 @@ class PartsManager {
         content.appendChild(actions);
     }
 
-    showStockUpdateModal(partId) {
-        const part = this.allParts.find(p => p.id === partId);
-        if (!part) return;
-
-        this.updatePartId = partId;
-
-        const updatePartIdElement = document.getElementById('updatePartId');
-        const updatePartInfoElement = document.getElementById('updatePartInfo');
-
-        if (updatePartIdElement) {
-            updatePartIdElement.value = partId;
-        }
-
-        if (updatePartInfoElement) {
-            // Clear and rebuild content safely
-            while (updatePartInfoElement.firstChild) {
-                updatePartInfoElement.removeChild(updatePartInfoElement.firstChild);
-            }
-
-            const title = document.createElement('h4');
-            title.textContent = this.SecurityUtils.sanitizeInput(part.name);
-
-            const partNumPara = document.createElement('p');
-            partNumPara.textContent = `Part Number: ${this.SecurityUtils.sanitizeInput(part.partNumber) || 'N/A'}`;
-
-            const stockPara = document.createElement('p');
-            const stockStrong = document.createElement('strong');
-            stockStrong.textContent = part.stockQuantity;
-            stockPara.appendChild(document.createTextNode('Current Stock: '));
-            stockPara.appendChild(stockStrong);
-
-            const minPara = document.createElement('p');
-            minPara.textContent = `Minimum Level: ${part.minimumStockLevel}`;
-
-            updatePartInfoElement.appendChild(title);
-            updatePartInfoElement.appendChild(partNumPara);
-            updatePartInfoElement.appendChild(stockPara);
-            updatePartInfoElement.appendChild(minPara);
-        }
-
-        const form = document.getElementById('stockUpdateForm');
-        if (form) {
-            form.reset();
-        }
-
-        if (updatePartIdElement) {
-            updatePartIdElement.value = partId;
-        }
-
-        const modal = document.getElementById('stockUpdateModal');
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-    }
 
     async handleStockUpdate(e) {
         e.preventDefault();
@@ -626,3 +572,4 @@ class PartsManager {
 
 // Initialize the PartsManager when the script loads
 const partsManager = new PartsManager();
+
