@@ -1,6 +1,8 @@
 const url = require('url');
 const CalendarController = require('../controllers/calendarController');
+const SecurePath = require('./SecurePath');
 
+const securePath = new SecurePath();
 
 async function handleCalendarRoutes(req, res) {
     const parsedUrl = url.parse(req.url, true);
@@ -9,27 +11,28 @@ async function handleCalendarRoutes(req, res) {
     const queryParams = parsedUrl.query;
 
     try {
-        //GET /api/calendar/available-slots (data)
+        const sanitizedQueryParams = securePath.sanitizeQuery(queryParams);
+
         if (method === 'GET' && path === '/api/calendar/available-slots') {
-            await CalendarController.getAvailableSlots(req, res, queryParams);
+            securePath.setSecurityHeaders(res);
+            await CalendarController.getAvailableSlots(req, res, sanitizedQueryParams);
         }
         else if (method === 'GET' && path === '/api/calendar/slot-availability') {
-            // GET /api/calendar/slot-availability?date=YYYY-MM-DD&time=HH:MM
-            await CalendarController.checkSlotAvailability(req, res, queryParams);
+            securePath.setSecurityHeaders(res);
+            await CalendarController.checkSlotAvailability(req, res, sanitizedQueryParams);
         }
         else {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            return securePath.sendJSON(res, 404, {
                 success: false,
                 message: 'Route not found'
-            }));
+            });
         }
     } catch (error) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+        console.error('Error in calendar routes:', securePath.sanitizeInput(error.message || ''));
+        return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Internal server error'
-        }));
+        });
     }
 }
 

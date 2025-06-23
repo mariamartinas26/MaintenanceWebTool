@@ -3,11 +3,9 @@ const AdminAppointmentsController = require('../controllers/adminAppointmentsCon
 const PartsController = require('../controllers/partsController');
 const SupplierController = require('../controllers/supplierController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
+const SecurePath = require('./SecurePath');
 
-function sendJSON(res, statusCode, data) {
-    res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(data));
-}
+const securePath = new SecurePath();
 
 const runMiddleware = (req, res, fn) => {
     return new Promise((resolve, reject) => {
@@ -26,16 +24,16 @@ const requireAdminAccess = async (req, res, next) => {
         await runMiddleware(req, res, requireAdmin);
 
         req.admin = {
-            id: req.user.id,
-            email: req.user.email,
-            name: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
-            role: req.user.role
+            id: securePath.sanitizeInput(req.user.id),
+            email: securePath.sanitizeInput(req.user.email),
+            name: securePath.sanitizeInput(`${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email),
+            role: securePath.sanitizeInput(req.user.role)
         };
 
         next();
     } catch (error) {
-        console.error('Admin access denied:', error.message);
-        return sendJSON(res, 401, {
+        console.error('Admin access denied:', securePath.sanitizeInput(error.message));
+        return securePath.sendJSON(res, 401, {
             success: false,
             message: 'Admin access required'
         });
@@ -48,7 +46,8 @@ const adminRoutes = (req, res) => {
     const query = parsedUrl.query;
     const method = req.method;
 
-    req.query = query;
+    const sanitizedQuery = securePath.sanitizeQuery(query);
+    req.query = sanitizedQuery;
 
     if (path.startsWith('/admin/api')) {
         return handleAdminApiRoutes(req, res, path, method);
@@ -58,7 +57,7 @@ const adminRoutes = (req, res) => {
         return handleAdminPageRoutes(req, res, path, method);
     }
 
-    return sendJSON(res, 404, {
+    return securePath.sendJSON(res, 404, {
         success: false,
         message: 'Admin route not found'
     });
@@ -66,7 +65,8 @@ const adminRoutes = (req, res) => {
 
 const handleAdminApiRoutes = (req, res, path, method) => {
     requireAdminAccess(req, res, () => {
-        // APPOINTMENTS ROUTES
+        securePath.setSecurityHeaders(res);
+
         if (path === '/admin/api/appointments' && method === 'GET') {
             return AdminAppointmentsController.getAppointmentsForAdmin(req, res);
         }
@@ -77,13 +77,27 @@ const handleAdminApiRoutes = (req, res, path, method) => {
 
         if (path.match(/^\/admin\/api\/appointments\/(\d+)$/) && method === 'GET') {
             const matches = path.match(/^\/admin\/api\/appointments\/(\d+)$/);
-            req.params = { id: matches[1] };
+            const appointmentId = securePath.validateNumericId(matches[1]);
+            if (!appointmentId) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid appointment ID'
+                });
+            }
+            req.params = { id: appointmentId };
             return AdminAppointmentsController.getAppointmentDetails(req, res);
         }
 
         if (path.match(/^\/admin\/api\/appointments\/(\d+)\/status$/) && method === 'PUT') {
             const matches = path.match(/^\/admin\/api\/appointments\/(\d+)\/status$/);
-            req.params = { id: matches[1] };
+            const appointmentId = securePath.validateNumericId(matches[1]);
+            if (!appointmentId) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid appointment ID'
+                });
+            }
+            req.params = { id: appointmentId };
 
             let body = '';
             req.on('data', chunk => {
@@ -92,10 +106,12 @@ const handleAdminApiRoutes = (req, res, path, method) => {
 
             req.on('end', () => {
                 try {
-                    req.body = JSON.parse(body);
+                    const parsedBody = JSON.parse(body);
+                    const sanitizedBody = securePath.sanitizeObject(parsedBody);
+                    req.body = sanitizedBody;
                     return AdminAppointmentsController.updateAppointmentStatus(req, res);
                 } catch (error) {
-                    return sendJSON(res, 400, {
+                    return securePath.sendJSON(res, 400, {
                         success: false,
                         message: 'Invalid JSON in request body'
                     });
@@ -104,7 +120,6 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             return;
         }
 
-        // PARTS ROUTES
         if (path === '/admin/api/parts' && method === 'GET') {
             return PartsController.getAllParts(req, res);
         }
@@ -115,16 +130,22 @@ const handleAdminApiRoutes = (req, res, path, method) => {
 
         if (path.match(/^\/admin\/api\/parts\/(\d+)$/) && method === 'GET') {
             const matches = path.match(/^\/admin\/api\/parts\/(\d+)$/);
-            req.params = { id: matches[1] };
+            const partId = securePath.validateNumericId(matches[1]);
+            if (!partId) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid part ID'
+                });
+            }
+            req.params = { id: partId };
             return PartsController.getPartById(req, res);
         }
 
-        // ORDERS ROUTES
         if (path === '/admin/api/orders' && method === 'GET') {
             return SupplierController.getAllOrders(req, res, req.query);
         }
 
-        return sendJSON(res, 404, {
+        return securePath.sendJSON(res, 404, {
             success: false,
             message: 'Admin API endpoint not found'
         });
@@ -141,7 +162,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 const adminDashboardPath = pathModule.join(__dirname, '../frontend/pages/admin-dashboard.html');
 
                 if (!fs.existsSync(adminDashboardPath)) {
-                    return sendJSON(res, 404, {
+                    return securePath.sendJSON(res, 404, {
                         success: false,
                         message: 'Admin dashboard page not found'
                     });
@@ -156,7 +177,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 res.end(html);
                 return;
             } catch (error) {
-                return sendJSON(res, 500, {
+                return securePath.sendJSON(res, 500, {
                     success: false,
                     message: 'Error loading admin dashboard'
                 });
@@ -174,7 +195,7 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 res.end(html);
                 return;
             } catch (error) {
-                return sendJSON(res, 500, {
+                return securePath.sendJSON(res, 500, {
                     success: false,
                     message: 'Error loading login page'
                 });
@@ -182,12 +203,11 @@ const handleAdminPageRoutes = (req, res, path, method) => {
         }
     }
 
-    // Serve static files for admin (CSS, JS, images)
     if (path.startsWith('/css/') || path.startsWith('/js/')) {
         return serveStaticFile(req, res, path);
     }
 
-    return sendJSON(res, 404, {
+    return securePath.sendJSON(res, 404, {
         success: false,
         message: 'Admin page not found'
     });
@@ -201,7 +221,7 @@ const serveStaticFile = (req, res, path) => {
         const fullPath = pathModule.join(__dirname, '../frontend', path);
 
         if (!fs.existsSync(fullPath)) {
-            return sendJSON(res, 404, {
+            return securePath.sendJSON(res, 404, {
                 success: false,
                 message: 'File not found'
             });
@@ -209,7 +229,7 @@ const serveStaticFile = (req, res, path) => {
 
         const stat = fs.statSync(fullPath);
         if (!stat.isFile()) {
-            return sendJSON(res, 404, {
+            return securePath.sendJSON(res, 404, {
                 success: false,
                 message: 'File not found'
             });
@@ -246,7 +266,7 @@ const serveStaticFile = (req, res, path) => {
         res.end(fileContent);
 
     } catch (error) {
-        return sendJSON(res, 500, {
+        return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Error serving file'
         });

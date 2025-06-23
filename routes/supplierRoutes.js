@@ -1,5 +1,8 @@
 const url = require('url');
 const supplierController = require('../controllers/supplierController');
+const SecurePath = require('./SecurePath');
+
+const securePath = new SecurePath();
 
 async function requireAuth(req, res) {
     const jwt = require('jsonwebtoken');
@@ -7,71 +10,65 @@ async function requireAuth(req, res) {
 
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+    if (!authHeader || typeof authHeader !== 'string') {
+        return securePath.sendJSON(res, 401, {
             success: false,
             message: 'No token provided'
-        }));
-        return false;
+        });
     }
 
-    const token = authHeader.substring(7);
+    const sanitizedAuthHeader = securePath.sanitizeInput(authHeader);
+
+    if (!sanitizedAuthHeader.startsWith('Bearer ')) {
+        return securePath.sendJSON(res, 401, {
+            success: false,
+            message: 'No token provided'
+        });
+    }
+
+    const token = sanitizedAuthHeader.substring(7);
+
+    if (!token || token.trim().length === 0) {
+        return securePath.sendJSON(res, 401, {
+            success: false,
+            message: 'No token provided'
+        });
+    }
 
     try {
         const secret = process.env.JWT_SECRET;
         const decoded = jwt.verify(token, secret);
 
-        const user = await User.findById(decoded.userId || decoded.user_id);
+        const sanitizedDecoded = securePath.sanitizeObject(decoded);
+        const userId = sanitizedDecoded.userId || sanitizedDecoded.user_id;
+
+        const user = await User.findById(userId);
 
         if (!user) {
-            res.writeHead(401, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            return securePath.sendJSON(res, 401, {
                 success: false,
                 message: 'User not found'
-            }));
-            return false;
+            });
         }
 
         if (user.role !== 'admin' && user.role !== 'manager') {
-            res.writeHead(403, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            return securePath.sendJSON(res, 403, {
                 success: false,
                 message: 'Admin access required'
-            }));
-            return false;
+            });
         }
 
-        req.userId = user.id;
-        req.user = user;
+        req.userId = securePath.sanitizeInput(user.id);
+        req.user = securePath.sanitizeObject(user);
         return true;
 
     } catch (error) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+        console.error('Auth error:', securePath.sanitizeInput(error.message || ''));
+        return securePath.sendJSON(res, 401, {
             success: false,
             message: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
-        }));
-        return false;
+        });
     }
-}
-
-async function getRequestBody(req) {
-    return new Promise((resolve, reject) => {
-        let body = '';
-        req.on('data', chunk => {
-            body += chunk.toString();
-        });
-        req.on('end', () => {
-            try {
-                const parsed = body.trim() ? JSON.parse(body) : {};
-                resolve(parsed);
-            } catch (error) {
-                reject(new Error('Invalid JSON in request body'));
-            }
-        });
-        req.on('error', reject);
-    });
 }
 
 async function handleSupplierRoutes(req, res) {
@@ -80,53 +77,71 @@ async function handleSupplierRoutes(req, res) {
     const method = req.method;
     const query = parsedUrl.query;
 
-    if (!await requireAuth(req, res)) {
-        return;
-    }
-
     try {
-        // GET /api/suppliers - Get all suppliers
+        const sanitizedQuery = securePath.sanitizeQuery(query);
+
+        if (!await requireAuth(req, res)) {
+            return;
+        }
+
+        securePath.setSecurityHeaders(res);
+
         if (pathname === '/api/suppliers' && method === 'GET') {
-            await supplierController.getAllSuppliers(req, res, query);
+            await supplierController.getAllSuppliers(req, res, sanitizedQuery);
         }
-
-
-        // GET /api/parts - Get all parts
         else if (pathname === '/api/parts' && method === 'GET') {
-            await supplierController.getAllParts(req, res, query);
+            await supplierController.getAllParts(req, res, sanitizedQuery);
         }
-
-        // POST /api/orders - Create new order
         else if (pathname === '/api/orders' && method === 'POST') {
-            const body = await getRequestBody(req);
-            await supplierController.createOrder(req, res, body);
-        }
+            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
+                if (error) {
+                    return securePath.sendJSON(res, error.statusCode || 400, {
+                        success: false,
+                        message: securePath.sanitizeInput(error.message)
+                    });
+                }
 
-        // GET /api/orders - Get all orders
+                await supplierController.createOrder(req, res, sanitizedBody);
+            });
+        }
         else if (pathname === '/api/orders' && method === 'GET') {
-            await supplierController.getAllOrders(req, res, query);
+            await supplierController.getAllOrders(req, res, sanitizedQuery);
         }
-
-        // PUT /api/orders/:id/status - Update order status
         else if (pathname.match(/^\/api\/orders\/(\d+)\/status$/) && method === 'PUT') {
-            const orderId = pathname.split('/')[3];
-            const body = await getRequestBody(req);
-            await supplierController.updateOrderStatus(req, res, { orderId, ...body });
-        }
+            const params = securePath.extractPathParams(pathname, /^\/api\/orders\/(\d+)\/status$/);
+            if (!params) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid order ID'
+                });
+            }
 
+            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
+                if (error) {
+                    return securePath.sendJSON(res, error.statusCode || 400, {
+                        success: false,
+                        message: securePath.sanitizeInput(error.message)
+                    });
+                }
+
+                const requestData = { orderId: params.id, ...sanitizedBody };
+                await supplierController.updateOrderStatus(req, res, requestData);
+            });
+        }
         else {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, message: 'Supplier route not found' }));
+            return securePath.sendJSON(res, 404, {
+                success: false,
+                message: 'Supplier route not found'
+            });
         }
 
     } catch (error) {
-        console.error('Supplier routes error:', error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+        console.error('Supplier routes error:', securePath.sanitizeInput(error.message || ''));
+        return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Internal server error in supplier routes',
-            error: error.message
-        }));
+            error: process.env.NODE_ENV === 'development' ? securePath.sanitizeInput(error.message) : undefined
+        });
     }
 }
 

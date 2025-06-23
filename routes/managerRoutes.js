@@ -1,21 +1,40 @@
 const jwt = require('jsonwebtoken');
+const SecurePath = require('./SecurePath');
+
+const securePath = new SecurePath();
 
 function verifyToken(authHeader) {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || typeof authHeader !== 'string') {
         return { valid: false, error: 'No token provided' };
     }
 
-    const token = authHeader.substring(7);
+    const sanitizedAuthHeader = securePath.sanitizeInput(authHeader);
+
+    if (!sanitizedAuthHeader.startsWith('Bearer ')) {
+        return { valid: false, error: 'No token provided' };
+    }
+
+    const token = sanitizedAuthHeader.substring(7);
+
+    if (!token || token.trim().length === 0) {
+        return { valid: false, error: 'No token provided' };
+    }
 
     try {
         const secret = process.env.JWT_SECRET || 'fallback-secret-key';
         const decoded = jwt.verify(token, secret);
+
+        const sanitizedDecoded = securePath.sanitizeObject(decoded);
+
         return {
             valid: true,
-            userId: decoded.userId || decoded.user_id,
-            user: decoded
+            userId: sanitizedDecoded.userId || sanitizedDecoded.user_id,
+            user: sanitizedDecoded
         };
     } catch (error) {
+        const sanitizedErrorMessage = securePath.sanitizeInput(error.message || '');
+        console.error('Token verification error:', sanitizedErrorMessage);
+
         return {
             valid: false,
             error: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
@@ -24,20 +43,31 @@ function verifyToken(authHeader) {
 }
 
 function requireAuth(req, res, next) {
-    const authResult = verifyToken(req.headers.authorization);
+    try {
+        const authResult = verifyToken(req.headers.authorization);
 
-    if (!authResult.valid) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+        if (!authResult.valid) {
+            return securePath.sendJSON(res, 401, {
+                success: false,
+                message: securePath.sanitizeInput(authResult.error)
+            });
+        }
+
+        req.userId = authResult.userId;
+        req.user = authResult.user;
+
+        if (typeof next === 'function') {
+            next();
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Auth middleware error:', securePath.sanitizeInput(error.message || ''));
+        return securePath.sendJSON(res, 500, {
             success: false,
-            message: authResult.error
-        }));
-        return false;
+            message: 'Authentication error'
+        });
     }
-
-    req.userId = authResult.userId;
-    req.user = authResult.user;
-    return true;
 }
 
 module.exports = {

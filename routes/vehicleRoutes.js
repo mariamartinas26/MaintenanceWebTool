@@ -1,91 +1,89 @@
 const url = require('url');
 const vehicleController = require('../controllers/vehicleController');
+const SecurePath = require('./SecurePath');
 
-/**
- * Gestionează rutele pentru vehicule
- */
+const securePath = new SecurePath();
+
 async function handleVehicleRoutes(req, res) {
     const parsedUrl = url.parse(req.url, true);
     const path = parsedUrl.pathname;
     const method = req.method;
     const queryParams = parsedUrl.query;
 
-    // Extrage ID-ul din path dacă există (ex: /api/vehicles/123)
     const pathParts = path.split('/');
-    const vehicleId = pathParts[3]; // /api/vehicles/[id]
+    const vehicleIdString = pathParts[3];
+
+    let vehicleId = null;
+    if (vehicleIdString && vehicleIdString !== 'stats') {
+        vehicleId = securePath.validateNumericId(vehicleIdString);
+        if (!vehicleId && vehicleIdString) {
+            return securePath.sendJSON(res, 400, {
+                success: false,
+                message: 'Invalid vehicle ID'
+            });
+        }
+    }
 
     try {
+        const sanitizedQuery = securePath.sanitizeQuery(queryParams);
+        req.query = sanitizedQuery;
+
         if (method === 'GET' && path === '/api/vehicles') {
-            // GET /api/vehicles - Obține toate vehiculele utilizatorului
+            securePath.setSecurityHeaders(res);
             await vehicleController.getUserVehicles(req, res);
         }
         else if (method === 'GET' && path === '/api/vehicles/stats') {
-            // GET /api/vehicles/stats - Obține statistici despre vehicule
+            securePath.setSecurityHeaders(res);
             await vehicleController.getUserVehicleStats(req, res);
         }
-        else if (method === 'GET' && vehicleId && pathParts.length === 4 && vehicleId !== 'stats') {
-            // GET /api/vehicles/:id - Obține un vehicul specific
+        else if (method === 'GET' && vehicleId && pathParts.length === 4) {
+            securePath.setSecurityHeaders(res);
             await vehicleController.getVehicleById(req, res, vehicleId);
         }
         else if (method === 'POST' && path === '/api/vehicles') {
-            // POST /api/vehicles - Creează un vehicul nou
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
-            });
+            securePath.setSecurityHeaders(res);
 
-            req.on('end', async () => {
-                try {
-                    const parsedBody = JSON.parse(body);
-                    await vehicleController.createVehicle(req, res, parsedBody);
-                } catch (error) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
+            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
+                if (error) {
+                    return securePath.sendJSON(res, error.statusCode || 400, {
                         success: false,
-                        message: 'Invalid JSON format'
-                    }));
+                        message: securePath.sanitizeInput(error.message)
+                    });
                 }
+
+                await vehicleController.createVehicle(req, res, sanitizedBody);
             });
         }
         else if (method === 'PUT' && vehicleId && pathParts.length === 4) {
-            // PUT /api/vehicles/:id - Actualizează un vehicul
-            let body = '';
-            req.on('data', chunk => {
-                body += chunk.toString();
-            });
+            securePath.setSecurityHeaders(res);
 
-            req.on('end', async () => {
-                try {
-                    const parsedBody = JSON.parse(body);
-                    await vehicleController.updateVehicle(req, res, vehicleId, parsedBody);
-                } catch (error) {
-                    res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
+            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
+                if (error) {
+                    return securePath.sendJSON(res, error.statusCode || 400, {
                         success: false,
-                        message: 'Invalid JSON format'
-                    }));
+                        message: securePath.sanitizeInput(error.message)
+                    });
                 }
+
+                await vehicleController.updateVehicle(req, res, vehicleId, sanitizedBody);
             });
         }
         else if (method === 'DELETE' && vehicleId && pathParts.length === 4) {
-            // DELETE /api/vehicles/:id - Șterge un vehicul
+            securePath.setSecurityHeaders(res);
             await vehicleController.deleteVehicle(req, res, vehicleId);
         }
         else {
-            // Rută necunoscută
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
+            return securePath.sendJSON(res, 404, {
                 success: false,
                 message: 'Route not found'
-            }));
+            });
         }
     } catch (error) {
-        console.error('Error in vehicle routes:', error);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
+        console.error('Error in vehicle routes:', securePath.sanitizeInput(error.message || ''));
+        return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Internal server error'
-        }));
+        });
     }
 }
 

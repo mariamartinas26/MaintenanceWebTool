@@ -1,41 +1,9 @@
 const url = require('url');
 const InventoryController = require('../controllers/inventoryController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
+const SecurePath = require('./SecurePath');
 
-// Security headers helper function
-function getSecurityHeaders() {
-    return {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        // CSP allowing external fonts and styles
-        'Content-Security-Policy': [
-            "default-src 'self'",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
-            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
-            "script-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: https:",
-            "connect-src 'self'"
-        ].join('; '),
-        // Security headers
-        'X-Frame-Options': 'DENY',
-        'X-Content-Type-Options': 'nosniff',
-        'Referrer-Policy': 'strict-origin-when-cross-origin',
-        'X-XSS-Protection': '1; mode=block'
-    };
-}
-
-function sendJSON(res, statusCode, data) {
-    res.writeHead(statusCode, {
-        'Content-Type': 'application/json',
-        ...getSecurityHeaders()
-    });
-    res.end(JSON.stringify(data));
-}
-
-function sendHTML(res, statusCode, html) {
-    res.writeHead(statusCode, getSecurityHeaders());
-    res.end(html);
-}
+const securePath = new SecurePath();
 
 const runMiddleware = (req, res, fn) => {
     return new Promise((resolve, reject) => {
@@ -54,16 +22,16 @@ const requireAdminAccess = async (req, res, next) => {
         await runMiddleware(req, res, requireAdmin);
 
         req.admin = {
-            id: req.user.id,
-            email: req.user.email,
-            name: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
-            role: req.user.role
+            id: securePath.sanitizeInput(req.user.id),
+            email: securePath.sanitizeInput(req.user.email),
+            name: securePath.sanitizeInput(`${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email),
+            role: securePath.sanitizeInput(req.user.role)
         };
 
         next();
     } catch (error) {
-        console.error('Admin access denied:', error.message);
-        return sendJSON(res, 401, {
+        console.error('Admin access denied:', securePath.sanitizeInput(error.message));
+        return securePath.sendJSON(res, 401, {
             success: false,
             message: 'Admin access required'
         });
@@ -76,69 +44,94 @@ const inventoryRoutes = (req, res) => {
     const query = parsedUrl.query;
     const method = req.method;
 
-    req.query = query;
+    try {
+        const sanitizedQuery = securePath.sanitizeQuery(query);
+        req.query = sanitizedQuery;
 
-    if (path.startsWith('/inventory/api')) {
-        return handleInventoryApiRoutes(req, res, path, method);
+        if (path.startsWith('/inventory/api')) {
+            return handleInventoryApiRoutes(req, res, path, method);
+        }
+
+        if (path.startsWith('/inventory')) {
+            return handleInventoryPageRoutes(req, res, path, method);
+        }
+
+        return securePath.sendJSON(res, 404, {
+            success: false,
+            message: 'Inventory route not found'
+        });
+    } catch (error) {
+        console.error('Error in inventory routes:', securePath.sanitizeInput(error.message || ''));
+        return securePath.sendJSON(res, 500, {
+            success: false,
+            message: 'Internal server error in inventory routes'
+        });
     }
-
-    if (path.startsWith('/inventory')) {
-        return handleInventoryPageRoutes(req, res, path, method);
-    }
-
-    return sendJSON(res, 404, {
-        success: false,
-        message: 'Inventory route not found'
-    });
 };
 
 const handleInventoryApiRoutes = (req, res, path, method) => {
     requireAdminAccess(req, res, () => {
+        securePath.setSecurityHeaders(res);
 
-        // GET /inventory/api/parts - Get all parts
         if (path === '/inventory/api/parts' && method === 'GET') {
             return InventoryController.getAllParts(req, res);
         }
 
-        // GET /inventory/api/parts/categories - Get all categories
         if (path === '/inventory/api/parts/categories' && method === 'GET') {
             return InventoryController.getCategories(req, res);
         }
 
-        // GET /inventory/api/parts/statistics - Get inventory statistics
         if (path === '/inventory/api/parts/statistics' && method === 'GET') {
             return InventoryController.getInventoryStats(req, res);
         }
 
-        // GET /inventory/api/parts/category/:category - Get parts by category
-        if (path.match(/^\/inventory\/api\/parts\/category\/(.+)$/) && method === 'GET') {
-            const matches = path.match(/^\/inventory\/api\/parts\/category\/(.+)$/);
-            req.params = { category: decodeURIComponent(matches[1]) };
+        const categoryMatch = path.match(/^\/inventory\/api\/parts\/category\/(.+)$/);
+        if (categoryMatch && method === 'GET') {
+            const sanitizedCategory = securePath.sanitizeInput(decodeURIComponent(categoryMatch[1]));
+            req.params = { category: sanitizedCategory };
             return InventoryController.getPartsByCategory(req, res);
         }
 
-        // GET /inventory/api/parts/:id - Get single part details
-        if (path.match(/^\/inventory\/api\/parts\/(\d+)$/) && method === 'GET') {
-            const matches = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
-            req.params = { id: matches[1] };
+        const partByIdMatch = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
+        if (partByIdMatch && method === 'GET') {
+            const partId = securePath.validateNumericId(partByIdMatch[1]);
+            if (!partId) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid part ID'
+                });
+            }
+            req.params = { id: partId };
             return InventoryController.getPartById(req, res);
         }
 
-        // PUT /inventory/api/parts/:id/stock - Update part stock
-        if (path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/) && method === 'PUT') {
-            const matches = path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/);
-            req.params = { id: matches[1] };
+        const stockUpdateMatch = path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/);
+        if (stockUpdateMatch && method === 'PUT') {
+            const partId = securePath.validateNumericId(stockUpdateMatch[1]);
+            if (!partId) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid part ID'
+                });
+            }
+            req.params = { id: partId };
             return InventoryController.updatePartStock(req, res);
         }
 
-        // DELETE /inventory/api/parts/:id - Delete part
-        if (path.match(/^\/inventory\/api\/parts\/(\d+)$/) && method === 'DELETE') {
-            const matches = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
-            req.params = { id: matches[1] };
+        const deletePartMatch = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
+        if (deletePartMatch && method === 'DELETE') {
+            const partId = securePath.validateNumericId(deletePartMatch[1]);
+            if (!partId) {
+                return securePath.sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid part ID'
+                });
+            }
+            req.params = { id: partId };
             return InventoryController.deletePart(req, res);
         }
 
-        return sendJSON(res, 404, {
+        return securePath.sendJSON(res, 404, {
             success: false,
             message: 'Inventory API endpoint not found'
         });
@@ -149,23 +142,27 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
     const fs = require('fs');
     const pathModule = require('path');
 
-    // Main inventory dashboard
     if (path === '/inventory' || path === '/inventory/' || path === '/inventory/dashboard') {
         if (method === 'GET') {
             try {
                 const inventoryDashboardPath = pathModule.join(__dirname, '../frontend/pages/inventory-dashboard.html');
 
                 if (!fs.existsSync(inventoryDashboardPath)) {
-                    return sendJSON(res, 404, {
+                    return securePath.sendJSON(res, 404, {
                         success: false,
                         message: 'Inventory dashboard page not found'
                     });
                 }
 
                 const html = fs.readFileSync(inventoryDashboardPath, 'utf8');
-                return sendHTML(res, 200, html);
+                res.writeHead(200, {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-cache'
+                });
+                res.end(html);
+                return;
             } catch (error) {
-                return sendJSON(res, 500, {
+                return securePath.sendJSON(res, 500, {
                     success: false,
                     message: 'Error loading inventory dashboard'
                 });
@@ -173,23 +170,27 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
         }
     }
 
-    // Parts management page
     if (path === '/inventory/parts') {
         if (method === 'GET') {
             try {
                 const partsPagePath = pathModule.join(__dirname, '../frontend/pages/inventory-parts.html');
 
                 if (!fs.existsSync(partsPagePath)) {
-                    return sendJSON(res, 404, {
+                    return securePath.sendJSON(res, 404, {
                         success: false,
                         message: 'Parts management page not found'
                     });
                 }
 
                 const html = fs.readFileSync(partsPagePath, 'utf8');
-                return sendHTML(res, 200, html);
+                res.writeHead(200, {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-cache'
+                });
+                res.end(html);
+                return;
             } catch (error) {
-                return sendJSON(res, 500, {
+                return securePath.sendJSON(res, 500, {
                     success: false,
                     message: 'Error loading parts management page'
                 });
@@ -197,13 +198,11 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
         }
     }
 
-    // Serve static files for inventory (CSS, JS, images)
     if (path.startsWith('/css/') || path.startsWith('/js/')) {
         return serveStaticFile(req, res, path);
     }
 
-    // If no inventory page route matches
-    return sendJSON(res, 404, {
+    return securePath.sendJSON(res, 404, {
         success: false,
         message: 'Inventory page not found'
     });
@@ -217,7 +216,7 @@ const serveStaticFile = (req, res, path) => {
         const fullPath = pathModule.join(__dirname, '../frontend', path);
 
         if (!fs.existsSync(fullPath)) {
-            return sendJSON(res, 404, {
+            return securePath.sendJSON(res, 404, {
                 success: false,
                 message: 'File not found'
             });
@@ -225,7 +224,7 @@ const serveStaticFile = (req, res, path) => {
 
         const stat = fs.statSync(fullPath);
         if (!stat.isFile()) {
-            return sendJSON(res, 404, {
+            return securePath.sendJSON(res, 404, {
                 success: false,
                 message: 'File not found'
             });
@@ -251,15 +250,13 @@ const serveStaticFile = (req, res, path) => {
 
         const contentType = contentTypes[ext] || 'application/octet-stream';
 
-        // Add security headers for static files too
         const staticHeaders = {
             'Content-Type': contentType,
             'Content-Length': stat.size,
-            'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+            'Cache-Control': 'public, max-age=3600',
             'X-Content-Type-Options': 'nosniff'
         };
 
-        // Add CSP for HTML files
         if (ext === '.html') {
             staticHeaders['Content-Security-Policy'] = [
                 "default-src 'self'",
@@ -272,14 +269,13 @@ const serveStaticFile = (req, res, path) => {
             staticHeaders['X-Frame-Options'] = 'DENY';
         }
 
-        // Read and serve file
         const fileContent = fs.readFileSync(fullPath);
 
         res.writeHead(200, staticHeaders);
         res.end(fileContent);
 
     } catch (error) {
-        return sendJSON(res, 500, {
+        return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Error serving file'
         });
