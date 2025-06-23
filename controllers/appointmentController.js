@@ -252,7 +252,7 @@ class AppointmentController {
         const requestedDate = new Date(date);
         const dayOfWeek = requestedDate.getDay();
 
-        // Skip weekends
+        //nu se lucreaza in weekend
         if (dayOfWeek === 0 || dayOfWeek === 6) return;
 
         const workingHours = [

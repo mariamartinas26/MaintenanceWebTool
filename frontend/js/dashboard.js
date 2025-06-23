@@ -79,6 +79,7 @@ class Dashboard {
         }
     }
 
+    //data de azi - ca nu poti programa in trecut
     setMinDate() {
         const dateInput = document.getElementById('appointment-date');
         if (dateInput) {
@@ -390,12 +391,6 @@ class Dashboard {
             const statusText = this.getStatusText(sanitizedAppointment.status);
             const statusClass = this.getStatusClass(sanitizedAppointment.status);
 
-            const appointmentDateTime = new Date(`${sanitizedAppointment.date}T${sanitizedAppointment.time}`);
-            const now = new Date();
-            const timeDiff = appointmentDateTime.getTime() - now.getTime();
-            const hoursDiff = timeDiff / (1000 * 3600);
-            const canCancel = sanitizedAppointment.status === 'pending' && hoursDiff >= 24;
-
             return `
                 <div class="appointment-card" data-appointment-id="${sanitizedAppointment.id}">
                     <div class="appointment-header">
@@ -432,13 +427,7 @@ class Dashboard {
                             </div>
                         ` : ''}
                     </div>
-                    <div class="appointment-actions">
-                        ${canCancel ? `
-                            <button class="secondary-btn" onclick="dashboard.cancelAppointment('${sanitizedAppointment.id}')">
-                                Cancel
-                            </button>
-                        ` : ''}
-                    </div>
+                  
                 </div>
             `;
         }).join('');
@@ -451,7 +440,6 @@ class Dashboard {
             'confirmed': 'Confirmed',
             'rejected': 'Rejected',
             'completed': 'Completed',
-            'cancelled': 'Cancelled'
         };
         return statusMap[status] || status;
     }
@@ -464,49 +452,15 @@ class Dashboard {
         const serviceMap = {
             'mentenanta': 'General Maintenance',
             'reparatii': 'Repairs',
-            'diagnoza': 'Diagnosis',
             'piese': 'Parts Replacement',
-            'general': 'General Service'
         };
         return serviceMap[serviceType] || serviceType;
     }
 
-    async cancelAppointment(appointmentId) {
-        if (!confirm('Are you sure you want to cancel this appointment?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/appointments/${appointmentId}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({status: 'cancelled'})
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                alert('Appointment cancelled successfully');
-                this.loadAppointments();
-            } else {
-                alert(data.message || 'Error cancelling appointment');
-            }
-        } catch (error) {
-            console.error('Error cancelling appointment:', error);
-            alert('Error cancelling appointment');
-        }
-    }
-
-
     logout() {
-        if (confirm('Are you sure you want to logout?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/homepage';
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/homepage';
     }
 
     startTokenValidation() {

@@ -7,10 +7,8 @@ class User {
             let hashedPassword;
 
             if (userData.password_hash) {
-                // Dacă primești hash direct, folosește-l
                 hashedPassword = userData.password_hash;
             } else if (userData.password) {
-                // Dacă primești parola în clar, hash-uiește-o
                 const saltRounds = 12;
                 hashedPassword = await bcrypt.hash(userData.password, saltRounds);
             } else {
@@ -57,10 +55,6 @@ class User {
         } catch (error) {
             throw error;
         }
-    }
-
-    static async verifyPassword(plainPassword, hashedPassword) {
-        return await bcrypt.compare(plainPassword, hashedPassword);
     }
 }
 
