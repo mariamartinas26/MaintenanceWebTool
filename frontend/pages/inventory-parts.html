@@ -64,6 +64,7 @@
                 <div class="filters-container">
                     <div class="filters-group">
                         <select id="stockFilter">
+                            <option value="all">All Parts</option>
                             <option value="in-stock">In Stock</option>
                             <option value="low-stock">Low Stock</option>
                             <option value="out-of-stock">Out of Stock</option>
@@ -74,17 +75,12 @@
 
             <section class="parts-section">
                 <h2 class="sr-only">Parts Inventory</h2>
-                <div id="partsContainer" class="parts-grid">
+                <div class="parts-header">
+                    <div class="parts-count">
+                        <span id="partsCount">0 parts found</span>
+                    </div>
                 </div>
-
-                <div id="pagination" class="pagination" style="display: none;">
-                    <button id="prevPage" class="page-btn" onclick="changePage(-1)">
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </button>
-                    <span id="pageInfo">Page 1 of 1</span>
-                    <button id="nextPage" class="page-btn" onclick="changePage(1)">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </button>
+                <div id="partsContainer" class="parts-grid">
                 </div>
             </section>
         </div>
@@ -96,7 +92,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-info-circle"></i> Part Details</h3>
-            <span class="modal-close" onclick="hidePartDetailsModal()">&times;</span>
+            <span class="modal-close" id="partDetailsClose">&times;</span>
         </div>
         <div class="modal-body" id="partDetailsContent">
         </div>
@@ -107,7 +103,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-warehouse"></i> Update Stock</h3>
-            <span class="modal-close" onclick="hideStockUpdateModal()">&times;</span>
+            <span class="modal-close" id="stockUpdateClose">&times;</span>
         </div>
         <div class="modal-body">
             <form id="stockUpdateForm">
@@ -139,7 +135,7 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="hideStockUpdateModal()">Cancel</button>
+                    <button type="button" class="btn-secondary" id="stockUpdateCancel">Cancel</button>
                     <button type="submit" class="btn-primary">Update Stock</button>
                 </div>
             </form>
