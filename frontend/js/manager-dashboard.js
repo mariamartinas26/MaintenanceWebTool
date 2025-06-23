@@ -115,7 +115,9 @@ class ManagerDashboard {
 
             const data = await response.json();
 
-            this.allRequests = (data.requests || data.data || []).map(request => this.sanitizeObject(request));
+            // Păstrează datele originale, sanitizează doar la afișare
+            this.allRequests = data.requests || data.data || [];
+
             this.renderRequests();
             this.updateStats();
 
@@ -169,9 +171,13 @@ class ManagerDashboard {
             return;
         }
 
-        this.allRequests.forEach(request => {
-            const card = this.createRequestCard(request);
-            this.requestsContainer.appendChild(card);
+        this.allRequests.forEach((request, index) => {
+            try {
+                const card = this.createRequestCard(request);
+                this.requestsContainer.appendChild(card);
+            } catch (error) {
+                console.error(`Error creating card ${index}:`, error);
+            }
         });
     }
 
@@ -201,7 +207,7 @@ class ManagerDashboard {
 
         // Status detail row
         const statusRow = this.createSafeElement('div', 'detail-row');
-        const statusLabel = this.createSafeElement('span', 'detail-label', 'Status:');
+        const statusLabel = this.createSafeElement('span', 'detail-label', 'Status: ');
         const statusValueContainer = this.createSafeElement('span', 'detail-value');
         const statusBadge = this.createSafeElement('span', `status-badge status-${request.status}`, request.status || '');
         statusValueContainer.appendChild(statusBadge);
@@ -211,22 +217,13 @@ class ManagerDashboard {
         requestDetails.appendChild(phoneRow);
         requestDetails.appendChild(statusRow);
 
-        // Assigned role row (if exists)
         if (request.assigned_role) {
             const roleRow = this.createSafeElement('div', 'detail-row');
-            const roleLabel = this.createSafeElement('span', 'detail-label', 'Assigned Role:');
+            const roleLabel = this.createSafeElement('span', 'detail-label', 'Assigned Role: ');
             const roleValue = this.createSafeElement('span', 'detail-value', request.assigned_role);
             roleRow.appendChild(roleLabel);
             roleRow.appendChild(roleValue);
             requestDetails.appendChild(roleRow);
-        }
-
-        // Request message (if exists)
-        let requestMessage = null;
-        if (request.message) {
-            requestMessage = this.createSafeElement('div', 'request-message');
-            const p = this.createSafeElement('p', '', request.message);
-            requestMessage.appendChild(p);
         }
 
         // Request actions
@@ -250,12 +247,8 @@ class ManagerDashboard {
             requestActions.appendChild(rejectBtn);
         }
 
-        // Assemble the card
         card.appendChild(requestHeader);
         card.appendChild(requestDetails);
-        if (requestMessage) {
-            card.appendChild(requestMessage);
-        }
         card.appendChild(requestActions);
 
         return card;
@@ -306,11 +299,6 @@ class ManagerDashboard {
         phoneP.appendChild(document.createTextNode(request.phone || 'N/A'));
         basicInfo.appendChild(phoneP);
 
-        const requestedRoleP = this.createSafeElement('p');
-        const requestedRoleStrong = this.createSafeElement('strong', '', 'Requested Role: ');
-        requestedRoleP.appendChild(requestedRoleStrong);
-        requestedRoleP.appendChild(document.createTextNode(request.requested_role || request.role || ''));
-        basicInfo.appendChild(requestedRoleP);
 
         if (request.assigned_role) {
             const assignedRoleP = this.createSafeElement('p');
@@ -320,17 +308,8 @@ class ManagerDashboard {
             basicInfo.appendChild(assignedRoleP);
         }
 
-        // Message section (if exists)
-        if (request.message) {
-            const messageH3 = this.createSafeElement('h3', '', 'Message');
-            basicInfo.appendChild(messageH3);
-
-            const messageP = this.createSafeElement('p', '', request.message);
-            basicInfo.appendChild(messageP);
-        }
-
         // Details section
-        const detailsH3 = this.createSafeElement('h3', '', 'Details');
+        const detailsH3 = this.createSafeElement('h3', '');
         basicInfo.appendChild(detailsH3);
 
         const statusP = this.createSafeElement('p');
@@ -339,28 +318,6 @@ class ManagerDashboard {
         const statusSpan = this.createSafeElement('span', `status-badge status-${request.status}`, request.status || '');
         statusP.appendChild(statusSpan);
         basicInfo.appendChild(statusP);
-
-        const requestedP = this.createSafeElement('p');
-        const requestedStrong = this.createSafeElement('strong', '', 'Requested: ');
-        requestedP.appendChild(requestedStrong);
-        requestedP.appendChild(document.createTextNode(this.formatDate(request.created_at)));
-        basicInfo.appendChild(requestedP);
-
-        if (request.processed_at) {
-            const processedP = this.createSafeElement('p');
-            const processedStrong = this.createSafeElement('strong', '', 'Processed: ');
-            processedP.appendChild(processedStrong);
-            processedP.appendChild(document.createTextNode(this.formatDate(request.processed_at)));
-            basicInfo.appendChild(processedP);
-        }
-
-        if (request.manager_message) {
-            const managerNoteP = this.createSafeElement('p');
-            const managerNoteStrong = this.createSafeElement('strong', '', 'Manager Note: ');
-            managerNoteP.appendChild(managerNoteStrong);
-            managerNoteP.appendChild(document.createTextNode(request.manager_message));
-            basicInfo.appendChild(managerNoteP);
-        }
 
         modalBody.appendChild(basicInfo);
         this.showModal(this.viewModal);
@@ -494,11 +451,6 @@ class ManagerDashboard {
         } catch (error) {
             return 'Invalid date';
         }
-    }
-
-    // Legacy method kept for compatibility but now uses sanitizeInput
-    escapeHtml(text) {
-        return this.sanitizeInput(text);
     }
 }
 

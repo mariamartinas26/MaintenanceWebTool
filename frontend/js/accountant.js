@@ -1,7 +1,6 @@
 class AccountantDashboard {
     constructor() {
         this.suppliers = [];
-        this.currentUser = null;
         this.token = localStorage.getItem('token');
     }
 
@@ -398,11 +397,6 @@ class AccountantDashboard {
 
         if (!suppliersList) return;
 
-        // Clear existing content safely
-        while (suppliersList.firstChild) {
-            suppliersList.removeChild(suppliersList.firstChild);
-        }
-
         if (this.suppliers.length === 0) {
             const noSuppliersP = this.createSafeElement('p', '', 'No suppliers found.');
             suppliersList.appendChild(noSuppliersP);
@@ -415,7 +409,7 @@ class AccountantDashboard {
 
             const h3 = this.createSafeElement('h3', '', supplier.company_name || '');
             const contactP = this.createSafeElement('p', '', `Contact: ${supplier.contact_person || ''}`);
-            const phoneP = this.createSafeElement('p', '', `Phone: ${supplier.phone || 'N/A'}`);
+            const phoneP = this.createSafeElement('p', '', `Phone: ${supplier.phone}`);
             const emailP = this.createSafeElement('p', '', `Email: ${supplier.email || ''}`);
             const deliveryP = this.createSafeElement('p', '', `Delivery: ${supplier.delivery_time_days || ''} days`);
             const addressP = this.createSafeElement('p', '', `Address: ${supplier.address || ''}`);
@@ -581,7 +575,3 @@ const accountantDashboard = new AccountantDashboard();
 document.addEventListener('DOMContentLoaded', function () {
     accountantDashboard.init();
 });
-
-if (typeof window !== 'undefined') {
-    window.accountantDashboard = accountantDashboard;
-}

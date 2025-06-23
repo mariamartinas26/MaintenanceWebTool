@@ -15,6 +15,7 @@ const adminRoutes = require('./routes/adminRoute');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const managerController = require('./controllers/managerController');
 const { handleSupplierRoutes } = require('./routes/supplierRoutes');
+const { handleManagerRoutes } = require('./routes/managerRoutes');
 
 const PORT = process.env.PORT || 3000;
 
@@ -139,32 +140,7 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             return await accountantRoutes(req, res);
         }
         else if (pathname.startsWith('/api/manager')) {
-            const { requireAuth } = require('./middleware/auth');
-
-            if (!requireAuth(req, res)) {
-                return;
-            }
-
-            if (pathname === '/api/manager/requests' && method === 'GET') {
-                req.query = queryParams || {};
-                await managerController.getAccountRequests(req, res);
-            }
-            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/approve$/) && method === 'POST') {
-                req.params = { id: pathname.split('/')[4] };
-                const body = await getRequestBody(req);
-                req.body = body;
-                await managerController.approveAccountRequest(req, res);
-            }
-            else if (pathname.match(/^\/api\/manager\/requests\/\d+\/reject$/) && method === 'POST') {
-                req.params = { id: pathname.split('/')[4] };
-                const body = await getRequestBody(req);
-                req.body = body;
-                await managerController.rejectAccountRequest(req, res);
-            }
-            else {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, message: 'Manager API route not found' }));
-            }
+            await handleManagerRoutes(req, res);
         }
         else if (pathname.startsWith('/api/appointments')) {
             await handleAppointmentRoutes(req, res);

@@ -47,45 +47,16 @@ const accountantRoutes = async (req, res) => {
             return await accountantController.getDashboard(req, res);
         }
 
+        //get la suppliers
         if (path === '/api/accountant/suppliers' && method === 'GET') {
             securePath.setSecurityHeaders(res);
             return await accountantController.getSuppliers(req, res);
         }
 
-        if (path === '/api/accountant/suppliers' && method === 'POST') {
-            securePath.setSecurityHeaders(res);
-            return await parseSecureBodyAndExecute(req, res, accountantController.addSupplier);
-        }
-
-        const supplierByIdMatch = path.match(/^\/api\/accountant\/suppliers\/(\d+)$/);
-        if (supplierByIdMatch) {
-            const params = securePath.extractPathParams(path, /^\/api\/accountant\/suppliers\/(\d+)$/);
-            if (!params) {
-                return securePath.sendJSON(res, 400, {
-                    success: false,
-                    message: 'Invalid supplier ID'
-                });
-            }
-
-            req.params = params;
-            securePath.setSecurityHeaders(res);
-
-            if (method === 'GET') {
-                return await accountantController.getSupplierById(req, res);
-            }
-
-            if (method === 'PUT') {
-                return await parseSecureBodyAndExecute(req, res, accountantController.updateSupplier);
-            }
-
-            if (method === 'DELETE') {
-                return await accountantController.deleteSupplier(req, res);
-            }
-        }
-
+        //rute import/export
         if (path === '/api/accountant/import' && method === 'POST') {
             securePath.setSecurityHeaders(res);
-            return await parseSecureBodyAndExecute(req, res, ImportExportController.importData);
+            return await parseBodyAndExecute(req, res, ImportExportController.importData);
         }
 
         if (path === '/api/accountant/export' && method === 'GET') {
@@ -99,7 +70,6 @@ const accountantRoutes = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error in accountant routes:', securePath.sanitizeInput(error.message || ''));
         if (!res.headersSent) {
             return securePath.sendJSON(res, 500, {
                 success: false,
@@ -110,11 +80,10 @@ const accountantRoutes = async (req, res) => {
     }
 };
 
-const parseSecureBodyAndExecute = (req, res, controllerFunction) => {
+const parseBodyAndExecute = (req, res, controllerFunction) => {
     return new Promise((resolve, reject) => {
         securePath.processRequestBody(req, async (error, sanitizedBody) => {
             if (error) {
-                console.error('Error processing request body:', securePath.sanitizeInput(error.message || ''));
                 return securePath.sendJSON(res, error.statusCode || 400, {
                     success: false,
                     message: securePath.sanitizeInput(error.message)
@@ -126,7 +95,6 @@ const parseSecureBodyAndExecute = (req, res, controllerFunction) => {
                 await controllerFunction(req, res);
                 resolve();
             } catch (controllerError) {
-                console.error('Error executing controller:', securePath.sanitizeInput(controllerError.message || ''));
                 if (!res.headersSent) {
                     return securePath.sendJSON(res, 500, {
                         success: false,

@@ -1,76 +1,90 @@
-const jwt = require('jsonwebtoken');
-const SecurePath = require('./SecurePath');
+const url = require('url');
+const { requireAuth } = require('../middleware/auth');
+const ManagerContoller = require('../controllers/managerController');
 
-const securePath = new SecurePath();
+async function getRequestBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
 
-function verifyToken(authHeader) {
-    if (!authHeader || typeof authHeader !== 'string') {
-        return { valid: false, error: 'No token provided' };
-    }
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
 
-    const sanitizedAuthHeader = securePath.sanitizeInput(authHeader);
+        req.on('end', () => {
+            try {
+                if (!body.trim()) {
+                    resolve({});
+                    return;
+                }
+                const parsed = JSON.parse(body);
+                resolve(parsed);
+            } catch (error) {
+                reject(new Error('Invalid JSON in request body'));
+            }
+        });
 
-    if (!sanitizedAuthHeader.startsWith('Bearer ')) {
-        return { valid: false, error: 'No token provided' };
-    }
-
-    const token = sanitizedAuthHeader.substring(7);
-
-    if (!token || token.trim().length === 0) {
-        return { valid: false, error: 'No token provided' };
-    }
-
-    try {
-        const secret = process.env.JWT_SECRET || 'fallback-secret-key';
-        const decoded = jwt.verify(token, secret);
-
-        const sanitizedDecoded = securePath.sanitizeObject(decoded);
-
-        return {
-            valid: true,
-            userId: sanitizedDecoded.userId || sanitizedDecoded.user_id,
-            user: sanitizedDecoded
-        };
-    } catch (error) {
-        const sanitizedErrorMessage = securePath.sanitizeInput(error.message || '');
-        console.error('Token verification error:', sanitizedErrorMessage);
-
-        return {
-            valid: false,
-            error: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
-        };
-    }
+        req.on('error', (error) => {
+            reject(error);
+        });
+    });
 }
 
-function requireAuth(req, res, next) {
+async function handleManagerRoutes(req, res) {
     try {
-        const authResult = verifyToken(req.headers.authorization);
+        if (!requireAuth(req, res)) {
+            return;
+        }
 
-        if (!authResult.valid) {
-            return securePath.sendJSON(res, 401, {
+        const parsedUrl = url.parse(req.url, true);
+        const pathname = parsedUrl.pathname;
+        const method = req.method;
+        const queryParams = parsedUrl.query;
+
+        // GET /api/manager/requests toate cererile de conturi
+        if (pathname === '/api/manager/requests' && method === 'GET') {
+            req.query = queryParams || {};
+            await ManagerContoller.getAccountRequests(req, res);
+        }
+
+        // POST /api/manager/requests/:id/approve aproba o cerere
+        else if (pathname.startsWith('/api/manager/requests/') && pathname.endsWith('/approve') && method === 'POST') {
+            const id = pathname.split('/')[4];
+            req.params = { id: id };
+
+            const body = await getRequestBody(req);
+            req.body = body;
+
+            await ManagerContoller.approveAccountRequest(req, res);
+        }
+
+        // POST /api/manager/requests/:id/reject resignem o cerere
+        else if (pathname.startsWith('/api/manager/requests/') && pathname.endsWith('/reject') && method === 'POST') {
+            const id = pathname.split('/')[4];
+            req.params = { id: id };
+
+            const body = await getRequestBody(req);
+            req.body = body;
+
+            await ManagerContoller.rejectAccountRequest(req, res);
+        }
+        else {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
                 success: false,
-                message: securePath.sanitizeInput(authResult.error)
-            });
+                message: 'Manager API route not found'
+            }));
         }
 
-        req.userId = authResult.userId;
-        req.user = authResult.user;
-
-        if (typeof next === 'function') {
-            next();
-        }
-
-        return true;
     } catch (error) {
-        console.error('Auth middleware error:', securePath.sanitizeInput(error.message || ''));
-        return securePath.sendJSON(res, 500, {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
             success: false,
-            message: 'Authentication error'
-        });
+            message: 'Internal server error in manager routes',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }));
     }
 }
 
 module.exports = {
-    verifyToken,
-    requireAuth
+    handleManagerRoutes
 };
