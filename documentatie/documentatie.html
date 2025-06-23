@@ -83,10 +83,12 @@
       Documentul este destinat următoarelor categorii de utilizatori:
     </p>
     <ul>
-      <li><b>Dezvoltatori și testeri:</b> Secțiunile relevante includ 3.1 Perspectiva produsului, 3.2 Funcțiile produsului și 6. Cerințele nefuncționale. Acestea oferă informații despre arhitectură, funcționalități și cerințe tehnice.</li>
-      <li><b>Manageri de proiect:</b> Secțiunile 2.1 Scop, 2.4 Domeniul de aplicare și 5. Caracteristicile sistemului sunt cele mai utile pentru înțelegerea obiectivelor proiectului.</li>
-      <li><b>Utilizatori finali:</b> Pot consulta secțiunea 3.5 Documentația utilizatorului pentru a învăța cum să utilizeze aplicația.</li>
-      <li><b>Scriitori de documentație:</b> Pot consulta 2.2 Convențiile documentului pentru a înțelege stilul, formatul și terminologia utilizată.</li>
+      <li><b>Dezvoltatori și testeri:</b> Secțiunile relevante includ 3.1 Perspectiva produsului, 3.2 Funcțiile produsului, 4.3 Interfața software și 6. Cerințele nefuncționale. Acestea oferă informații despre arhitectura Node.js/PostgreSQL, funcționalitățile sistemului de programări și cerințele tehnice de securitate.</li>
+      <li><b>Manageri de proiect:</b> Secțiunile 2.1 Scop, 2.4 Domeniul de aplicare și 5. Caracteristicile sistemului sunt cele mai utile pentru înțelegerea obiectivelor proiectului și planificarea resurselor necesare implementării.</li>
+      <li><b>Utilizatori finali (personal service):</b> Pot consulta secțiunea 3.5 Documentația utilizatorului pentru a învăța cum să utilizeze interfețele specifice rolurilor (administrator, contabil, manager) și funcționalitățile de gestionare a programărilor.</li>
+      <li><b>Clienți ai service-ului:</b> Secțiunea 3.5 Documentația utilizatorului oferă informații despre procesul de programare online, consultarea calendarului și urmărirea statusului programărilor.</li>
+      <li><b>Administratori de sistem:</b> Secțiunile 3.4 Constrângeri de proiectare și implementare, 4.2 Interfața hardware și 6. Cerințele nefuncționale conțin specificații pentru deployment, securitate și performanță.</li>
+      <li><b>Scriitori de documentație:</b> Pot consulta 2.2 Convențiile documentului pentru a înțelege stilul, formatul și terminologia utilizată în documentația tehnică a proiectului.</li>
     </ul>
 
 
@@ -109,10 +111,27 @@
 
     <h3>3.1 Perspectiva produsului</h3>
     <p>
-    <p>
-      Perspectiva proiectului este de a dezvolta un sistem web modern și eficient
-      pentru gestionarea programărilor și operațiunilor din cadrul unui service de trotinete, motociclete și scutere.
+      Perspectiva proiectului este de a dezvolta un sistem web modern și eficient pentru gestionarea programărilor și operațiunilor din cadrul unui service de motociclete, biciclete și trotinete (electrice sau clasice), oferind o platformă centralizată care conectează clienții cu personalul service-ului.
     </p>
+
+    <p>
+      Următoarea diagramă prezintă componentele majore ale sistemului aplicației:
+    </p>
+
+    <ul>
+      <li><b>Frontend</b> - reprezintă partea vizibilă a aplicației pentru utilizator, care include interfața grafică de utilizator (User Interface), dezvoltată cu HTML, CSS și JavaScript. Oferă interfețe distincte pentru fiecare tip de utilizator: dashboard-uri pentru clienți, administratori, contabili și manageri.</li>
+
+      <li><b>API REST</b> - reprezintă partea de interacțiune între frontend și backend, oferind o interfață de programare a aplicației pentru accesul la date și servicii. API-ul implementează endpoint-uri dedicate pentru gestionarea programărilor (/api/appointments), vehiculelor (/api/vehicles), inventarului (/api/inventory) și furnizorilor (/api/suppliers).</li>
+
+      <li><b>Backend</b> - reprezintă partea de procesare și stocare a datelor din aplicație, implementată în Node.js vanilla. Include serviciile aplicației pentru autentificare JWT, gestionarea rolurilor utilizatorilor, procesarea programărilor, administrarea stocurilor și gestionarea comenzilor către furnizori.</li>
+
+      <li><b>Database & Storage</b> - reprezintă componenta de stocare a datelor utilizate de aplicație, implementată cu PostgreSQL pentru stocarea utilizatorilor, programărilor, vehiculelor, pieselor, furnizorilor și comenzilor.</li>
+
+      <li><b>Module de Import/Export</b> - componente specializate pentru procesarea și transferul datelor în formatele CSV și JSON (import) și CSV, JSON, PDF (export), facilitând integrarea cu sisteme externe și generarea rapoartelor.</li>
+    </ul>
+
+    <p>
+      Aceste componente colaborează împreună pentru a oferi utilizatorilor o platformă completă de management al serviciilor de reparații și întreținere, de la programarea inițială până la finalizarea lucrărilor și gestionarea stocurilor.
     </p>
     <p>
       Următoarea diagramă prezintă componentele majore ale sistemului aplicației:

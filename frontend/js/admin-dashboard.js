@@ -92,13 +92,13 @@ class AdminDashboard {
         sidebarLinks.forEach(link => {
             const iconElement = link.querySelector('.icon');
             if (iconElement) {
-                if (iconElement.textContent.includes('Tool') || link.textContent.toLowerCase().includes('inventory')) {
+                if (link.textContent.toLowerCase().includes('inventory')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         window.location.href = '/inventory/dashboard';
                     });
                 }
-                if (iconElement.textContent.includes('Store') || link.textContent.toLowerCase().includes('supplier')) {
+                if (link.textContent.toLowerCase().includes('supplier')) {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
                         window.location.href = '/suppliers';
@@ -128,11 +128,9 @@ class AdminDashboard {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                console.log('No token found, skipping parts loading');
                 return;
             }
 
-            console.log('Loading parts from API...');
             const response = await fetch('/admin/api/parts?available_only=true', {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -141,7 +139,6 @@ class AdminDashboard {
             });
 
             const data = await response.json();
-
             if (response.status === 401) {
                 this.handleAuthError();
                 return;
@@ -161,14 +158,9 @@ class AdminDashboard {
                         supplierName: part.supplier_name || 'Unknown'
                     });
 
-                    if (!sanitizedPart.price || sanitizedPart.price <= 0 || isNaN(sanitizedPart.price)) {
-                        console.warn(`Part ${index} has invalid price:`, sanitizedPart);
-                    }
-
                     return sanitizedPart;
                 });
 
-                console.log(`Successfully loaded ${this.availableParts.length} parts`);
             } else {
                 console.error('Failed to load parts:', data);
                 this.availableParts = [];
@@ -186,15 +178,16 @@ class AdminDashboard {
             this.safeSetText(dropdown, 'No parts available');
             dropdown.className = 'part-option';
         } else {
-            this.renderPartsDropdown(this.availableParts);
+            this.listPartsDropdown(this.availableParts);
         }
 
         dropdown.classList.add('show');
     }
 
-    renderPartsDropdown(parts) {
+    listPartsDropdown(parts) {
         const dropdown = document.getElementById('parts-dropdown');
 
+        //golesc ca sa nu adaug peste vechiul continut
         while (dropdown.firstChild) {
             dropdown.removeChild(dropdown.firstChild);
         }
@@ -217,6 +210,7 @@ class AdminDashboard {
 
             option.appendChild(nameDiv);
             option.appendChild(detailsDiv);
+            //adauga in dropdown
             dropdown.appendChild(option);
 
             option.addEventListener('click', (e) => {
@@ -237,15 +231,10 @@ class AdminDashboard {
             return;
         }
 
-
-        if (!part.price || part.price <= 0 || isNaN(part.price)) {
-            console.error('Part has invalid price:', part);
-            return;
-        }
-
         const existingPartIndex = this.selectedParts.findIndex(p => p.id === part.id);
 
         if (existingPartIndex !== -1) {
+            //exista deja, crestem cantitatea
             this.selectedParts[existingPartIndex].quantity += 1;
         } else {
             const newPart = this.sanitizeObject({
@@ -259,19 +248,14 @@ class AdminDashboard {
                 quantity: 1
             });
 
-            if (!newPart.price || newPart.price <= 0 || isNaN(newPart.price)) {
-                console.error('Part price became invalid after sanitization:', newPart);
-                return;
-            }
-
             this.selectedParts.push(newPart);
         }
 
-        this.renderSelectedParts();
+        this.showSelectedParts();
         this.updatePartsTotal();
     }
 
-    renderSelectedParts() {
+    showSelectedParts() {
         const container = document.getElementById('selected-parts');
 
         while (container.firstChild) {
@@ -285,6 +269,7 @@ class AdminDashboard {
             return;
         }
 
+        //daca exista piese, eliminam clasa empty
         container.classList.remove('empty');
 
         this.selectedParts.forEach(part => {
@@ -297,6 +282,7 @@ class AdminDashboard {
             partInfo.appendChild(nameDiv);
             partInfo.appendChild(priceDiv);
 
+            //pentru controale plus, minus
             const quantityControls = this.createSafeElement('div', 'quantity-controls');
 
             const decreaseBtn = this.createSafeElement('button', 'quantity-btn decrease', '-');
@@ -334,6 +320,7 @@ class AdminDashboard {
     bindPartControlEvents() {
         document.querySelectorAll('.quantity-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                //ce piesa a declansat evenimentul
                 const partId = parseInt(e.target.dataset.partId);
                 const isIncrease = e.target.classList.contains('increase');
                 this.updatePartQuantity(partId, isIncrease ? 1 : -1);
@@ -358,34 +345,20 @@ class AdminDashboard {
 
     updatePartQuantity(partId, change) {
         const part = this.selectedParts.find(p => p.id === partId);
-        if (!part) return;
 
         part.quantity += change;
         if (part.quantity <= 0) {
             this.removePartFromSelection(partId);
         } else {
-            this.renderSelectedParts();
-            this.updatePartsTotal();
-        }
-    }
-
-    setPartQuantity(partId, quantity) {
-        if (quantity <= 0) {
-            this.removePartFromSelection(partId);
-            return;
-        }
-
-        const part = this.selectedParts.find(p => p.id === partId);
-        if (part) {
-            part.quantity = quantity;
-            this.renderSelectedParts();
+            this.showSelectedParts();
             this.updatePartsTotal();
         }
     }
 
     removePartFromSelection(partId) {
+       //pastreaza doar elementele care nu au fost removed
         this.selectedParts = this.selectedParts.filter(p => p.id !== partId);
-        this.renderSelectedParts();
+        this.showSelectedParts();
         this.updatePartsTotal();
     }
 
@@ -398,6 +371,7 @@ class AdminDashboard {
         const amountElement = document.getElementById('parts-total-amount');
 
         if (total > 0) {
+            //devine vizibil
             totalElement.style.display = 'block';
             this.safeSetText(amountElement, total.toFixed(2));
         } else {
@@ -436,17 +410,17 @@ class AdminDashboard {
 
             if (data.success) {
                 this.appointments = data.appointments.map(appointment => this.sanitizeObject(appointment));
-                this.renderAppointments();
+                this.showAppointments();
             }
         } catch (error) {
-            // Silent error handling
+            console.error('Error loading appointments:', error);
         }
     }
 
-    renderAppointments() {
+    showAppointments() {
         const container = document.getElementById('appointments-container');
 
-        // Clear existing content safely
+        //gol inainte sa afiseze programarile actuale
         while (container.firstChild) {
             container.removeChild(container.firstChild);
         }
@@ -548,14 +522,13 @@ class AdminDashboard {
                 this.openModal('view-appointment-modal');
             }
         } catch (error) {
-
+            console.error('Failed to load appointment details:', error);
         }
     }
 
     displayAppointmentDetails(appointment) {
         const detailsContainer = document.getElementById('appointment-details');
 
-        // Clear existing content safely
         while (detailsContainer.firstChild) {
             detailsContainer.removeChild(detailsContainer.firstChild);
         }
@@ -614,9 +587,6 @@ class AdminDashboard {
 
         if (appointment.status === 'rejected' && appointment.rejectionReason) {
             const rejectionItems = [{label: 'Reason', value: appointment.rejectionReason}];
-            if (appointment.retryDays) {
-                rejectionItems.push({label: 'Retry After', value: `${appointment.retryDays} days`});
-            }
             const rejectionSection = this.createDetailSection('Rejection Details', rejectionItems);
             detailsContainer.appendChild(rejectionSection);
         }
@@ -644,27 +614,6 @@ class AdminDashboard {
             partsSection.appendChild(partsList);
             detailsContainer.appendChild(partsSection);
         }
-
-        if (appointment.mediaFiles && appointment.mediaFiles.length > 0) {
-            const filesSection = this.createDetailSection('Attached Files', []);
-            const attachmentsList = this.createSafeElement('div', 'attachments-list');
-
-            appointment.mediaFiles.forEach(file => {
-                const attachmentItem = this.createSafeElement('div', 'attachment-item');
-                const span = this.createSafeElement('span', '', 'Attachment');
-                const link = document.createElement('a');
-                link.href = this.sanitizeInput(file.filePath);
-                link.target = '_blank';
-                this.safeSetText(link, file.fileName);
-
-                attachmentItem.appendChild(span);
-                attachmentItem.appendChild(link);
-                attachmentsList.appendChild(attachmentItem);
-            });
-
-            filesSection.appendChild(attachmentsList);
-            detailsContainer.appendChild(filesSection);
-        }
     }
 
     createDetailSection(title, items) {
@@ -683,11 +632,6 @@ class AdminDashboard {
                 const valueDiv = this.createSafeElement('div', 'detail-value');
                 const statusSpan = this.createSafeElement('span', `appointment-status status-${item.status}`, item.value);
                 valueDiv.appendChild(statusSpan);
-                detailItem.appendChild(labelDiv);
-                detailItem.appendChild(valueDiv);
-            } else if (item.label) {
-                const labelDiv = this.createSafeElement('div', 'detail-label', item.label + ':');
-                const valueDiv = this.createSafeElement('div', 'detail-value', item.value);
                 detailItem.appendChild(labelDiv);
                 detailItem.appendChild(valueDiv);
             }
@@ -727,7 +671,6 @@ class AdminDashboard {
             }
         } catch (error) {
             console.error('Error loading appointment details:', error);
-            alert('Error loading appointment details. Please try again.');
         }
     }
 
@@ -769,12 +712,10 @@ class AdminDashboard {
         if (appointment.rejectionReason) {
             this.safeSetValue(document.getElementById('rejection-reason'), appointment.rejectionReason);
         }
-        if (appointment.retryDays) {
-            this.safeSetValue(document.getElementById('retry-days'), appointment.retryDays);
-        }
 
         this.selectedParts = [];
-        this.renderSelectedParts();
+        //ca sa afiseze no parts selected
+        this.showSelectedParts();
         this.updatePartsTotal();
     }
 
@@ -807,11 +748,6 @@ class AdminDashboard {
             const appointmentId = formData.get('appointment-id') || document.getElementById('appointment-id').value;
             const status = formData.get('status');
 
-            console.log('=== Frontend Status Update ===');
-            console.log('Appointment ID:', appointmentId);
-            console.log('New Status:', status);
-            console.log('Selected Parts:', this.selectedParts);
-
             const updateData = {status: status};
 
             const adminMessage = document.getElementById('admin-message').value;
@@ -838,15 +774,11 @@ class AdminDashboard {
                 updateData.estimatedPrice = estimatedPrice;
                 updateData.warranty = warranty;
 
-                // Handle selected parts
                 if (this.selectedParts && this.selectedParts.length > 0) {
-                    console.log('Processing selected parts...');
 
-                    // Validate all parts have valid prices
                     const invalidParts = [];
                     for (let i = 0; i < this.selectedParts.length; i++) {
                         const part = this.selectedParts[i];
-                        console.log(`Validating part ${i}:`, part);
 
                         if (!part.price || part.price <= 0 || isNaN(part.price)) {
                             invalidParts.push({
@@ -879,21 +811,14 @@ class AdminDashboard {
                         return;
                     }
 
-                    // Transform parts data for backend
                     updateData.selectedParts = this.selectedParts.map((part, index) => {
                         const partData = {
                             partId: parseInt(part.id),
                             quantity: parseInt(part.quantity),
                             unitPrice: parseFloat(part.price)
                         };
-
-                        console.log(`Transformed part ${index}:`, partData);
                         return partData;
                     });
-
-                    console.log('Final parts data to send:', updateData.selectedParts);
-                } else {
-                    console.log('No parts selected');
                 }
             }
 
@@ -905,11 +830,8 @@ class AdminDashboard {
                     alert('Please enter a rejection reason');
                     return;
                 }
-
                 updateData.rejectionReason = this.sanitizeInput(rejectionReason);
             }
-
-            console.log('Final update data:', JSON.stringify(updateData, null, 2));
 
             const response = await fetch(`/admin/api/appointments/${appointmentId}/status`, {
                 method: 'PUT',
@@ -921,7 +843,6 @@ class AdminDashboard {
             });
 
             const data = await response.json();
-            console.log('Server response:', data);
 
             if (response.status === 401) {
                 this.handleAuthError();
@@ -934,12 +855,10 @@ class AdminDashboard {
                 alert('Appointment status updated successfully');
             } else {
                 console.error('Update failed:', data);
-                alert('Failed to update appointment: ' + (data.message || 'Unknown error'));
             }
 
         } catch (error) {
             console.error('Error in handleStatusUpdate:', error);
-            alert('An error occurred while updating the appointment. Please try again.');
         }
     }
 
@@ -962,7 +881,7 @@ class AdminDashboard {
         }
 
         this.selectedParts = [];
-        this.renderSelectedParts();
+        this.showSelectedParts();
         this.updatePartsTotal();
 
         const approvalFields = document.getElementById('approval-fields');
