@@ -198,6 +198,8 @@ http://localhost:8083
 
 ## Usage
 
+## Usage
+
 ### For Clients:
 1. **Registration**: Create a new account (requires manager approval)
 2. **Add vehicles**: Register motorcycles, bicycles, or scooters
@@ -208,6 +210,15 @@ http://localhost:8083
 1. **Manage appointments**: Approve/reject requests with price estimates
 2. **Inventory management**: Monitor parts stock and orders
 3. **Reports**: Generate analytics about service center activity
+
+### For Managers:
+1. **Account management**: Review and approve new user registrations
+2. **Role assignment**: Assign roles (Client, Administrator, Accountant) to approved users
+
+### For Accountants:
+1. **Supplier management**: View and manage the list of active suppliers
+2. **Data import/export**: Handle import and export of data related to suppliers, parts, and appointments
+3. **File format support**: Work with CSV, JSON, and PDF formats for data exchange
 
 ## Database Schema
 
@@ -238,7 +249,6 @@ The application uses the following main tables:
 - `GET /api/manager/requests` - New account requests
 - `POST /api/manager/requests/:id/approve` - Approve account
 
-For complete documentation, see [API Documentation](docs/api.md)
 
 ## Roadmap
 
