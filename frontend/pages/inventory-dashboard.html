@@ -17,7 +17,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/inventory-dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Removed Font Awesome since we're not using icons -->
 </head>
 <body>
 <div class="dashboard-container">
@@ -72,9 +72,7 @@
             <section class="stats-section">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-boxes"></i>
-                        </div>
+                        <!-- Removed icon div completely -->
                         <div class="stat-content">
                             <h3 id="totalParts">-</h3>
                             <p>Total Parts</p>
@@ -82,9 +80,7 @@
                     </div>
 
                     <div class="stat-card success">
-                        <div class="stat-icon">
-                            <i class="fas fa-dollar-sign"></i>
-                        </div>
+                        <!-- Removed icon div completely -->
                         <div class="stat-content">
                             <h3 id="inventoryValue">-</h3>
                             <p>Total Value (RON)</p>
@@ -92,9 +88,7 @@
                     </div>
 
                     <div class="stat-card info">
-                        <div class="stat-icon">
-                            <i class="fas fa-tags"></i>
-                        </div>
+                        <!-- Removed icon div completely -->
                         <div class="stat-content">
                             <h3 id="totalCategories">-</h3>
                             <p>Categories</p>
@@ -110,7 +104,7 @@
                 </div>
                 <div class="actions-grid">
                     <a href="/inventory/parts" class="action-card">
-                        <i class="fas fa-search"></i>
+                        <!-- Removed icon -->
                         <h3>Search Parts</h3>
                         <p>Find and manage existing parts</p>
                     </a>
@@ -131,6 +125,7 @@
 
 <div id="loadingOverlay" class="loading-overlay">
     <div class="loading-spinner">
+        <!-- Kept this icon for loading spinner -->
         <i class="fas fa-spinner fa-spin"></i>
         <p>Loading...</p>
     </div>
