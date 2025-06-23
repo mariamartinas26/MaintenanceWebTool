@@ -32,10 +32,6 @@ async function handleVehicleRoutes(req, res) {
             securePath.setSecurityHeaders(res);
             await vehicleController.getUserVehicles(req, res);
         }
-        else if (method === 'GET' && path === '/api/vehicles/stats') {
-            securePath.setSecurityHeaders(res);
-            await vehicleController.getUserVehicleStats(req, res);
-        }
         else if (method === 'GET' && vehicleId && pathParts.length === 4) {
             securePath.setSecurityHeaders(res);
             await vehicleController.getVehicleById(req, res, vehicleId);
@@ -43,34 +39,24 @@ async function handleVehicleRoutes(req, res) {
         else if (method === 'POST' && path === '/api/vehicles') {
             securePath.setSecurityHeaders(res);
 
-            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
-                if (error) {
-                    return securePath.sendJSON(res, error.statusCode || 400, {
-                        success: false,
-                        message: securePath.sanitizeInput(error.message)
+            try {
+                const sanitizedBody = await new Promise((resolve, reject) => {
+                    securePath.processRequestBody(req, (error, body) => {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            resolve(body);
+                        }
                     });
-                }
+                });
 
                 await vehicleController.createVehicle(req, res, sanitizedBody);
-            });
-        }
-        else if (method === 'PUT' && vehicleId && pathParts.length === 4) {
-            securePath.setSecurityHeaders(res);
-
-            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
-                if (error) {
-                    return securePath.sendJSON(res, error.statusCode || 400, {
-                        success: false,
-                        message: securePath.sanitizeInput(error.message)
-                    });
-                }
-
-                await vehicleController.updateVehicle(req, res, vehicleId, sanitizedBody);
-            });
-        }
-        else if (method === 'DELETE' && vehicleId && pathParts.length === 4) {
-            securePath.setSecurityHeaders(res);
-            await vehicleController.deleteVehicle(req, res, vehicleId);
+            } catch (error) {
+                return securePath.sendJSON(res, error.statusCode || 400, {
+                    success: false,
+                    message: securePath.sanitizeInput(error.message)
+                });
+            }
         }
         else {
             return securePath.sendJSON(res, 404, {
@@ -79,7 +65,6 @@ async function handleVehicleRoutes(req, res) {
             });
         }
     } catch (error) {
-        console.error('Error in vehicle routes:', securePath.sanitizeInput(error.message || ''));
         return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Internal server error'
