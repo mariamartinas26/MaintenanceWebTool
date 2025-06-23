@@ -878,15 +878,3 @@ function removeOrderItem(button) {
 function saveOrder() {
     orderManager.saveOrder();
 }
-
-function updatePartPrice(selectElement) {
-    orderManager.updatePartPrice(selectElement);
-}
-
-function calculateOrderTotal() {
-    orderManager.calculateOrderTotal();
-}
-
-function updateOrderStatus(orderId) {
-    orderManager.updateOrderStatus(orderId);
-}
