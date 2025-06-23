@@ -295,7 +295,7 @@ class SupplierController {
             if (!status) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Valid status is required (ordered, confirmed, in_transit, delivered, cancelled)'
+                    message: 'Valid status is required '
                 });
             }
 

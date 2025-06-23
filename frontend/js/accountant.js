@@ -130,9 +130,9 @@ class AccountantDashboard {
         }
     }
 
+    //afisam lista de suppliers
     renderSuppliers() {
         const suppliersList = document.getElementById('suppliers-list');
-        if (!suppliersList) return;
 
         if (this.suppliers.length === 0) {
             const noSuppliers = document.createElement('p');
@@ -142,6 +142,7 @@ class AccountantDashboard {
             return;
         }
 
+        //creez cate un card pt fiecare furnizor
         this.suppliers.forEach(supplier => {
             const supplierItem = this.createSupplierCard(supplier);
             suppliersList.appendChild(supplierItem);

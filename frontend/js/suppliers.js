@@ -1,3 +1,4 @@
+//aici ne ocupam acum doar sa vedem ce orders avem si sa putem adauga unele noi (in admin) in accountant facem partea de get suppliers
 class OrderManager {
     constructor() {
         this.suppliers = [];
@@ -15,12 +16,10 @@ class OrderManager {
     checkAuthentication() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (!this.token) {
-            alert('You need to login first');
             window.location.href = '/login';
             return false;
         }
-        if (user.role !== 'admin' && user.role !== 'manager') {
-            alert('Access denied. Admin or manager role required.');
+        if (user.role !== 'admin') {
             window.location.href = '/homepage';
             return false;
         }
@@ -106,26 +105,23 @@ class OrderManager {
     }
 
     async loadSuppliersFromAPI() {
-        try {
-            const response = await fetch('/api/suppliers', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
+        const response = await fetch('/api/suppliers', {
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
             }
+        });
 
-            const result = await response.json();
-            if (result.success) {
-                this.suppliers = result.data.map(supplier => this.sanitizeObject(supplier));
-            }
-        } catch (error) {
-            this.showNotification('Error loading suppliers: ' + error.message, 'error');
+        if (response.status === 401) {
+            this.handleAuthError();
+            return;
         }
+
+        const result = await response.json();
+        if (result.success) {
+            this.suppliers = result.data.map(supplier => this.sanitizeObject(supplier));
+        }
+
     }
 
     async loadPartsFromAPI() {
@@ -147,95 +143,78 @@ class OrderManager {
                 this.parts = result.data.map(part => this.sanitizeObject(part));
             }
         } catch (error) {
-            this.showNotification('Error loading parts: ' + error.message, 'error');
             this.parts = [];
         }
     }
 
     async loadOrdersFromAPI() {
-        try {
-            this.showLoading('orders-list');
-            const response = await fetch('/api/orders', {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
+        const response = await fetch('/api/orders', {
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json'
             }
+        });
 
-            const result = await response.json();
-            if (result.success) {
-                this.orders = result.data.map(order => this.sanitizeObject(order));
-                this.loadOrders();
-            }
-        } catch (error) {
-            this.showNotification('Error loading orders: ' + error.message, 'error');
-            this.hideLoading('orders-list');
+        if (response.status === 401) {
+            this.handleAuthError();
+            return;
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            this.orders = result.data.map(order => this.sanitizeObject(order));
+            this.loadOrders();
         }
     }
 
     async saveOrderToAPI(orderData) {
-        try {
-            const response = await fetch('/api/orders', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(this.sanitizeObject(orderData))
-            });
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(this.sanitizeObject(orderData))
+        });
 
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
-            }
+        if (response.status === 401) {
+            this.handleAuthError();
+            return;
+        }
 
-            const result = await response.json();
-            if (result.success) {
-                this.showNotification(result.message, 'success');
-                await this.loadOrdersFromAPI();
-            } else {
-                throw new Error(result.message || 'Failed to save order');
-            }
-        } catch (error) {
-            this.showNotification('Error saving order: ' + error.message, 'error');
+        const result = await response.json();
+        if (result.success) {
+            await this.loadOrdersFromAPI();
+        } else {
+            throw new Error(result.message || 'Failed to save order');
         }
     }
 
     async updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
-        try {
-            const body = {status: this.sanitizeInput(status)};
-            if (actualDeliveryDate) {
-                body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
-            }
+        const body = {status: this.sanitizeInput(status)};
+        if (actualDeliveryDate) {
+            body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
+        }
 
-            const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body)
-            });
+        const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body)
+        });
 
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
-            }
+        if (response.status === 401) {
+            this.handleAuthError();
+            return;
+        }
 
-            const result = await response.json();
-            if (result.success) {
-                this.showNotification(result.message, 'success');
-                await this.loadOrdersFromAPI();
-            } else {
-                throw new Error(result.message || 'Failed to update order status');
-            }
-        } catch (error) {
-            this.showNotification('Error updating order status: ' + error.message, 'error');
+        const result = await response.json();
+        if (result.success) {
+            await this.loadOrdersFromAPI();
+        } else {
+            throw new Error(result.message || 'Failed to update order status');
         }
     }
 
@@ -243,13 +222,11 @@ class OrderManager {
         const supplierIdElement = document.getElementById('orderSupplier');
 
         if (!supplierIdElement) {
-            this.showNotification('Order form elements not found', 'error');
             return;
         }
 
         const supplierId = supplierIdElement.value;
         if (!supplierId) {
-            this.showNotification('Please select a supplier', 'error');
             return;
         }
 
@@ -275,7 +252,6 @@ class OrderManager {
         });
 
         if (orderItems.length === 0) {
-            this.showNotification('Please add at least one order item', 'error');
             return;
         }
 
@@ -410,7 +386,6 @@ class OrderManager {
         if (!modal || !supplierSelect) return;
 
         if (!this.parts?.length) {
-            this.showNotification('No parts available. Please add parts first.', 'error');
             return;
         }
 
@@ -576,7 +551,6 @@ class OrderManager {
     updateOrderStatus(orderId) {
         const order = this.orders.find(o => o.id == orderId);
         if (!order) {
-            this.showNotification('Order not found', 'error');
             return;
         }
         this.openOrderStatusModal(orderId);
@@ -724,16 +698,11 @@ class OrderManager {
         const actualDeliveryDate = actualDeliveryDateEl && selectedStatus === 'delivered' ? actualDeliveryDateEl.value : null;
 
         if (!selectedStatus) {
-            this.showNotification('Please select a new status', 'error');
             return;
         }
 
-        try {
-            await this.updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate);
-            this.closeOrderStatusModal();
-        } catch (error) {
-            this.showNotification('Error updating order status: ' + error.message, 'error');
-        }
+        await this.updateOrderStatusAPI(orderId, selectedStatus, actualDeliveryDate);
+        this.closeOrderStatusModal();
     }
 
     closeOrderStatusModal() {
@@ -752,7 +721,6 @@ class OrderManager {
             try {
                 const partData = JSON.parse(preselectedPartData);
                 localStorage.removeItem('preselectedPart');
-                this.showNotification(`Creating order for: ${partData.name}`, 'info');
                 setTimeout(() => this.openOrderModalWithPreselectedPart(partData), 500);
             } catch (error) {
                 localStorage.removeItem('preselectedPart');
@@ -867,54 +835,10 @@ class OrderManager {
 
         this.calculateOrderTotal();
         modal.style.display = 'flex';
-        this.showNotification(`Part "${partData.name}" has been preselected for this order`, 'success');
     }
 
     formatDate(dateString) {
         return dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
-    }
-
-    showNotification(message, type = 'info') {
-        const notification = this.createSafeElement('div', `notification ${type}`, message);
-        document.body.appendChild(notification);
-
-        setTimeout(() => notification.classList.add('show'), 100);
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    document.body.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
-    }
-
-    showLoading(elementId) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            // Clear existing content safely
-            while (element.firstChild) {
-                element.removeChild(element.firstChild);
-            }
-            const loadingDiv = this.createSafeElement('div', 'loading', 'Loading...');
-            element.appendChild(loadingDiv);
-        }
-    }
-
-    hideLoading(elementId) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            // Clear existing content safely
-            while (element.firstChild) {
-                element.removeChild(element.firstChild);
-            }
-            const emptyState = this.createSafeElement('div', 'empty-state');
-            const h3 = this.createSafeElement('h3', '', 'Failed to load data');
-            const p = this.createSafeElement('p', '', 'Please try refreshing the page');
-            emptyState.appendChild(h3);
-            emptyState.appendChild(p);
-            element.appendChild(emptyState);
-        }
     }
 
     handleLogout() {

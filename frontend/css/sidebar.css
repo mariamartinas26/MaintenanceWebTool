@@ -1,0 +1,232 @@
+
+/* Mobile Toggle */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1001;
+    background: #2c3e50;
+    color: white;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+}
+
+/* Dashboard Layout */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background-color: #2c3e50;
+    color: #ecf0f1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+/* Logo */
+.logo {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.logo h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ecf0f1;
+    margin: 0;
+}
+
+/* Sidebar Navigation */
+.sidebar-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar-nav li {
+    margin-bottom: 5px;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    color: #ecf0f1;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+    font-weight: 500;
+}
+
+
+/* User Info */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: auto;
+}
+
+.user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-details h3 {
+    margin: 0 0 2px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-details p {
+    margin: 0;
+    font-size: 12px;
+    color: #bdc3c7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: white;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.logout-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    backdrop-filter: blur(10px);
+    min-width: 70px;
+    transition: all 0.3s ease;
+}
+
+/* Main Content Adjustment */
+.main-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* Sidebar Overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 80px;
+        padding: 15px 8px;
+    }
+
+    .sidebar .logo h2,
+    .sidebar .user-details,
+    .sidebar-nav li a span:not(.icon) {
+        display: none;
+    }
+
+    .sidebar-nav li a {
+        padding: 12px;
+        justify-content: center;
+    }
+
+    .sidebar-nav li a .icon {
+        margin-right: 0;
+    }
+
+    .user-info {
+        justify-content: center;
+        padding: 12px 0;
+    }
+
+    .logout-btn {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 80px;
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+        z-index: 1002;
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay.show {
+        display: block;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 15px;
+        padding-top: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 10px;
+        padding-top: 55px;
+    }
+
+    .mobile-menu-toggle {
+        padding: 10px;
+        font-size: 16px;
+    }
+}

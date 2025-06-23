@@ -373,49 +373,6 @@ async function requireAccountant(req, res, next) {
     }
 }
 
-async function requireManager(req, res, next) {
-    try {
-
-        setSecurityHeaders(res);
-
-        if (!req.userId) {
-            const error = new Error('User ID not found');
-            error.statusCode = 401;
-            return next(error);
-        }
-
-        const user = await User.findById ? await User.findById(req.userId) : null;
-
-        if (!user) {
-            const error = new Error('User not found');
-            error.statusCode = 401;
-            return next(error);
-        }
-
-
-        if (!validateRole(user.role, ['admin', 'manager'])) {
-            const error = new Error('Manager access required');
-            error.statusCode = 403;
-            return next(error);
-        }
-
-        req.user = {
-            id: user.id,
-            email: sanitizeInput(user.email || ''),
-            first_name: sanitizeInput(user.first_name || ''),
-            last_name: sanitizeInput(user.last_name || ''),
-            role: sanitizeInput(user.role || '')
-        };
-
-        return next();
-
-    } catch (error) {
-        const managerError = new Error('Failed to verify manager access');
-        managerError.statusCode = 500;
-        return next(error);
-    }
-}
-
 function requireAuth(req, res) {
     const authHeader = req.headers.authorization;
 
@@ -479,7 +436,6 @@ module.exports = {
     authenticateToken,
     requireAdmin,
     requireAccountant,
-    requireManager,
     sanitizeInput,
     safeJsonParse,
     setSecurityHeaders,

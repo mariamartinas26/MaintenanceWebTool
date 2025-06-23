@@ -107,9 +107,11 @@ async function handleSupplierRoutes(req, res) {
         else if (pathname === '/api/orders' && method === 'GET') {
             await supplierController.getAllOrders(req, res, sanitizedQuery);
         }
-        else if (pathname.match(/^\/api\/orders\/(\d+)\/status$/) && method === 'PUT') {
-            const params = securePath.extractPathParams(pathname, /^\/api\/orders\/(\d+)\/status$/);
-            if (!params) {
+        else if (pathname.startsWith('/api/orders/') && pathname.endsWith('/status') && method === 'PUT') {
+            //extrag id
+            const orderId = pathname.slice(12, -7); //elimin /api/orders/ si /status
+
+            if (!orderId) {
                 return securePath.sendJSON(res, 400, {
                     success: false,
                     message: 'Invalid order ID'
@@ -124,7 +126,7 @@ async function handleSupplierRoutes(req, res) {
                     });
                 }
 
-                const requestData = { orderId: params.id, ...sanitizedBody };
+                const requestData = { orderId: orderId, ...sanitizedBody };
                 await supplierController.updateOrderStatus(req, res, requestData);
             });
         }
@@ -136,7 +138,6 @@ async function handleSupplierRoutes(req, res) {
         }
 
     } catch (error) {
-        console.error('Supplier routes error:', securePath.sanitizeInput(error.message || ''));
         return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Internal server error in supplier routes',
