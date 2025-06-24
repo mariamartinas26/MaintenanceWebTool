@@ -1,42 +1,41 @@
 const PDFDocument = require('pdfkit');
+
 class PDFGenerator {
     static async generatePDF(data, dataType) {
         return new Promise((resolve, reject) => {
             try {
+                //document pdf gol
                 const doc = new PDFDocument();
+                //array pentru a colecta toate datele pdf generate
                 const buffers = [];
 
-                // Collect PDF data
                 doc.on('data', buffers.push.bind(buffers));
+                //cand e gata pdf ul concateneaza toate bufferele si returneaza rezultatul
                 doc.on('end', () => {
                     const pdfData = Buffer.concat(buffers);
                     resolve(pdfData);
                 });
 
-                // PDF Header
+                //header
                 doc.fontSize(20).text(`${dataType.toUpperCase()} Export Report`, 50, 50);
                 doc.fontSize(12).text(`Generated on: ${new Date().toLocaleString()}`, 50, 80);
-                doc.fontSize(12).text(`Total Records: ${data.length}`, 50, 100);
-
-                // Add separator line
-                doc.moveTo(50, 120).lineTo(550, 120).stroke();
+                doc.moveTo(50, 120).lineTo(550, 120).stroke(); //linie separatoare
 
                 let yPosition = 140;
 
-                // Generate content based on data type
+                //datele pe care le exportam in pdf
                 switch (dataType) {
                     case 'suppliers':
-                        yPosition = this.generateSuppliersContent(doc, data, yPosition);
+                        this.generateSuppliersContent(doc, data, yPosition);
                         break;
                     case 'parts':
-                        yPosition = this.generatePartsContent(doc, data, yPosition);
+                        this.generatePartsContent(doc, data, yPosition);
                         break;
                     case 'appointments':
-                        yPosition = this.generateAppointmentsContent(doc, data, yPosition);
+                        this.generateAppointmentsContent(doc, data, yPosition);
                         break;
                 }
-
-                doc.end();
+                doc.end();//finalizeaza documentul pdf
             } catch (error) {
                 reject(error);
             }
@@ -45,73 +44,79 @@ class PDFGenerator {
 
     static generateSuppliersContent(doc, suppliers, startY) {
         let yPos = startY;
+        let itemsOnPage = 0; //cate iteme sunt pe pagina curenta
 
         suppliers.forEach((supplier, index) => {
-            // Check if we need a new page
-            if (yPos > 700) {
+            //facem o pagina noua cand am adaugat 3 elemente pe pagina curenta
+            if (itemsOnPage === 3) {
                 doc.addPage();
-                yPos = 50;
+                yPos = 50; //resetam pozitia y la inceput
+                itemsOnPage = 0;
             }
 
+            //afisam supplierul
             doc.fontSize(14).text(`${index + 1}. ${supplier.company_name}`, 50, yPos);
             yPos += 20;
 
             doc.fontSize(10)
                 .text(`Contact: ${supplier.contact_person}`, 70, yPos)
                 .text(`Email: ${supplier.email}`, 70, yPos + 15)
-                .text(`Phone: ${supplier.phone || 'N/A'}`, 70, yPos + 30)
-                .text(`Address: ${supplier.address || 'N/A'}`, 70, yPos + 45)
+                .text(`Phone: ${supplier.phone }`, 70, yPos + 30)
+                .text(`Address: ${supplier.address }`, 70, yPos + 45)
                 .text(`Delivery Time: ${supplier.delivery_time_days} days`, 70, yPos + 60);
 
             yPos += 90;
-
-            // Add separator line
             doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
-            yPos += 10;
+            yPos += 15;
+            itemsOnPage++;
         });
-
-        return yPos;
     }
 
     static generatePartsContent(doc, parts, startY) {
         let yPos = startY;
+        let itemsOnPage = 0;
 
         parts.forEach((part, index) => {
-            if (yPos > 680) {
+            //pagina noua dupa 3 afisari
+            if (itemsOnPage === 3) {
                 doc.addPage();
                 yPos = 50;
+                itemsOnPage = 0;
             }
 
+            //afisam piesa
             doc.fontSize(14).text(`${index + 1}. ${part.name}`, 50, yPos);
             yPos += 20;
 
             doc.fontSize(10)
-                .text(`Description: ${part.description || 'N/A'}`, 70, yPos)
-                .text(`Part Number: ${part.part_number || 'N/A'}`, 70, yPos + 15)
-                .text(`Category: ${part.category || 'N/A'}`, 70, yPos + 30)
-                .text(`Price: $${part.price}`, 70, yPos + 45)
+                .text(`Description: ${part.description }`, 70, yPos)
+                .text(`Part Number: ${part.part_number }`, 70, yPos + 15)
+                .text(`Category: ${part.category}`, 70, yPos + 30)
+                .text(`Price: ${part.price}`, 70, yPos + 45)
                 .text(`Stock: ${part.stock_quantity}`, 70, yPos + 60)
                 .text(`Min Stock: ${part.minimum_stock_level}`, 70, yPos + 75)
-                .text(`Supplier: ${part.supplier_name || 'N/A'}`, 70, yPos + 90);
+                .text(`Supplier: ${part.supplier_name }`, 70, yPos + 90);
 
             yPos += 120;
-
             doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
-            yPos += 10;
+            yPos += 15;
+            itemsOnPage++;
         });
-
-        return yPos;
     }
 
     static generateAppointmentsContent(doc, appointments, startY) {
         let yPos = startY;
+        let itemsOnPage = 0;
 
         appointments.forEach((appointment, index) => {
-            if (yPos > 650) {
+            //pagina noua dupa 3 afisari
+            if (itemsOnPage === 3) {
                 doc.addPage();
                 yPos = 50;
+                itemsOnPage = 0;
             }
 
+            //afisam programarea
             doc.fontSize(14).text(`${index + 1}. Appointment #${appointment.id}`, 50, yPos);
             yPos += 20;
 
@@ -121,21 +126,19 @@ class PDFGenerator {
                 : 'N/A';
 
             doc.fontSize(10)
-                .text(`Customer: ${customerName || 'N/A'}`, 70, yPos)
-                .text(`Email: ${appointment.user_email || 'N/A'}`, 70, yPos + 15)
+                .text(`Customer: ${customerName }`, 70, yPos)
+                .text(`Email: ${appointment.user_email }`, 70, yPos + 15)
                 .text(`Vehicle: ${vehicleInfo}`, 70, yPos + 30)
                 .text(`Date: ${new Date(appointment.appointment_date).toLocaleString()}`, 70, yPos + 45)
                 .text(`Status: ${appointment.status}`, 70, yPos + 60)
                 .text(`Problem: ${appointment.problem_description}`, 70, yPos + 75)
-                .text(`Estimated Price: $${appointment.estimated_price || 'TBD'}`, 70, yPos + 90);
+                .text(`Estimated Price: ${appointment.estimated_price || 'not yet'}`, 70, yPos + 90);
 
             yPos += 120;
-
             doc.moveTo(50, yPos).lineTo(550, yPos).stroke();
-            yPos += 10;
+            yPos += 15;
+            itemsOnPage++;
         });
-
-        return yPos;
     }
 }
 
