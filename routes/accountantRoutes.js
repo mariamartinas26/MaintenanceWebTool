@@ -59,9 +59,9 @@ const accountantRoutes = async (req, res) => {
             return await parseBodyAndExecute(req, res, ImportExportController.importData);
         }
 
-        if (path === '/api/accountant/export' && method === 'GET') {
+        if (path === '/api/accountant/export' && method === 'POST') {
             securePath.setSecurityHeaders(res);
-            return await ImportExportController.exportData(req, res);
+            return await parseBodyAndExecute(req, res, ImportExportController.exportData);
         }
         return securePath.sendJSON(res, 404, {
             success: false,
@@ -78,7 +78,7 @@ const accountantRoutes = async (req, res) => {
         }
     }
 };
-//citeste si parseaza body ul requestului si il trimite la controller
+//citeste si parseaza body ul requestului si il trimite la controller la importData()
 const parseBodyAndExecute = (req, res, controllerFunction) => {
     return new Promise((resolve) => {
         securePath.processRequestBody(req, async (error, sanitizedBody) => {

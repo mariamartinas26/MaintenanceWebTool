@@ -276,12 +276,12 @@ class ImportExportController {
                 });
             }
             //supplier/parts/appointments+formatul de export
-            const {dataType, format} = req.query;
+            const {dataType, format} = req.body;
 
             if (!dataType || !format) {
                 return ImportExportController.sendJSON(res, 400, {
                     success: false,
-                    message: 'Missing required parameters: dataType, format'
+                    message: 'Missing required fields: dataType, format'
                 });
             }
             const allowedDataTypes = ['suppliers', 'parts', 'appointments'];
@@ -314,11 +314,13 @@ class ImportExportController {
             const filename = `${dataType}_export_${timestamp}`;
 
             if (format === 'json') {
-                ImportExportController.sendJSON(res, 200, {
-                    success: true,
-                    data: data,
-                    filename: `${filename}.json`
+                const jsonData = JSON.stringify(data, null, 2);
+                res.writeHead(200, {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Content-Disposition': `attachment; filename="${filename}.json"`,
+                    'Content-Length': Buffer.byteLength(jsonData, 'utf8')
                 });
+                res.end(jsonData);
             } else if (format === 'csv') {
                 const csvData = ImportExportController.convertToCSV(data, dataType);
                 res.writeHead(200, {

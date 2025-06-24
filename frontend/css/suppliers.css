@@ -11,27 +11,14 @@ body {
     line-height: 1.6;
 }
 
-.tabs-header .tab,
-.tab-button,
-.nav-tab,
-.btn,
-button,
-.add-btn,
-.new-order-btn {
+.btn, button {
     font-family: 'Poppins', sans-serif;
     font-weight: 500;
 }
 
-h1, h2, h3, h4, h5, h6,
-.page-title,
-.section-title {
+h1, h2, h3, h4, h5, h6 {
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-}
-
-.dashboard-container {
-    display: flex;
-    min-height: 100vh;
 }
 
 .main-content {
@@ -64,6 +51,7 @@ h1, h2, h3, h4, h5, h6,
     background-color: #101c5a;
     color: white;
 }
+
 .tab-content {
     display: none;
 }
@@ -98,7 +86,7 @@ h1, h2, h3, h4, h5, h6,
 
 .suppliers-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
 }
 
@@ -122,23 +110,6 @@ h1, h2, h3, h4, h5, h6,
     margin-bottom: 5px;
 }
 
-.supplier-specialization {
-    color: #6c757d;
-    font-size: 14px;
-    margin-bottom: 10px;
-}
-
-.supplier-rating {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
-}
-
-.rating-stars {
-    color: #ffc107;
-}
-
 .supplier-details {
     margin-bottom: 15px;
 }
@@ -150,46 +121,9 @@ h1, h2, h3, h4, h5, h6,
     font-size: 14px;
 }
 
-.supplier-detail .icon {
-    margin-right: 8px;
-    width: 16px;
-}
-
 .supplier-actions {
     display: flex;
     gap: 10px;
-}
-
-.part-select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 14px;
-    background-color: white;
-    cursor: pointer;
-}
-
-.part-select:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.unit-price[readonly] {
-    background-color: #f8f9fa;
-    cursor: not-allowed;
-}
-
-.form-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.form-row .form-group {
-    flex: 1;
 }
 
 .orders-section {
@@ -201,7 +135,7 @@ h1, h2, h3, h4, h5, h6,
 
 .orders-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 20px;
 }
 
@@ -232,25 +166,10 @@ h1, h2, h3, h4, h5, h6,
     text-transform: uppercase;
 }
 
-.status-placed {
-    background-color: #17a2b8;
-    color: white;
-}
-
-.status-confirmed {
-    background-color: #4ecdc4;
-    color: white;
-}
-
-.status-shipped {
-    background-color: #ffc107;
-    color: white;
-}
-
-.status-delivered {
-    background-color: #28a745;
-    color: white;
-}
+.status-ordered { background-color: #17a2b8; color: white; }
+.status-confirmed { background-color: #4ecdc4; color: white; }
+.status-in_transit { background-color: #ffc107; color: white; }
+.status-delivered { background-color: #28a745; color: white; }
 
 .order-supplier {
     font-size: 14px;
@@ -267,13 +186,6 @@ h1, h2, h3, h4, h5, h6,
     border-radius: 4px;
     padding: 15px;
     margin-bottom: 15px;
-}
-
-.order-item-display {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-    font-size: 14px;
 }
 
 .order-total {
@@ -353,11 +265,7 @@ label {
     font-size: 14px;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="number"],
-select,
-textarea {
+input[type="text"], input[type="email"], input[type="number"], select, textarea {
     width: 100%;
     padding: 10px 15px;
     border: 1px solid #e9ecef;
@@ -366,11 +274,7 @@ textarea {
     font-size: 14px;
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="number"]:focus,
-select:focus,
-textarea:focus {
+input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: #101c5a;
 }
@@ -409,11 +313,6 @@ textarea {
     color: #333333;
 }
 
-.danger-btn {
-    background-color: #dc3545;
-    color: white;
-}
-
 .btn-sm {
     padding: 6px 12px;
     font-size: 12px;
@@ -433,26 +332,11 @@ textarea {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     cursor: pointer;
-    position: relative;
 }
 
 .status-option.selected {
     background-color: #e3f2fd;
     border-color: #101c5a;
-}
-
-.status-option.disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    background-color: #f8f9fa;
-}
-
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 15px;
-    flex-shrink: 0;
 }
 
 .status-info {
@@ -470,70 +354,6 @@ textarea {
     color: #6c757d;
 }
 
-.current-badge {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background-color: #4ecdc4;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-badge.status-placed {
-    background-color: rgba(23, 162, 184, 0.1);
-    color: #17a2b8;
-}
-
-.status-badge.status-confirmed {
-    background-color: rgba(78, 205, 196, 0.1);
-    color: #4ecdc4;
-}
-
-.status-badge.status-shipped {
-    background-color: rgba(255, 193, 7, 0.1);
-    color: #ffc107;
-}
-
-.status-badge.status-delivered {
-    background-color: rgba(40, 167, 69, 0.1);
-    color: #28a745;
-}
-
-#deliveryDateGroup {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-}
-
-#deliveryDateGroup label {
-    color: #28a745;
-    font-weight: 600;
-}
-
-.order-summary {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 4px;
-    margin-top: 20px;
-}
-
-.total-amount {
-    text-align: right;
-    font-size: 18px;
-}
-
 @media (max-width: 1024px) {
     .main-content {
         margin-left: 80px;
@@ -541,10 +361,6 @@ textarea {
 }
 
 @media (max-width: 768px) {
-    .mobile-menu-toggle {
-        display: block;
-    }
-
     .main-content {
         margin-left: 0;
         padding: 16px;
@@ -561,8 +377,7 @@ textarea {
         justify-content: center;
     }
 
-    .suppliers-list,
-    .orders-list {
+    .suppliers-list, .orders-list {
         grid-template-columns: 1fr;
     }
 
@@ -576,8 +391,7 @@ textarea {
     }
 
     .form-row {
-        flex-direction: column;
-        gap: 0;
+        grid-template-columns: 1fr;
     }
 
     .form-actions {
@@ -589,8 +403,7 @@ textarea {
         max-width: calc(100% - 20px);
     }
 
-    .modal-header,
-    .modal-body {
+    .modal-header, .modal-body {
         padding: 16px;
     }
 }
@@ -601,13 +414,11 @@ textarea {
         padding-top: 56px;
     }
 
-    .suppliers-grid,
-    .orders-section {
+    .suppliers-grid, .orders-section {
         padding: 16px;
     }
 
-    .supplier-card,
-    .order-card {
+    .supplier-card, .order-card {
         padding: 16px;
     }
 

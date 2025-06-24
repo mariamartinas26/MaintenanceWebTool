@@ -174,6 +174,7 @@ class AccountRequestController {
                 return sendBadRequest(res, 'Invalid request ID');
             }
 
+            const { manager_message } = req.body;
             if (!manager_message) {
                 return sendBadRequest(res, 'Manager message is required and must be at least 5 characters');
             }

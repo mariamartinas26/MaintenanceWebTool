@@ -12,27 +12,8 @@ body {
     background-color: #f8f9fa;
     line-height: 1.6;
 }
-#suppliers-back-btn,
-#import-export-back-btn {
-    display: inline-block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    background: #101c5a !important;
-    color: white !important;
-    border: 1px solid #101c5a !important;
-    padding: 10px 20px !important;
-    border-radius: 6px !important;
-    font-family: 'Poppins', sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    cursor: pointer !important;
-    text-decoration: none !important;
-    min-width: 80px !important;
-    text-align: center !important;
-}
 
-.main-content,
-.manager-container {
+.main-content, .manager-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 30px 20px;
@@ -64,9 +45,7 @@ body {
     font-weight: 600;
 }
 
-.btn,
-button,
-.action-btn {
+.btn, button {
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
@@ -89,6 +68,16 @@ button,
     border: 2px solid #101c5a;
 }
 
+#suppliers-back-btn, #import-export-back-btn {
+    background: #101c5a !important;
+    color: white !important;
+    border: 1px solid #101c5a !important;
+    padding: 10px 20px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    min-width: 80px !important;
+}
+
 .request-card {
     background: white;
     border: 1px solid #e9ecef;
@@ -96,7 +85,6 @@ button,
     padding: 25px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-
 
 .request-header {
     margin-bottom: 20px;
@@ -122,7 +110,7 @@ button,
 
 .requests-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 25px;
 }
 
@@ -131,96 +119,6 @@ button,
     border-radius: 8px;
     padding: 30px;
     border: 1px solid #e9ecef;
-}
-
-.dashboard-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 30px;
-    margin-bottom: 30px;
-}
-
-.dashboard-card {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-
-.dashboard-card h2 {
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #101c5a;
-}
-
-.dashboard-card p {
-    color: #6c757d;
-    margin-bottom: 25px;
-    font-size: 15px;
-}
-
-.card-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: flex-end;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 25px 30px;
-    border-bottom: 1px solid #e9ecef;
-    background: #101c5a;
-    color: white;
-    border-radius: 12px 12px 0 0;
-}
-
-.modal-header h2 {
-    font-size: 20px;
-    font-weight: 600;
-}
-
-.close-modal {
-    font-size: 24px;
-    cursor: pointer;
-    color: white;
-    background: none;
-    border: none;
-    padding: 5px;
-    border-radius: 4px;
-
-}
-
-
-.modal-body {
-    padding: 30px;
 }
 
 .form-group {
@@ -234,9 +132,7 @@ button,
     color: #333;
 }
 
-.form-group input,
-.form-group textarea,
-.form-group select {
+.form-group input, .form-group textarea, .form-group select {
     width: 100%;
     padding: 12px 15px;
     border: 1px solid #e9ecef;
@@ -244,7 +140,6 @@ button,
     font-family: 'Poppins', sans-serif;
     font-size: 14px;
 }
-
 
 .form-group textarea {
     resize: vertical;
@@ -257,17 +152,7 @@ button,
     cursor: pointer;
 }
 
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #e9ecef;
-}
-
-.import-section,
-.export-section {
+.import-section, .export-section {
     margin-bottom: 40px;
     padding: 25px;
     border: 1px solid #e9ecef;
@@ -275,16 +160,14 @@ button,
     background: #f8f9fa;
 }
 
-.import-section h3,
-.export-section h3 {
+.import-section h3, .export-section h3 {
     font-size: 18px;
     font-weight: 600;
     margin-bottom: 20px;
     color: #101c5a;
 }
 
-.import-form,
-.export-form {
+.import-form, .export-form {
     display: grid;
     gap: 20px;
     align-items: end;
@@ -310,7 +193,6 @@ button,
     margin-bottom: 15px;
 }
 
-
 .supplier-info h3 {
     font-size: 18px;
     font-weight: 600;
@@ -325,60 +207,47 @@ button,
 }
 
 .section-header {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 30px !important;
-    padding: 20px !important;
-    background: #f8f9fa !important;
-    border-radius: 8px !important;
-    border-bottom: 2px solid #e9ecef !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-bottom: 2px solid #e9ecef;
 }
 
 .section-header h2 {
     font-size: 24px;
     font-weight: 600;
     color: #101c5a;
-    margin: 0 !important;
+    margin: 0;
 }
 
 .section-actions {
-    display: flex !important;
+    display: flex;
     gap: 10px;
 }
 
 #suppliers-section {
-    background: white !important;
-    border-radius: 8px !important;
-    padding: 30px !important;
-    border: 1px solid #e9ecef !important;
-    margin-bottom: 30px !important;
-    display: block !important;
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 30px;
 }
 
 #suppliers-section[style*="display: none"] {
     display: none !important;
 }
 
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #6c757d;
-}
-
-.empty-state h3 {
-    font-size: 20px;
-    margin-bottom: 10px;
-}
-
-.empty-state p {
-    font-size: 16px;
-}
-
 @media (max-width: 768px) {
-    .manager-container,
-    .main-content {
-        padding: 20px 15px;
+    .main-content, .manager-container {
+        padding: 15px;
+    }
+
+    .manager-header {
+        padding: 20px;
     }
 
     .header-content {
@@ -391,7 +260,11 @@ button,
         gap: 15px;
     }
 
-    .dashboard-cards {
+    .header-title h1 {
+        font-size: 22px;
+    }
+
+    .requests-grid {
         grid-template-columns: 1fr;
         gap: 20px;
     }
@@ -399,48 +272,61 @@ button,
     .section-header {
         flex-direction: column;
         gap: 15px;
-        align-items: stretch;
+        text-align: center;
+        padding: 15px;
     }
 
-    .section-actions {
-        justify-content: center;
-    }
-
-    .modal-content {
-        margin: 10px;
-        width: calc(100% - 20px);
-    }
-
-    .modal-header,
-    .modal-body {
-        padding: 20px;
-    }
-
-    .import-form,
-    .export-form {
+    .import-form, .export-form {
         grid-template-columns: 1fr;
     }
-    .card-actions {
-        flex-direction: column;
+
+    .request-card {
+        padding: 20px;
     }
 
     .btn {
         width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .request-actions {
+        flex-direction: column;
     }
 }
 
 @media (max-width: 480px) {
+    .main-content, .manager-container {
+        padding: 10px;
+    }
+
+    .manager-header {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .header-title h1 {
+        font-size: 18px;
+    }
+
     .requests-grid {
-        grid-template-columns: 1fr;
         gap: 15px;
     }
 
-    .form-actions .btn {
-        width: 100%;
-        margin-bottom: 10px;
+    .request-card {
+        padding: 15px;
     }
 
-    .form-actions .btn:last-child {
-        margin-bottom: 0;
+    .import-section, .export-section {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .section-header {
+        padding: 10px;
+    }
+
+    .btn {
+        font-size: 14px;
+        padding: 10px 16px;
     }
 }

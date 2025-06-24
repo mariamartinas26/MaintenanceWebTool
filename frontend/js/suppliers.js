@@ -1,4 +1,5 @@
-//aici ne ocupam acum doar sa vedem ce orders avem si sa putem adauga unele noi (in admin) in accountant facem partea de get suppliers
+//aici ne ocupam acum doar sa vedem ce orders avem si sa putem adauga unele noi (in admin)
+//in accountant facem partea de get suppliers
 class OrderManager {
     constructor() {
         this.suppliers = [];
@@ -81,7 +82,7 @@ class OrderManager {
         const orderForm = document.getElementById('orderForm');
         if (orderForm) {
             orderForm.addEventListener('submit', (e) => {
-                e.preventDefault();
+                e.preventDefault(); //sa nu dam refresh
                 this.saveOrder();
             });
         }
@@ -101,7 +102,7 @@ class OrderManager {
             this.loadPartsFromAPI(),
             this.loadOrdersFromAPI()
         ]);
-        this.checkForPreselectedPart();
+        this.checkForPreselectedPart(); //verific daca am deja o piesa selectata
     }
 
     async loadSuppliersFromAPI() {
@@ -163,7 +164,7 @@ class OrderManager {
         const result = await response.json();
         if (result.success) {
             this.orders = result.data.map(order => this.sanitizeObject(order));
-            this.loadOrders();
+            this.loadOrders(); //afisam comenzile
         }
     }
 
@@ -191,6 +192,7 @@ class OrderManager {
     }
 
     async updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
+        //creez obiectul cu noul status
         const body = {status: this.sanitizeInput(status)};
         if (actualDeliveryDate) {
             body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
@@ -229,7 +231,7 @@ class OrderManager {
         if (!supplierId) {
             return;
         }
-
+        //furnizorul selectat din dropdown
         const supplier = this.suppliers.find(s => s.id === parseInt(supplierId));
 
         const orderItems = [];
@@ -238,6 +240,7 @@ class OrderManager {
             const quantity = parseInt(item.querySelector('.quantity')?.value);
             const unitPrice = parseFloat(item.querySelector('.unit-price')?.value);
 
+            //creez cate un obiect pentru fiecare produs din comanda
             if (partSelect?.value && quantity && unitPrice) {
                 const selectedPart = this.parts.find(p => p.id === parseInt(partSelect.value));
                 if (selectedPart) {
@@ -272,21 +275,22 @@ class OrderManager {
         const ordersList = document.getElementById('orders-list');
         if (!ordersList) return;
 
-        // Clear existing content safely
         while (ordersList.firstChild) {
             ordersList.removeChild(ordersList.firstChild);
         }
 
+        //daca nu avem orders =>empty state
         if (this.orders.length === 0) {
             const emptyState = this.createSafeElement('div', 'empty-state');
             const h3 = this.createSafeElement('h3', '', 'No orders found');
-            const p = this.createSafeElement('p', '', 'No purchase orders have been placed yet');
+            const p = this.createSafeElement('p', '', 'No orders have been placed yet');
             emptyState.appendChild(h3);
             emptyState.appendChild(p);
             ordersList.appendChild(emptyState);
             return;
         }
 
+        //pt fiecare comanda creaza card
         this.orders.forEach(order => {
             const orderCard = this.createOrderCard(order);
             ordersList.appendChild(orderCard);
@@ -294,12 +298,12 @@ class OrderManager {
     }
 
     createOrderCard(order) {
-        const totalAmount = parseFloat(order.total_amount || 0);
+        const totalAmount = parseFloat(order.total_amount);
 
         let productName = 'Order Items';
         let quantity = 1;
 
-        // Find product name and quantity safely
+        //numele profusului
         for (const key of Object.keys(order)) {
             const value = order[key];
             if (typeof value === 'string' && value.length > 2 &&
@@ -310,7 +314,7 @@ class OrderManager {
                 break;
             }
         }
-
+        //cantitatea
         for (const key of Object.keys(order)) {
             const value = order[key];
             if (typeof value === 'number' && value > 0 && value < 1000 && !key.includes('amount') && !key.includes('id')) {
@@ -318,12 +322,12 @@ class OrderManager {
                 break;
             }
         }
-
+        //pretul per bucata
         const unitPrice = quantity > 0 ? totalAmount / quantity : totalAmount;
 
         const orderCard = this.createSafeElement('div', `order-card ${order.status || ''}`);
 
-        // Order header
+        //header comanda
         const orderHeader = this.createSafeElement('div', 'order-header');
         const orderNumber = this.createSafeElement('h3', 'order-number', `ORDER #${order.id || ''}`);
         const orderStatus = this.createSafeElement('span', `order-status status-${order.status || 'ordered'}`, (order.status || 'ordered').toUpperCase());
@@ -331,10 +335,10 @@ class OrderManager {
         orderHeader.appendChild(orderNumber);
         orderHeader.appendChild(orderStatus);
 
-        // Order supplier
-        const orderSupplier = this.createSafeElement('p', 'order-supplier', `Supplier: ${order.supplier_name || 'N/A'}`);
+        //order supplier
+        const orderSupplier = this.createSafeElement('p', 'order-supplier', `Supplier: ${order.supplier_name}`);
 
-        // Order items
+        //order items
         const orderItems = this.createSafeElement('div', 'order-items');
         const orderItemDisplay = this.createSafeElement('div', 'order-item-display');
 
@@ -345,18 +349,19 @@ class OrderManager {
         orderItemDisplay.appendChild(itemPrice);
         orderItems.appendChild(orderItemDisplay);
 
-        // Order total
+        //order total
         const orderTotal = this.createSafeElement('div', 'order-total', `Total: RON ${totalAmount.toFixed(2)}`);
 
-        // Order dates
+        //orddar date
         const orderDate = this.createSafeElement('div', 'order-date', `Ordered: ${this.formatDate(order.order_date)}`);
 
         let deliveryDate = null;
+        //expected delivery
         if (order.expected_delivery_date) {
             deliveryDate = this.createSafeElement('div', 'order-date', `Delivery: ${this.formatDate(order.expected_delivery_date)}`);
         }
 
-        // Order actions
+        //updatare status
         const orderActions = this.createSafeElement('div', 'order-actions');
 
         if (order.status !== 'delivered') {
@@ -365,7 +370,6 @@ class OrderManager {
             orderActions.appendChild(updateBtn);
         }
 
-        // Assemble the card
         orderCard.appendChild(orderHeader);
         orderCard.appendChild(orderSupplier);
         orderCard.appendChild(orderItems);
@@ -388,30 +392,29 @@ class OrderManager {
         if (!this.parts?.length) {
             return;
         }
-
-        // Clear and populate supplier select safely
         while (supplierSelect.firstChild) {
             supplierSelect.removeChild(supplierSelect.firstChild);
         }
 
+        //dropdown furnizori
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         this.safeSetText(defaultOption, 'Select Supplier');
         supplierSelect.appendChild(defaultOption);
-
+        //populeaza dropdown
         this.suppliers.forEach(supplier => {
             const option = document.createElement('option');
             option.value = String(supplier.id);
             this.safeSetText(option, supplier.company_name || supplier.name || '');
             supplierSelect.appendChild(option);
         });
-
+        //reseteaza formularul
         const orderForm = document.getElementById('orderForm');
         if (orderForm) orderForm.reset();
 
         const orderItems = document.getElementById('orderItems');
         if (orderItems) {
-            this.populateOrderItems(orderItems);
+            this.populateOrderItems(orderItems);//dropdown cu piese
         }
 
         this.calculateOrderTotal();
@@ -419,11 +422,11 @@ class OrderManager {
     }
 
     populateOrderItems(container) {
-        // Clear existing content safely
         while (container.firstChild) {
             container.removeChild(container.firstChild);
         }
 
+        //verifica daca avem piese disponibile
         if (!this.parts?.length) {
             const orderItem = this.createSafeElement('div', 'order-item');
             const p = this.createSafeElement('p', '', 'No parts available');
@@ -440,7 +443,7 @@ class OrderManager {
         const orderItem = this.createSafeElement('div', 'order-item');
         const formRow = this.createSafeElement('div', 'form-row');
 
-        // Part select group
+        //dropdown selectare piesa
         const partGroup = this.createSafeElement('div', 'form-group');
         const partSelect = document.createElement('select');
         partSelect.className = 'part-select';
@@ -451,7 +454,7 @@ class OrderManager {
         defaultPartOption.value = '';
         this.safeSetText(defaultPartOption, 'Select Part');
         partSelect.appendChild(defaultPartOption);
-
+        //populeaza cu piese disponibile
         this.parts.forEach(part => {
             const option = document.createElement('option');
             option.value = String(part.id);
@@ -462,7 +465,7 @@ class OrderManager {
 
         partGroup.appendChild(partSelect);
 
-        // Quantity group
+        //cantitatea
         const quantityGroup = this.createSafeElement('div', 'form-group');
         const quantityInput = document.createElement('input');
         quantityInput.type = 'number';
@@ -473,7 +476,6 @@ class OrderManager {
         quantityInput.onchange = () => this.calculateOrderTotal();
         quantityGroup.appendChild(quantityInput);
 
-        // Unit price group
         const priceGroup = this.createSafeElement('div', 'form-group');
         const priceInput = document.createElement('input');
         priceInput.type = 'number';
@@ -482,10 +484,10 @@ class OrderManager {
         priceInput.step = '0.01';
         priceInput.min = '0';
         priceInput.required = true;
-        priceInput.readOnly = true;
+        priceInput.readOnly = true; //nu se poate modifica pretul
         priceGroup.appendChild(priceInput);
 
-        // Remove button
+        //buton remove
         const removeBtn = this.createSafeElement('button', 'btn danger-btn', 'Remove');
         removeBtn.type = 'button';
         removeBtn.onclick = () => this.removeOrderItem(removeBtn);
@@ -504,6 +506,7 @@ class OrderManager {
         if (modal) modal.style.display = 'none';
     }
 
+    //mai adaugam o piesa la order
     addOrderItem() {
         const container = document.getElementById('orderItems');
         if (!container) return;
@@ -538,10 +541,11 @@ class OrderManager {
 
     updatePartPrice(selectElement) {
         const selectedOption = selectElement.options[selectElement.selectedIndex];
-        const price = selectedOption.getAttribute('data-price');
+        const price = selectedOption.getAttribute('data-price');//extrag pretul din optiunea selectata
         const orderItem = selectElement.closest('.order-item');
         const priceInput = orderItem.querySelector('.unit-price');
 
+        //actualizeaza pretul si recalculeaza totalul
         if (price && priceInput) {
             priceInput.value = parseFloat(price).toFixed(2);
             this.calculateOrderTotal();

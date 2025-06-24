@@ -18,7 +18,6 @@ class AccountantDashboard {
     }
 
     bindEvents() {
-        // Navigation buttons
         const logoutBtn = document.getElementById('logout-btn');
         const suppliersViewBtn = document.getElementById('suppliers-view-btn');
         const importExportBtn = document.getElementById('import-export-manage-btn');
@@ -68,12 +67,14 @@ class AccountantDashboard {
         if (importExportSection) importExportSection.style.display = 'none';
     }
 
+    //pagina principala
     showMainDashboard() {
         this.hideAllSections();
         const mainDashboard = document.getElementById('main-dashboard');
         if (mainDashboard) mainDashboard.style.display = 'block';
     }
 
+    //lista de furnizori
     showSuppliersSection() {
         this.hideAllSections();
         const suppliersSection = document.getElementById('suppliers-section');
@@ -87,6 +88,7 @@ class AccountantDashboard {
         this.showMainDashboard();
     }
 
+    //sectiunea import/export
     showImportExportSection() {
         this.hideAllSections();
         const importExportSection = document.getElementById('import-export-section');
@@ -101,6 +103,7 @@ class AccountantDashboard {
 
     async loadSuppliersFromAPI() {
         try {
+            //trimitem request GET la endpointul pt suppliers
             const response = await fetch('/api/accountant/suppliers', {
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
@@ -121,7 +124,7 @@ class AccountantDashboard {
 
             if (result.success) {
                 this.suppliers = result.data || [];
-                this.renderSuppliers();
+                this.displaySuppliers();
             } else {
                 throw new Error(result.message || 'Failed to load suppliers');
             }
@@ -131,7 +134,7 @@ class AccountantDashboard {
     }
 
     //afisam lista de suppliers
-    renderSuppliers() {
+    displaySuppliers() {
         const suppliersList = document.getElementById('suppliers-list');
 
         if (this.suppliers.length === 0) {
@@ -151,39 +154,39 @@ class AccountantDashboard {
 
     createSupplierCard(supplier) {
         const supplierItem = document.createElement('div');
-        supplierItem.className = 'supplier-item';
+        supplierItem.className = 'supplier-item'; //pt css
 
         const supplierInfo = document.createElement('div');
         supplierInfo.className = 'supplier-info';
 
-        // Company name
+        //name
         const h3 = document.createElement('h3');
         h3.textContent = supplier.company_name;
         supplierInfo.appendChild(h3);
 
-        // Contact person
+        //contact person
         const contactP = document.createElement('p');
         contactP.textContent = `Contact: ${supplier.contact_person}`;
         supplierInfo.appendChild(contactP);
 
-        // Phone
+        //phone
         const phoneP = document.createElement('p');
-        phoneP.textContent = `Phone: ${supplier.phone }`;
+        phoneP.textContent = `Phone: ${supplier.phone}`;
         supplierInfo.appendChild(phoneP);
 
-        // Email
+        //email
         const emailP = document.createElement('p');
-        emailP.textContent = `Email: ${supplier.email }`;
+        emailP.textContent = `Email: ${supplier.email}`;
         supplierInfo.appendChild(emailP);
 
-        // Delivery time
+        //delivery time
         const deliveryP = document.createElement('p');
-        deliveryP.textContent = `Delivery: ${supplier.delivery_time_days } days`;
+        deliveryP.textContent = `Delivery: ${supplier.delivery_time_days} days`;
         supplierInfo.appendChild(deliveryP);
 
-        // Address
+        //adress
         const addressP = document.createElement('p');
-        addressP.textContent = `Address: ${supplier.address }`;
+        addressP.textContent = `Address: ${supplier.address}`;
         supplierInfo.appendChild(addressP);
 
         supplierItem.appendChild(supplierInfo);
@@ -191,9 +194,10 @@ class AccountantDashboard {
     }
 
     async processImport() {
-        const dataType = document.getElementById('importDataType')?.value;
-        const format = document.getElementById('importFormat')?.value;
-        const fileInput = document.getElementById('importFile');
+        //colectam datele din interfata
+        const dataType = document.getElementById('importDataType')?.value; //suppliers,parts,appointments
+        const format = document.getElementById('importFormat')?.value; //csv,json
+        const fileInput = document.getElementById('importFile'); //fisierul pe care vrem sa il importam
 
         if (!dataType || !format || !fileInput?.files[0]) {
             alert('Please select data type, format and file');
@@ -204,13 +208,13 @@ class AccountantDashboard {
             const file = fileInput.files[0];
             const fileContent = await this.readFile(file);
 
-            // Procesează conținutul în funcție de format
+            //procesare continut fisier
             let data;
             if (format === 'json') {
-                // Pentru JSON, parsează string-ul înainte să-l trimiți
+                //parseaza json in obiect
                 data = JSON.parse(fileContent);
             } else {
-                // Pentru CSV, trimite string-ul direct
+                //trimitem continutul ca string, parsarea csv se face in backend
                 data = fileContent;
             }
 
@@ -220,10 +224,10 @@ class AccountantDashboard {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
+                body: JSON.stringify({ //convertesc din obiect in string
                     dataType: dataType,
                     format: format,
-                    data: data  // Acum data e corect formatată
+                    data: data
                 })
             });
 
@@ -235,28 +239,12 @@ class AccountantDashboard {
             const result = await response.json();
 
             if (result.success) {
-                // Reset form
+                //resetez formularul
                 document.getElementById('importDataType').value = '';
                 document.getElementById('importFormat').value = '';
                 document.getElementById('importFile').value = '';
 
-                // Folosește structura corectă din răspuns
-                const imported = result.details?.imported || 0;
-                const skipped = result.details?.skipped || 0;
-                const errors = result.details?.errors || [];
-
-                if (errors.length > 0) {
-                    let errorMsg = `Import completed!\nImported: ${imported}\nSkipped: ${skipped}\n\nErrors:\n`;
-                    errors.slice(0, 3).forEach(error => {
-                        errorMsg += `Row ${error.row}: ${error.error}\n`;
-                    });
-                    if (errors.length > 3) {
-                        errorMsg += `... and ${errors.length - 3} more errors`;
-                    }
-                    alert(errorMsg);
-                } else {
-                    alert(`Import successful!\nImported: ${imported} records`);
-                }
+                alert(`Import successful!`);
             } else {
                 throw new Error(result.message || 'Failed to import data');
             }
@@ -266,8 +254,8 @@ class AccountantDashboard {
     }
 
     async processExport() {
-        const dataType = document.getElementById('exportDataType')?.value;
-        const format = document.getElementById('exportFormat')?.value;
+        const dataType = document.getElementById('exportDataType')?.value; //suppliers,parts,appointments
+        const format = document.getElementById('exportFormat')?.value;//json,csv,pdf
 
         if (!dataType || !format) {
             alert('Please select data type and format');
@@ -275,11 +263,16 @@ class AccountantDashboard {
         }
 
         try {
-            const response = await fetch(`/api/accountant/export?dataType=${encodeURIComponent(dataType)}&format=${encodeURIComponent(format)}`, {
+            const response = await fetch('/api/accountant/export', {
+                method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({
+                    dataType: dataType,
+                    format: format
+                })
             });
 
             if (response.status === 401) {
@@ -289,26 +282,17 @@ class AccountantDashboard {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Export failed: ${response.status} - ${errorText}`);
+                throw new Error(`Export failed`);
             }
 
-            if (format === 'json') {
-                const result = await response.json();
-                if (result.success) {
-                    const dataStr = JSON.stringify(result.data, null, 2);
-                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-                    this.downloadBlob(dataBlob, `${dataType}_export_${this.getCurrentDate()}.json`);
-                } else {
-                    throw new Error(result.message || 'Failed to export data');
-                }
-            } else {
-                const blob = await response.blob();
-                this.downloadBlob(blob, `${dataType}_export_${this.getCurrentDate()}.${format}`);
-            }
+            const blob = await response.blob();
+            const filename = `${dataType}_export_${this.getCurrentDate()}.${format}`;
+            this.downloadBlob(blob, filename);
 
-            // Reset form
+            //resetare formular
             document.getElementById('exportDataType').value = '';
             document.getElementById('exportFormat').value = '';
+
         } catch (error) {
             alert('Export failed: ' + error.message);
         }

@@ -32,7 +32,7 @@ class ManagerDashboard {
             return;
         }
 
-        if (!['admin', 'manager'].includes(user.role)) {
+        if (!['manager'].includes(user.role)) {
             window.location.href = '/login';
             return;
         }
@@ -76,7 +76,7 @@ class ManagerDashboard {
         return sanitized;
     }
 
-    createSafeElement(tag, className = '', textContent = '') {
+    createElement(tag, className = '', textContent = '') {
         const element = document.createElement(tag);
         if (className) {
             element.className = this.sanitizeInput(className);
@@ -115,17 +115,36 @@ class ManagerDashboard {
 
             const data = await response.json();
 
-            // Păstrează datele originale, sanitizează doar la afișare
-            this.allRequests = data.requests || data.data || [];
+            this.allRequests = data.requests; //rapsunsul de la backend
 
-            this.renderRequests();
-            this.updateStats();
-
+            this.displayRequests();
+            this.updateStats(); //statistici nr cereri pending,approved,rejected
         } catch (error) {
-            console.error('Failed to load requests:', error);
             this.allRequests = [];
-            this.renderRequests();
+            this.displayRequests();
         }
+    }
+
+    displayRequests() {
+        while (this.requestsContainer.firstChild) {
+            this.requestsContainer.removeChild(this.requestsContainer.firstChild);
+        }
+        //cazul in care nu avem requests
+        if (this.allRequests.length === 0) {
+            const emptyState = this.createElement('div', 'empty-state');
+            const h3 = this.createElement('h3', '', 'No requests found');
+            const p = this.createElement('p', '', 'There are currently no registration requests');
+
+            emptyState.appendChild(h3);
+            emptyState.appendChild(p);
+            this.requestsContainer.appendChild(emptyState);
+            return;
+        }
+
+        this.allRequests.forEach((request, index) => {
+            const card = this.createRequestCard(request);
+            this.requestsContainer.appendChild(card);
+        });
     }
 
     setupEventListeners() {
@@ -142,74 +161,48 @@ class ManagerDashboard {
                 }
             });
         });
-
+        //daca da approve
         document.getElementById('approve-form').addEventListener('submit', (e) => {
-            e.preventDefault();
+            e.preventDefault(); //previne refresh ul paginii
             this.confirmApproval();
         });
-
+        //daca da reject
         document.getElementById('reject-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.confirmRejection();
         });
     }
 
-    renderRequests() {
-        // Clear existing content safely
-        while (this.requestsContainer.firstChild) {
-            this.requestsContainer.removeChild(this.requestsContainer.firstChild);
-        }
-
-        if (this.allRequests.length === 0) {
-            const emptyState = this.createSafeElement('div', 'empty-state');
-            const h3 = this.createSafeElement('h3', '', 'No requests found');
-            const p = this.createSafeElement('p', '', 'There are currently no registration requests to review.');
-
-            emptyState.appendChild(h3);
-            emptyState.appendChild(p);
-            this.requestsContainer.appendChild(emptyState);
-            return;
-        }
-
-        this.allRequests.forEach((request, index) => {
-            try {
-                const card = this.createRequestCard(request);
-                this.requestsContainer.appendChild(card);
-            } catch (error) {
-                console.error(`Error creating card ${index}:`, error);
-            }
-        });
-    }
 
     createRequestCard(request) {
-        const card = this.createSafeElement('div', 'request-card');
+        const card = this.createElement('div', 'request-card');
 
-        // Request header
-        const requestHeader = this.createSafeElement('div', 'request-header');
-        const requestInfo = this.createSafeElement('div', 'request-info');
+        //nume+email
+        const requestHeader = this.createElement('div', 'request-header');
+        const requestInfo = this.createElement('div', 'request-info');
 
-        const h4 = this.createSafeElement('h4', '', `${request.first_name || ''} ${request.last_name || ''}`);
-        const requestEmail = this.createSafeElement('div', 'request-email', request.email || '');
+        const h4 = this.createElement('h4', '', `${request.first_name || ''} ${request.last_name || ''}`);
+        const requestEmail = this.createElement('div', 'request-email', request.email || '');
 
         requestInfo.appendChild(h4);
         requestInfo.appendChild(requestEmail);
         requestHeader.appendChild(requestInfo);
 
-        // Request details
-        const requestDetails = this.createSafeElement('div', 'request-details');
+        //detaliile
+        const requestDetails = this.createElement('div', 'request-details');
 
-        // Phone detail row
-        const phoneRow = this.createSafeElement('div', 'detail-row');
-        const phoneLabel = this.createSafeElement('span', 'detail-label', 'Phone:');
-        const phoneValue = this.createSafeElement('span', 'detail-value', request.phone || 'N/A');
+        //phone nr details
+        const phoneRow = this.createElement('div', 'detail-row');
+        const phoneLabel = this.createElement('span', 'detail-label', 'Phone:');
+        const phoneValue = this.createElement('span', 'detail-value', request.phone);
         phoneRow.appendChild(phoneLabel);
         phoneRow.appendChild(phoneValue);
 
-        // Status detail row
-        const statusRow = this.createSafeElement('div', 'detail-row');
-        const statusLabel = this.createSafeElement('span', 'detail-label', 'Status: ');
-        const statusValueContainer = this.createSafeElement('span', 'detail-value');
-        const statusBadge = this.createSafeElement('span', `status-badge status-${request.status}`, request.status || '');
+        //status (pending,rejected,approved)
+        const statusRow = this.createElement('div', 'detail-row');
+        const statusLabel = this.createElement('span', 'detail-label', 'Status: ');
+        const statusValueContainer = this.createElement('span', 'detail-value');
+        const statusBadge = this.createElement('span', `status-badge status-${request.status}`, request.status || '');
         statusValueContainer.appendChild(statusBadge);
         statusRow.appendChild(statusLabel);
         statusRow.appendChild(statusValueContainer);
@@ -217,31 +210,32 @@ class ManagerDashboard {
         requestDetails.appendChild(phoneRow);
         requestDetails.appendChild(statusRow);
 
+        //rolul asignat de manager
         if (request.assigned_role) {
-            const roleRow = this.createSafeElement('div', 'detail-row');
-            const roleLabel = this.createSafeElement('span', 'detail-label', 'Assigned Role: ');
-            const roleValue = this.createSafeElement('span', 'detail-value', request.assigned_role);
+            const roleRow = this.createElement('div', 'detail-row');
+            const roleLabel = this.createElement('span', 'detail-label', 'Assigned Role: ');
+            const roleValue = this.createElement('span', 'detail-value', request.assigned_role);
             roleRow.appendChild(roleLabel);
             roleRow.appendChild(roleValue);
             requestDetails.appendChild(roleRow);
         }
 
-        // Request actions
-        const requestActions = this.createSafeElement('div', 'request-actions');
+        //view details
+        const requestActions = this.createElement('div', 'request-actions');
 
-        const viewBtn = this.createSafeElement('button', 'action-btn view-btn', 'View Details');
+        const viewBtn = this.createElement('button', 'action-btn view-btn', 'View Details');
         viewBtn.type = 'button';
         viewBtn.onclick = () => this.viewRequest(request.id);
         requestActions.appendChild(viewBtn);
 
         const isPending = request.status === 'pending';
         if (isPending) {
-            const approveBtn = this.createSafeElement('button', 'action-btn approve-btn', 'Approve');
+            const approveBtn = this.createElement('button', 'action-btn approve-btn', 'Approve');
             approveBtn.type = 'button';
             approveBtn.onclick = () => this.showApproveModal(request.id);
             requestActions.appendChild(approveBtn);
 
-            const rejectBtn = this.createSafeElement('button', 'action-btn reject-btn', 'Reject');
+            const rejectBtn = this.createElement('button', 'action-btn reject-btn', 'Reject');
             rejectBtn.type = 'button';
             rejectBtn.onclick = () => this.showRejectModal(request.id);
             requestActions.appendChild(rejectBtn);
@@ -254,6 +248,7 @@ class ManagerDashboard {
         return card;
     }
 
+    //nr cereri pending,approved,rejected
     updateStats() {
         const pending = this.allRequests.filter(r => r.status === 'pending').length;
         const approved = this.allRequests.filter(r => r.status === 'approved').length;
@@ -263,59 +258,50 @@ class ManagerDashboard {
         this.safeSetText(this.approvedCount, approved);
         this.safeSetText(this.rejectedCount, rejected);
     }
-
+    //modal detaliile despre request
     viewRequest(requestId) {
         const request = this.allRequests.find(r => r.id === requestId);
         if (!request) return;
 
         const modalBody = document.getElementById('request-details');
 
-        // Clear existing content safely
         while (modalBody.firstChild) {
             modalBody.removeChild(modalBody.firstChild);
         }
 
-        const basicInfo = this.createSafeElement('div', 'basic-info');
+        const basicInfo = this.createElement('div', 'basic-info');
 
-        // Personal Info section
-        const personalInfoH3 = this.createSafeElement('h3', '', 'Personal Info');
-        basicInfo.appendChild(personalInfoH3);
-
-        const nameP = this.createSafeElement('p');
-        const nameStrong = this.createSafeElement('strong', '', 'Name: ');
+        const nameP = this.createElement('p');
+        const nameStrong = this.createElement('strong', '', 'Name: ');
         nameP.appendChild(nameStrong);
         nameP.appendChild(document.createTextNode(`${request.first_name || ''} ${request.last_name || ''}`));
         basicInfo.appendChild(nameP);
 
-        const emailP = this.createSafeElement('p');
-        const emailStrong = this.createSafeElement('strong', '', 'Email: ');
+        const emailP = this.createElement('p');
+        const emailStrong = this.createElement('strong', '', 'Email: ');
         emailP.appendChild(emailStrong);
         emailP.appendChild(document.createTextNode(request.email || ''));
         basicInfo.appendChild(emailP);
 
-        const phoneP = this.createSafeElement('p');
-        const phoneStrong = this.createSafeElement('strong', '', 'Phone: ');
+        const phoneP = this.createElement('p');
+        const phoneStrong = this.createElement('strong', '', 'Phone: ');
         phoneP.appendChild(phoneStrong);
         phoneP.appendChild(document.createTextNode(request.phone || 'N/A'));
         basicInfo.appendChild(phoneP);
 
-
+        //daca a asignat un rol
         if (request.assigned_role) {
-            const assignedRoleP = this.createSafeElement('p');
-            const assignedRoleStrong = this.createSafeElement('strong', '', 'Assigned Role: ');
+            const assignedRoleP = this.createElement('p');
+            const assignedRoleStrong = this.createElement('strong', '', 'Assigned Role: ');
             assignedRoleP.appendChild(assignedRoleStrong);
             assignedRoleP.appendChild(document.createTextNode(request.assigned_role));
             basicInfo.appendChild(assignedRoleP);
         }
 
-        // Details section
-        const detailsH3 = this.createSafeElement('h3', '');
-        basicInfo.appendChild(detailsH3);
-
-        const statusP = this.createSafeElement('p');
-        const statusStrong = this.createSafeElement('strong', '', 'Status: ');
+        const statusP = this.createElement('p');
+        const statusStrong = this.createElement('strong', '', 'Status: ');
         statusP.appendChild(statusStrong);
-        const statusSpan = this.createSafeElement('span', `status-badge status-${request.status}`, request.status || '');
+        const statusSpan = this.createElement('span', `status-badge status-${request.status}`, request.status || '');
         statusP.appendChild(statusSpan);
         basicInfo.appendChild(statusP);
 
@@ -330,10 +316,9 @@ class ManagerDashboard {
         if (request) {
             const assignRoleSelect = document.getElementById('assign-role');
             if (assignRoleSelect) {
-                assignRoleSelect.value = request.requested_role || request.role || '';
+                assignRoleSelect.value = request.role;
             }
         }
-
         this.showModal(this.approveModal);
     }
 
@@ -373,7 +358,6 @@ class ManagerDashboard {
             const data = await response.json();
 
             if (data.success) {
-                alert(`Request approved! User assigned role: ${assignedRole}`);
                 this.closeAllModals();
                 this.loadRequests();
             } else {
@@ -381,7 +365,6 @@ class ManagerDashboard {
             }
 
         } catch (error) {
-            console.error('Approval error:', error);
             alert('Failed to approve request');
         }
     }
@@ -392,7 +375,6 @@ class ManagerDashboard {
         const rejectionMessage = document.getElementById('reject-message').value.trim();
 
         if (!rejectionMessage) {
-            alert('Please provide a reason for rejection');
             return;
         }
 
@@ -421,7 +403,6 @@ class ManagerDashboard {
             }
 
         } catch (error) {
-            console.error('Rejection error:', error);
             alert('Failed to reject request');
         }
     }
@@ -442,15 +423,6 @@ class ManagerDashboard {
         localStorage.removeItem('user');
         localStorage.clear();
         window.location.href = '/homepage';
-    }
-
-    formatDate(dateString) {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ro-RO');
-        } catch (error) {
-            return 'Invalid date';
-        }
     }
 }
 

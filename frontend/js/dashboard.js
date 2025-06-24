@@ -169,15 +169,15 @@ class Dashboard {
 
         const data = await response.json();
         if (data.success) {
-            this.populateVehicleSelect(data.vehicles.map(vehicle => this.sanitizeObject(vehicle)));
+            //dropdown cu vehicule
+            this.populateVehicleDropdown(data.vehicles.map(vehicle => this.sanitizeObject(vehicle)));
         }
     }
 
-    populateVehicleSelect(vehicles) {
+    populateVehicleDropdown(vehicles) {
         const select = document.getElementById('existing-vehicle');
         if (!select) return;
 
-        // Clear existing content safely
         while (select.firstChild) {
             select.removeChild(select.firstChild);
         }

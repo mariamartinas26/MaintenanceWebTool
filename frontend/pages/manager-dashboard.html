@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Dashboard - Repair Queens</title>
+    <title>Manager Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/manager-dashboard.css">
 </head>
@@ -38,6 +38,7 @@
 
     <!-- Requests Section -->
     <section class="requests-section">
+        <h2>Access Requests</h2>
         <div class="requests-grid" id="requests-container">
         </div>
     </section>
@@ -89,7 +90,7 @@
         <div class="modal-body">
             <form id="reject-form">
                 <div class="form-group">
-                    <label for="reject-message">Rejection reason *</label>
+                    <label for="reject-message">Rejection reason</label>
                     <textarea id="reject-message" name="manager_message" rows="4" maxlength="1000" required></textarea>
                 </div>
 
@@ -99,12 +100,6 @@
             </form>
         </div>
     </div>
-</div>
-
-<!-- Notification -->
-<div class="notification" id="notification">
-    <span id="notification-message"></span>
-    <button type="button" class="notification-close" id="notification-close">&times;</button>
 </div>
 
 <script src="/js/manager-dashboard.js"></script>
