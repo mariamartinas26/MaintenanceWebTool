@@ -666,7 +666,6 @@ class AdminDashboard {
                 const appointment = this.sanitizeObject(data.appointment);
 
                 if (appointment.status !== 'pending') {
-                    alert('This appointment cannot be modified as it has already been processed.');
                     return;
                 }
 
@@ -856,7 +855,6 @@ class AdminDashboard {
             if (data.success) {
                 this.closeModal();
                 this.loadAppointments();
-                alert('Appointment status updated successfully');
             } else {
                 console.error('Update failed:', data);
             }

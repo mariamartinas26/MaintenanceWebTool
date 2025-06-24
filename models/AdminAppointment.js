@@ -159,7 +159,7 @@ class AdminAppointment {
                 const appointmentDateStr = appointmentDateTime.toISOString().split('T')[0];
                 const appointmentTimeStr = appointmentDateTime.toTimeString().slice(0, 8);
 
-                //scade din calendar-ul clinetului din un slot
+                //elibreaza slotul pt alte programari
                 const updateCalendarQuery = `
                     UPDATE "Calendar"
                     SET current_appointments = current_appointments - 1
