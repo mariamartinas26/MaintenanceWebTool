@@ -2,7 +2,7 @@ const { pool } = require('../database/db');
 
 class CalendarModel {
 
-    static async getSlotsCountForDate(date) {
+    static async getSlotsNumberForDate(date) {
         const query = `
             SELECT COUNT(*) as count 
             FROM "Calendar" 
@@ -13,15 +13,12 @@ class CalendarModel {
         return parseInt(result.rows[0].count);
     }
 
-    /**
-     * creates slots for a date
-     */
     static async createSlotsForDate(client, date, workingHours) {
         for (const slot of workingHours) {
             const query = `
                 INSERT INTO "Calendar" 
                 (date, start_time, end_time, max_appointments, current_appointments, is_available, notes)
-                VALUES ($1, $2, $3, $4, 0, true, 'Auto-generated slot')
+                VALUES ($1, $2, $3, $4, 0, true, '')
             `;
 
             await client.query(query, [

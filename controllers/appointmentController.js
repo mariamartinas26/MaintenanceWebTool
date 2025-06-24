@@ -150,7 +150,7 @@ class AppointmentController {
 
     static async ensureSlotsExistForDate(date) {
         //verific daca exista deja sloturi pentru acea data
-        const existingCount = await CalendarModel.getSlotsCountForDate(date);
+        const existingCount = await CalendarModel.getSlotsNumberForDate(date);
         if (existingCount > 0) return;
 
         const requestedDate = new Date(date);
@@ -160,14 +160,14 @@ class AppointmentController {
         if (dayOfWeek === 0 || dayOfWeek === 6) return;
 
         const workingHours = [
-            { start: '08:00:00', end: '09:00:00', maxAppointments: 3 },
-            { start: '09:00:00', end: '10:00:00', maxAppointments: 3 },
-            { start: '10:00:00', end: '11:00:00', maxAppointments: 3 },
-            { start: '11:00:00', end: '12:00:00', maxAppointments: 3 },
-            { start: '13:00:00', end: '14:00:00', maxAppointments: 3 },
-            { start: '14:00:00', end: '15:00:00', maxAppointments: 3 },
-            { start: '15:00:00', end: '16:00:00', maxAppointments: 3 },
-            { start: '16:00:00', end: '17:00:00', maxAppointments: 3 }
+            { start: '08:00', end: '09:00', maxAppointments: 3 },
+            { start: '09:00', end: '10:00', maxAppointments: 3 },
+            { start: '10:00', end: '11:00', maxAppointments: 3 },
+            { start: '11:00', end: '12:00', maxAppointments: 3 },
+            { start: '13:00', end: '14:00', maxAppointments: 3 },
+            { start: '14:00', end: '15:00', maxAppointments: 3 },
+            { start: '15:00', end: '16:00', maxAppointments: 3 },
+            { start: '16:00', end: '17:00', maxAppointments: 3 }
         ];
 
         const client = await pool.connect();

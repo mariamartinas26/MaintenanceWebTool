@@ -7,6 +7,7 @@ const securePath = new SecurePath();
 async function handleAppointmentRoutes(req, res) {
     const parsedUrl = url.parse(req.url, true);
     const path = parsedUrl.pathname;
+    //metoda http folosita
     const method = req.method;
 
     try {
@@ -28,7 +29,6 @@ async function handleAppointmentRoutes(req, res) {
             });
         }
     } catch (error) {
-        console.error('Error in appointment routes:', securePath.sanitizeInput(error.message || ''));
         return securePath.sendJSON(res, 500, {
             success: false,
             message: 'Internal server error'

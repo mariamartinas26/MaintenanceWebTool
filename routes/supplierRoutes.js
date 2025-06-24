@@ -1,75 +1,9 @@
 const url = require('url');
 const supplierController = require('../controllers/supplierController');
+const { verifyToken, requireAdmin } = require('../middleware/auth');
 const SecurePath = require('./SecurePath');
 
 const securePath = new SecurePath();
-
-async function requireAuth(req, res) {
-    const jwt = require('jsonwebtoken');
-    const User = require('../models/User');
-
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || typeof authHeader !== 'string') {
-        return securePath.sendJSON(res, 401, {
-            success: false,
-            message: 'No token provided'
-        });
-    }
-
-    const sanitizedAuthHeader = securePath.sanitizeInput(authHeader);
-
-    if (!sanitizedAuthHeader.startsWith('Bearer ')) {
-        return securePath.sendJSON(res, 401, {
-            success: false,
-            message: 'No token provided'
-        });
-    }
-
-    const token = sanitizedAuthHeader.substring(7);
-
-    if (!token || token.trim().length === 0) {
-        return securePath.sendJSON(res, 401, {
-            success: false,
-            message: 'No token provided'
-        });
-    }
-
-    try {
-        const secret = process.env.JWT_SECRET;
-        const decoded = jwt.verify(token, secret);
-
-        const sanitizedDecoded = securePath.sanitizeObject(decoded);
-        const userId = sanitizedDecoded.userId || sanitizedDecoded.user_id;
-
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return securePath.sendJSON(res, 401, {
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        if (user.role !== 'admin' && user.role !== 'manager') {
-            return securePath.sendJSON(res, 403, {
-                success: false,
-                message: 'Admin access required'
-            });
-        }
-
-        req.userId = securePath.sanitizeInput(user.id);
-        req.user = securePath.sanitizeObject(user);
-        return true;
-
-    } catch (error) {
-        console.error('Auth error:', securePath.sanitizeInput(error.message || ''));
-        return securePath.sendJSON(res, 401, {
-            success: false,
-            message: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
-        });
-    }
-}
 
 async function handleSupplierRoutes(req, res) {
     const parsedUrl = url.parse(req.url, true);
@@ -79,71 +13,109 @@ async function handleSupplierRoutes(req, res) {
 
     try {
         const sanitizedQuery = securePath.sanitizeQuery(query);
+        req.query = sanitizedQuery;
 
-        if (!await requireAuth(req, res)) {
-            return;
-        }
+        //verific autentificarea
+        await new Promise((resolve) => {
+            verifyToken(req, res, (error) => {
+                if (error) {
+                    return securePath.sendJSON(res, error.statusCode || 401, {
+                        success: false,
+                        message: error.message
+                    });
+                }
+                resolve();
+            });
+        });
+
+        // Verifică rolul (admin sau manager)
+        await new Promise((resolve) => {
+            requireAdmin(req, res, (error) => {
+                if (error) {
+                    return securePath.sendJSON(res, error.statusCode || 403, {
+                        success: false,
+                        message: error.message
+                    });
+                }
+                resolve();
+            });
+        });
 
         securePath.setSecurityHeaders(res);
 
         if (pathname === '/api/suppliers' && method === 'GET') {
-            await supplierController.getAllSuppliers(req, res, sanitizedQuery);
+            return await supplierController.getAllSuppliers(req, res);
         }
-        else if (pathname === '/api/parts' && method === 'GET') {
-            await supplierController.getAllParts(req, res, sanitizedQuery);
-        }
-        else if (pathname === '/api/orders' && method === 'POST') {
-            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
-                if (error) {
-                    return securePath.sendJSON(res, error.statusCode || 400, {
-                        success: false,
-                        message: securePath.sanitizeInput(error.message)
-                    });
-                }
 
-                await supplierController.createOrder(req, res, sanitizedBody);
-            });
+        if (pathname === '/api/parts' && method === 'GET') {
+            return await supplierController.getAllParts(req, res);
         }
-        else if (pathname === '/api/orders' && method === 'GET') {
-            await supplierController.getAllOrders(req, res, sanitizedQuery);
-        }
-        else if (pathname.startsWith('/api/orders/') && pathname.endsWith('/status') && method === 'PUT') {
-            //extrag id
-            const orderId = pathname.slice(12, -7); //elimin /api/orders/ si /status
 
-            if (!orderId) {
+        if (pathname === '/api/orders' && method === 'GET') {
+            return await supplierController.getAllOrders(req, res);
+        }
+
+        if (pathname === '/api/orders' && method === 'POST') {
+            return await parseBodyAndExecute(req, res, supplierController.createOrder);
+        }
+
+        // PUT /api/orders/:id/status
+        if (pathname.startsWith('/api/orders/') && pathname.endsWith('/status') && method === 'PUT') {
+            const orderId = pathname.slice(12, -7); //elimin /api/orders/ și /status
+
+            if (!orderId || isNaN(parseInt(orderId))) {
                 return securePath.sendJSON(res, 400, {
                     success: false,
                     message: 'Invalid order ID'
                 });
             }
 
-            return securePath.processRequestBody(req, async (error, sanitizedBody) => {
-                if (error) {
-                    return securePath.sendJSON(res, error.statusCode || 400, {
-                        success: false,
-                        message: securePath.sanitizeInput(error.message)
-                    });
-                }
-
-                const requestData = { orderId: orderId, ...sanitizedBody };
-                await supplierController.updateOrderStatus(req, res, requestData);
+            return await parseBodyAndExecute(req, res, (req, res) => {
+                req.body.orderId = parseInt(orderId);
+                return supplierController.updateOrderStatus(req, res);
             });
         }
-        else {
-            return securePath.sendJSON(res, 404, {
-                success: false,
-                message: 'Supplier route not found'
-            });
-        }
+        return securePath.sendJSON(res, 404, {
+            success: false,
+            message: 'Route not found'
+        });
 
     } catch (error) {
-        return securePath.sendJSON(res, 500, {
-            success: false,
-            message: 'Internal server error in supplier routes',
-            error: process.env.NODE_ENV === 'development' ? securePath.sanitizeInput(error.message) : undefined
-        });
+        if (!res.headersSent) {
+            return securePath.sendJSON(res, 500, {
+                success: false,
+                message: 'Internal server error',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
     }
 }
+//citeste si parseaza body ul requestului si il trimite la controller(pt post si put)
+const parseBodyAndExecute = (req, res, controllerFunction) => {
+    return new Promise((resolve) => {
+        securePath.processRequestBody(req, async (error, sanitizedBody) => {
+            if (error) {
+                return securePath.sendJSON(res, error.statusCode || 400, {
+                    success: false,
+                    message: error.message
+                });
+            }
+
+            try {
+                req.body = sanitizedBody;
+                await controllerFunction(req, res);
+                resolve();
+            } catch (controllerError) {
+                if (!res.headersSent) {
+                    return securePath.sendJSON(res, 500, {
+                        success: false,
+                        message: 'Controller execution error'
+                    });
+                }
+                resolve();
+            }
+        });
+    });
+};
 
 module.exports = { handleSupplierRoutes };

@@ -223,7 +223,7 @@ class CalendarController {
             throw new Error('Invalid date for slot creation');
         }
 
-        const existingCount = await CalendarModel.getSlotsCountForDate(validDate);
+        const existingCount = await CalendarModel.getSlotsNumberForDate(validDate);
 
         if (existingCount > 0) {
             return;

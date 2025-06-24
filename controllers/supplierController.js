@@ -1,6 +1,6 @@
 const SupplierModel = require('../models/supplierModel');
 const { sanitizeInput, setSecurityHeaders } = require('../middleware/auth');
-
+//supplier din pagina admin!!!
 function validateInput(input) {
     if (typeof input !== 'string') return input;
     return sanitizeInput(input);
@@ -106,7 +106,7 @@ class SupplierController {
         }
     }
 
-
+    //toate comenzile
     async getAllOrders(req, res, query = {}) {
         try {
             setSecurityHeaders(res);
@@ -129,7 +129,6 @@ class SupplierController {
                 data: sanitizedOrders,
                 total: sanitizedOrders.length
             });
-
         } catch (error) {
             sendJSON(res, 500, {
                 success: false,
@@ -137,7 +136,7 @@ class SupplierController {
             });
         }
     }
-
+    //toate piesele
     async getAllParts(req, res, query = {}) {
         try {
             setSecurityHeaders(res);
@@ -171,7 +170,6 @@ class SupplierController {
                 data: sanitizedParts,
                 total: sanitizedParts.length
             });
-
         } catch (error) {
             sendJSON(res, 500, {
                 success: false,
@@ -220,36 +218,46 @@ class SupplierController {
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
 
-                const name = validateTextLength(item.name, 1, 100);
+                const partId = validateInteger(item.part_id, 1);
                 const quantity = validateInteger(item.quantity, 1, 10000);
                 const unitPrice = validateNumber(item.unit_price, 0, 100000);
 
-                if (!name) {
+                if (!partId) {
                     return sendJSON(res, 400, {
                         success: false,
-                        message: `Item ${i + 1}: name is required (1-100 characters)`
+                        message: `Valid part selection is required`
                     });
                 }
 
                 if (!quantity) {
                     return sendJSON(res, 400, {
                         success: false,
-                        message: `Item ${i + 1}: quantity must be between 1-10000`
+                        message: `Quantity must be between 1-10000`
                     });
                 }
 
                 if (unitPrice === null) {
                     return sendJSON(res, 400, {
                         success: false,
-                        message: `Item ${i + 1}: unit_price must be a valid number`
+                        message: `unit_price must be a valid number`
+                    });
+                }
+
+                //verific daca piesa exista in bd
+                const part = await SupplierModel.getPartById(partId);
+                if (!part) {
+                    return sendJSON(res, 400, {
+                        success: false,
+                        message: `part not found`
                     });
                 }
 
                 validatedItems.push({
-                    name: name,
+                    part_id: partId,
+                    name: part.name,
                     quantity: quantity,
                     unit_price: unitPrice,
-                    description: validateTextLength(item.description, 0, 500) || ''
+                    description: validateTextLength(item.description, 0, 500) || part.description || ''
                 });
             }
 
@@ -268,7 +276,6 @@ class SupplierController {
                 data: sanitizedOrder,
                 message: 'Order created successfully'
             });
-
         } catch (error) {
             sendJSON(res, 500, {
                 success: false,

@@ -204,6 +204,16 @@ class AccountantDashboard {
             const file = fileInput.files[0];
             const fileContent = await this.readFile(file);
 
+            // Procesează conținutul în funcție de format
+            let data;
+            if (format === 'json') {
+                // Pentru JSON, parsează string-ul înainte să-l trimiți
+                data = JSON.parse(fileContent);
+            } else {
+                // Pentru CSV, trimite string-ul direct
+                data = fileContent;
+            }
+
             const response = await fetch('/api/accountant/import', {
                 method: 'POST',
                 headers: {
@@ -213,7 +223,7 @@ class AccountantDashboard {
                 body: JSON.stringify({
                     dataType: dataType,
                     format: format,
-                    data: fileContent
+                    data: data  // Acum data e corect formatată
                 })
             });
 
@@ -230,14 +240,22 @@ class AccountantDashboard {
                 document.getElementById('importFormat').value = '';
                 document.getElementById('importFile').value = '';
 
-                const errors = result.data?.errors || [];
-                const imported = result.data?.imported || 0;
-                const failed = result.data?.failed || 0;
+                // Folosește structura corectă din răspuns
+                const imported = result.details?.imported || 0;
+                const skipped = result.details?.skipped || 0;
+                const errors = result.details?.errors || [];
 
                 if (errors.length > 0) {
-                    alert(`Import completed!\nImported: ${imported}\nFailed: ${failed}`);
+                    let errorMsg = `Import completed!\nImported: ${imported}\nSkipped: ${skipped}\n\nErrors:\n`;
+                    errors.slice(0, 3).forEach(error => {
+                        errorMsg += `Row ${error.row}: ${error.error}\n`;
+                    });
+                    if (errors.length > 3) {
+                        errorMsg += `... and ${errors.length - 3} more errors`;
+                    }
+                    alert(errorMsg);
                 } else {
-                    alert('Import successful!');
+                    alert(`Import successful!\nImported: ${imported} records`);
                 }
             } else {
                 throw new Error(result.message || 'Failed to import data');

@@ -1,11 +1,12 @@
 const { query } = require('../database/db');
 
 class ImportExportModel {
+    //toti suppliers pentru export
     static async getAllSuppliers() {
         const result = await query('SELECT * FROM "Suppliers" ORDER BY id');
         return result.rows || [];
     }
-
+    //toate piesele pt export
     static async getAllParts() {
         const result = await query(`
             SELECT p.*, s.company_name as supplier_name 
@@ -15,7 +16,7 @@ class ImportExportModel {
         `);
         return result.rows || [];
     }
-
+    //toate programarile pt export
     static async getAllAppointments() {
         const result = await query(`
             SELECT a.*, u.first_name, u.last_name, u.email as user_email,
@@ -52,7 +53,7 @@ class ImportExportModel {
         const result = await query('SELECT id FROM "Parts" WHERE part_number = $1', [part_number]);
         return result.rows[0] || null;
     }
-
+    //import piesa
     static async createPart(partData) {
         const { name, description, part_number, category, price, stock_quantity, minimum_stock_level, supplier_id } = partData;
 
@@ -66,7 +67,7 @@ class ImportExportModel {
         return result.rows[0];
     }
 
-    // Appointments
+    //import programare
     static async createAppointment(appointmentData) {
         const { user_id, vehicle_id, appointment_date, status, problem_description, estimated_price } = appointmentData;
 

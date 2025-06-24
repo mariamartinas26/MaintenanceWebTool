@@ -15,8 +15,8 @@ const accountantRoutes = async (req, res) => {
     try {
         const sanitizedQuery = securePath.sanitizeQuery(query);
         req.query = sanitizedQuery;
-
-        await new Promise((resolve, reject) => {
+        //verifica tokenul
+        await new Promise((resolve) => {
             verifyToken(req, res, (error) => {
                 if (error) {
                     return securePath.sendJSON(res, error.statusCode || 401, {
@@ -28,7 +28,7 @@ const accountantRoutes = async (req, res) => {
                 }
             });
         });
-
+        //verifica rolul
         await new Promise((resolve) => {
             requireAccountant(req, res, (error) => {
                 if (error) {
@@ -63,7 +63,6 @@ const accountantRoutes = async (req, res) => {
             securePath.setSecurityHeaders(res);
             return await ImportExportController.exportData(req, res);
         }
-
         return securePath.sendJSON(res, 404, {
             success: false,
             message: 'Route not found'
@@ -79,9 +78,9 @@ const accountantRoutes = async (req, res) => {
         }
     }
 };
-
+//citeste si parseaza body ul requestului si il trimite la controller
 const parseBodyAndExecute = (req, res, controllerFunction) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         securePath.processRequestBody(req, async (error, sanitizedBody) => {
             if (error) {
                 return securePath.sendJSON(res, error.statusCode || 400, {
@@ -89,7 +88,6 @@ const parseBodyAndExecute = (req, res, controllerFunction) => {
                     message: securePath.sanitizeInput(error.message)
                 });
             }
-
             try {
                 req.body = sanitizedBody;
                 await controllerFunction(req, res);
