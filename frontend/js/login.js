@@ -65,7 +65,7 @@ class LoginManager {
             return;
         }
 
-        const email = emailInput.value.trim(); // Don't sanitize before sending
+        const email = emailInput.value.trim();
         const password = passwordInput.value;
 
         if (!this.validateForm(email, password)) {
@@ -73,8 +73,6 @@ class LoginManager {
         }
 
         try {
-            console.log('Attempting login with:', { email }); // Debug log
-
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -83,22 +81,18 @@ class LoginManager {
                 body: JSON.stringify({ email, password })
             });
 
-            console.log('Response status:', response.status); // Debug log
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Login error response:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const responseText = await response.text();
-            console.log('Response text:', responseText); // Debug log
 
             let data;
             try {
                 data = JSON.parse(responseText);
             } catch (parseError) {
-                console.error('JSON parse error:', parseError);
                 throw new Error('Invalid JSON response from server');
             }
 
@@ -109,14 +103,12 @@ class LoginManager {
                 this.showMessage(data.message || 'Login failed', 'error');
             }
         } catch (error) {
-            console.error('Login error:', error);
             this.showMessage('Network error: ' + error.message, 'error');
         }
     }
 
     storeAuthData(token, user) {
         try {
-            // Fix: Use the correct field names from backend response
             const sanitizedUser = {
                 id: user.id,
                 email: user.email ? this.sanitizeInput(user.email) : '',
@@ -125,12 +117,9 @@ class LoginManager {
                 role: user.role ? this.sanitizeInput(user.role) : 'client'
             };
 
-            localStorage.setItem('token', token); // Don't sanitize the token
+            localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(sanitizedUser));
-
-            console.log('Auth data stored:', { user: sanitizedUser }); // Debug log
         } catch (error) {
-            console.error('Error saving login data:', error);
             this.showMessage('Error saving login data', 'error');
         }
     }
@@ -140,12 +129,10 @@ class LoginManager {
             'manager': '/manager/dashboard',
             'admin': '/admin/dashboard',
             'accountant': '/accountant/dashboard',
-            'contabil': '/contabil/dashboard',
             'client': '/client/dashboard'
         };
 
         const route = roleRoutes[user.role] || '/client/dashboard';
-        console.log('Redirecting to:', route); // Debug log
         window.location.href = route;
     }
 

@@ -217,7 +217,7 @@ class AccountantDashboard {
                 //trimitem continutul ca string, parsarea csv se face in backend
                 data = fileContent;
             }
-
+            //trimitem request la backend
             const response = await fetch('/api/accountant/import', {
                 method: 'POST',
                 headers: {
@@ -262,6 +262,7 @@ class AccountantDashboard {
             return;
         }
 
+        //facem request la backend
         try {
             const response = await fetch('/api/accountant/export', {
                 method: 'POST',
@@ -270,8 +271,8 @@ class AccountantDashboard {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    dataType: dataType,
-                    format: format
+                    dataType: dataType, //ce exportam
+                    format: format //in ce format
                 })
             });
 
@@ -281,10 +282,9 @@ class AccountantDashboard {
             }
 
             if (!response.ok) {
-                const errorText = await response.text();
                 throw new Error(`Export failed`);
             }
-
+            //procesare raspuns
             const blob = await response.blob();
             const filename = `${dataType}_export_${this.getCurrentDate()}.${format}`;
             this.downloadBlob(blob, filename);

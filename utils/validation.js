@@ -1,22 +1,17 @@
-// Existing validation functions...
 function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
 }
 
-function isValidPassword(password) {
-    return password && password.length >= 6;
-}
-
 function isValidPhone(phone) {
-    const romanianPhoneRegex = /^0\d{9}$/;
-    const internationalPhoneRegex = /^[\d\s\+\-\(\)]{10,15}$/;
-    return romanianPhoneRegex.test(phone) || internationalPhoneRegex.test(phone);
+    const valid1 = /^0\d{9}$/;
+    const valid2 = /^[\d\s\+\-\(\)]{10,15}$/;
+    return valid1.test(phone) || valid2.test(phone);
 }
 
 function isValidName(name) {
-    const nameRegex = /^[a-zA-ZÀ-ÿ\s\-']{2,50}$/;
-    return nameRegex.test(name);
+    const validName = /^[a-zA-ZÀ-ÿ\s\-']{2,50}$/;
+    return validName.test(name);
 }
 
 function sanitizeString(str) {
@@ -78,12 +73,11 @@ function validateSupplierData(data) {
     };
 }
 
-// NEW: Part validation for import
+//pt import
 function validatePartData(data) {
     const { name, description, part_number, category, price, stock_quantity, minimum_stock_level, supplier_id } = data;
     const errors = [];
 
-    // Required fields
     if (!name || name.trim() === '') {
         errors.push('Part name is required');
     } else if (name.length > 100) {
@@ -96,12 +90,8 @@ function validatePartData(data) {
         const priceNum = parseFloat(price);
         if (isNaN(priceNum) || priceNum < 0) {
             errors.push('Price must be a valid positive number');
-        } else if (priceNum > 999999.99) {
-            errors.push('Price cannot exceed 999,999.99');
         }
     }
-
-    // Optional fields validation
     if (description && description.length > 500) {
         errors.push('Description cannot exceed 500 characters');
     }
@@ -118,8 +108,6 @@ function validatePartData(data) {
         const quantity = parseInt(stock_quantity);
         if (isNaN(quantity) || quantity < 0) {
             errors.push('Stock quantity must be a valid non-negative number');
-        } else if (quantity > 999999) {
-            errors.push('Stock quantity cannot exceed 999,999');
         }
     }
 
@@ -127,8 +115,6 @@ function validatePartData(data) {
         const minLevel = parseInt(minimum_stock_level);
         if (isNaN(minLevel) || minLevel < 0) {
             errors.push('Minimum stock level must be a valid non-negative number');
-        } else if (minLevel > 999999) {
-            errors.push('Minimum stock level cannot exceed 999,999');
         }
     }
 
@@ -138,19 +124,16 @@ function validatePartData(data) {
             errors.push('Supplier ID must be a valid positive number');
         }
     }
-
     return {
         isValid: errors.length === 0,
         errors: errors
     };
 }
 
-// NEW: Appointment validation for import (different from regular appointment validation)
 function validateImportAppointmentData(data) {
     const { user_id, vehicle_id, appointment_date, status, problem_description, estimated_price } = data;
     const errors = [];
 
-    // Required fields
     if (!user_id || user_id.toString().trim() === '') {
         errors.push('User ID is required');
     } else {
@@ -163,10 +146,9 @@ function validateImportAppointmentData(data) {
     if (!appointment_date || appointment_date.trim() === '') {
         errors.push('Appointment date is required');
     } else {
-        // Check date format and validity
         const dateRegex = /^\d{4}-\d{2}-\d{2}(\s\d{2}:\d{2}(:\d{2})?)?$/;
         if (!dateRegex.test(appointment_date)) {
-            errors.push('Appointment date must be in format YYYY-MM-DD or YYYY-MM-DD HH:MM:SS');
+            errors.push('Appointment date');
         } else {
             const date = new Date(appointment_date);
             if (isNaN(date.getTime())) {
@@ -174,7 +156,6 @@ function validateImportAppointmentData(data) {
             }
         }
     }
-
     if (!problem_description || problem_description.trim() === '') {
         errors.push('Problem description is required');
     } else if (problem_description.trim().length < 10) {
@@ -183,7 +164,6 @@ function validateImportAppointmentData(data) {
         errors.push('Problem description cannot exceed 1000 characters');
     }
 
-    // Optional fields validation
     if (vehicle_id !== undefined && vehicle_id !== null && vehicle_id !== '') {
         const vehicleId = parseInt(vehicle_id);
         if (isNaN(vehicleId) || vehicleId < 1) {
@@ -202,18 +182,14 @@ function validateImportAppointmentData(data) {
         const price = parseFloat(estimated_price);
         if (isNaN(price) || price < 0) {
             errors.push('Estimated price must be a valid non-negative number');
-        } else if (price > 999999.99) {
-            errors.push('Estimated price cannot exceed 999,999.99');
         }
     }
-
     return {
         isValid: errors.length === 0,
         errors: errors
     };
 }
 
-// Existing validation functions (keeping them as they were)
 function validateRegisterData(data) {
     const { email, password, first_name, last_name, phone } = data;
     const errors = [];
@@ -245,29 +221,8 @@ function validateRegisterData(data) {
     if (!phone) {
         errors.push('Phone number is required');
     } else if (!isValidPhone(phone)) {
-        errors.push('Please enter a valid phone number (format: 07xxxxxxxx)');
+        errors.push('Please enter a valid phone number');
     }
-
-    return {
-        isValid: errors.length === 0,
-        errors: errors
-    };
-}
-
-function validateLoginData(data) {
-    const { email, password } = data;
-    const errors = [];
-
-    if (!email) {
-        errors.push('Email is required');
-    } else if (!isValidEmail(email)) {
-        errors.push('Please enter a valid email address');
-    }
-
-    if (!password) {
-        errors.push('Password is required');
-    }
-
     return {
         isValid: errors.length === 0,
         errors: errors
@@ -278,12 +233,11 @@ function validateAppointmentData(data) {
     const { date, time, description, vehicleId } = data;
     const errors = [];
 
-    // Validare dată
     if (!date) {
         errors.push('Appointment date is required');
     } else {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            errors.push('Invalid date format. Use YYYY-MM-DD');
+            errors.push('Invalid date format');
         } else {
             const appointmentDate = new Date(date);
             const today = new Date();
@@ -296,25 +250,11 @@ function validateAppointmentData(data) {
             }
         }
     }
-
-    // Validare oră
+    //validare ora
     if (!time) {
         errors.push('Appointment time is required');
-    } else {
-        if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) {
-            errors.push('Invalid time format. Use HH:MM');
-        } else {
-            const hour = parseInt(time.split(':')[0]);
-            if (hour < 8 || hour >= 17) {
-                errors.push('Appointment time must be between 08:00 and 17:00');
-            }
-            if (hour >= 12 && hour < 13) {
-                errors.push('No appointments available during lunch break (12:00-13:00)');
-            }
-        }
     }
 
-    // Validare descriere
     if (!description) {
         errors.push('Problem description is required');
     } else if (description.trim().length < 10) {
@@ -323,14 +263,12 @@ function validateAppointmentData(data) {
         errors.push('Problem description cannot exceed 500 characters');
     }
 
-    // Validare vehicleId
     if (vehicleId !== undefined) {
         const vehicleIdNum = parseInt(vehicleId);
         if (isNaN(vehicleIdNum) || vehicleIdNum < 1) {
             errors.push('Valid vehicle ID is required');
         }
     }
-
     return {
         isValid: errors.length === 0,
         errors: errors
@@ -346,7 +284,7 @@ function validateVehicleData(data) {
     } else {
         const validTypes = ['motocicleta', 'bicicleta', 'trotineta'];
         if (!validTypes.includes(vehicle_type)) {
-            errors.push('Vehicle type must be: motocicleta, bicicleta, or trotineta');
+            errors.push('Vehicle type ');
         }
     }
 
@@ -367,54 +305,24 @@ function validateVehicleData(data) {
     } else {
         const currentYear = new Date().getFullYear();
         if (year < 1900 || year > currentYear + 1) {
-            errors.push(`Year must be between 1900 and ${currentYear + 1}`);
+            errors.push(`Year must be between 1900 and ${currentYear }`);
         }
     }
-
     return {
         isValid: errors.length === 0,
         errors: errors
     };
 }
 
-function isValidAppointmentTime(time) {
-    if (!time || typeof time !== 'string') return false;
-
-    // Format HH:MM sau HH:MM:SS
-    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) return false;
-
-    const [hours, minutes] = time.split(':').map(Number);
-
-    // Verifică limite valide
-    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return false;
-
-    return true;
-}
-
-function isValidAppointmentDate(date) {
-    if (!date || typeof date !== 'string') return false;
-
-    // Format YYYY-MM-DD
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-
-    // Verifică că e o dată validă
-    const dateObj = new Date(date);
-    return !isNaN(dateObj.getTime());
-}
-
 module.exports = {
     isValidEmail,
-    isValidPassword,
     isValidPhone,
     isValidName,
     validateRegisterData,
-    validateLoginData,
     validateAppointmentData,
     validateVehicleData,
     sanitizeString,
     sanitizeUserInput,
-    isValidAppointmentTime,
-    isValidAppointmentDate,
     validateSupplierData,
     validatePartData,
     validateImportAppointmentData

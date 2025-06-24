@@ -12,6 +12,42 @@ class ImportExportController {
         res.end(JSON.stringify(data));
     }
 
+    static parseCSV(csvData) {
+        try {
+            //iau textul CSV il impart pe linii fara spatii si linii goale
+            const lines = csvData.trim().split('\n').filter(line => line.trim());
+
+            //prima linie contine header-ele
+            const headers = ImportExportController.parseCSVLine(lines[0]);
+            const results = [];
+            const errors = [];
+            //parcurg fiecare linie de date si o parsez
+            for (let i = 1; i < lines.length; i++) {
+                try {
+                    const values = ImportExportController.parseCSVLine(lines[i]);
+                    //verific daca nr de coloane la linia curenta = nr col headere
+                    if (values.length !== headers.length) {
+                        errors.push(`Not equal column number`);
+                        continue;
+                    }
+                    //pt fiecare linie valida fac un obiect
+                    //fac match intre header si valoare
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        const cleanHeader = header.trim().toLowerCase().replace(/\s+/g, '_');
+                        obj[cleanHeader] = values[index] ? values[index].trim() : '';
+                    });
+                    results.push(obj);
+                } catch (lineError) {
+                    errors.push(`Error`);
+                }
+            }
+            return results;
+        } catch (error) {
+            throw new Error(`CSV parsing failed: ${error.message}`);
+        }
+    }
+
     //parsare linie csv
     static parseCSVLine(line) {
         const result = [];
@@ -40,47 +76,12 @@ class ImportExportController {
         return result;
     }
 
-    static parseCSV(csvData) {
-        try {
-            //iau textul CSV il impart pe linii fara spatii si linii goale
-            const lines = csvData.trim().split('\n').filter(line => line.trim());
-
-            //prima linie contine header-ele
-            const headers = ImportExportController.parseCSVLine(lines[0]);
-            const results = [];
-            const errors = [];
-            //parcurg fiecare linie de date
-            for (let i = 1; i < lines.length; i++) {
-                try {
-                    const values = ImportExportController.parseCSVLine(lines[i]);
-                    //verific daca nr de coloane la linia curenta = nr col headere
-                    if (values.length !== headers.length) {
-                        errors.push(`Not equal column number`);
-                        continue;
-                    }
-                    //pt fiecare linie valida fac un obiect
-                    //fac match intre header si valoare
-                    const obj = {};
-                    headers.forEach((header, index) => {
-                        const cleanHeader = header.trim().toLowerCase().replace(/\s+/g, '_');
-                        obj[cleanHeader] = values[index] ? values[index].trim() : '';
-                    });
-                    results.push(obj);
-                } catch (lineError) {
-                    errors.push(`Error`);
-                }
-            }
-            return results;
-        } catch (error) {
-            throw new Error(`CSV parsing failed: ${error.message}`);
-        }
-    }
-
-    static escapeCSVValue(value) {
+    static addQuotes(value) {
+        //convertesc tot la string
         if (typeof value !== 'string') {
             value = String(value);
         }
-
+        //daca valoarea mea are virgule sau newline o pun intre ghilimele
         if (value.includes(',') || value.includes('\n')) {
             value = `"${value}"`;
         }
@@ -92,14 +93,14 @@ class ImportExportController {
             return '';
         }
 
-        const headers = ImportExportController.getCSVHeaders(dataType);
+        const headers = ImportExportController.getCSVHeaders(dataType);//headere in functie de ce dorim sa exportam
         const headerKeys = Object.keys(headers);
         const headerValues = Object.values(headers);
 
-        //linia header
-        let csv = headerValues.map(h => ImportExportController.escapeCSVValue(h)).join(',') + '\n';
+        //creez linia de header
+        let csv = headerValues.map(h => ImportExportController.addQuotes(h)).join(',') + '\n';
 
-        // Create data rows
+        //liniile de date
         data.forEach(row => {
             const values = headerKeys.map(key => {
                 let value = row[key];
@@ -110,10 +111,10 @@ class ImportExportController {
                 }
 
                 if (value instanceof Date) {
-                    return ImportExportController.escapeCSVValue(value.toISOString());
+                    return ImportExportController.addQuotes(value.toISOString());
                 }
-
-                return ImportExportController.escapeCSVValue(String(value));
+                //convertim tot la string si punem ghilimele daca e necesar
+                return ImportExportController.addQuotes(String(value));
             });
             csv += values.join(',') + '\n';
         });
@@ -193,6 +194,7 @@ class ImportExportController {
                     message: 'Access denied'
                 });
             }
+            //extrag parametrii
             //extrag din cerere tipul de date de importat(suppliers,parts,appointments), formatul si datele efective
             const {dataType, format, data} = req.body;
 
@@ -221,10 +223,8 @@ class ImportExportController {
             let parsedData;
             if (format === 'json') {
                 try {
-                    console.log('JSON data received:', data); // DEBUG
                     parsedData = typeof data === 'string' ? JSON.parse(data) : data;
                 } catch (error) {
-                    console.log('JSON parsing error:', error.message); // DEBUG
                     return ImportExportController.sendJSON(res, 400, {
                         success: false,
                         message: 'Invalid JSON format: ' + error.message
@@ -275,6 +275,7 @@ class ImportExportController {
                     message: 'Access denied'
                 });
             }
+            //extragem parametrii
             //supplier/parts/appointments+formatul de export
             const {dataType, format} = req.body;
 
@@ -322,6 +323,7 @@ class ImportExportController {
                 });
                 res.end(jsonData);
             } else if (format === 'csv') {
+                //convertim in format csv
                 const csvData = ImportExportController.convertToCSV(data, dataType);
                 res.writeHead(200, {
                     'Content-Type': 'text/csv; charset=utf-8',

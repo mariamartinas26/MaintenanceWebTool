@@ -58,7 +58,7 @@ class Dashboard {
         };
     }
 
-    createSafeElement(tag, className = '', textContent = '') {
+    createElement(tag, className = '', textContent = '') {
         const element = document.createElement(tag);
         if (className) {
             element.className = this.sanitizeInput(className);
@@ -111,6 +111,7 @@ class Dashboard {
     }
 
     setupEventListeners() {
+        //pt tab
         document.querySelectorAll('.tab-btn[data-tab]').forEach(button => {
             button.addEventListener('click', () => {
                 this.switchTab(button.getAttribute('data-tab'));
@@ -153,6 +154,7 @@ class Dashboard {
         }
 
         document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+        //afisez tab ul corespunzator
         const targetPane = document.getElementById(targetTab);
         if (targetPane) {
             targetPane.classList.add('active');
@@ -187,6 +189,7 @@ class Dashboard {
         this.safeSetText(defaultOption, 'Select vehicle or add a new one');
         select.appendChild(defaultOption);
 
+        //adaug fiecare vehicul ca optiune
         vehicles.forEach(vehicle => {
             const option = document.createElement('option');
             option.value = String(vehicle.id);
@@ -207,15 +210,9 @@ class Dashboard {
         if (!dateInput || !timeSelect || !dateInput.value) return;
 
         try {
-            // Clear existing content safely
             while (timeSelect.firstChild) {
                 timeSelect.removeChild(timeSelect.firstChild);
             }
-
-            const loadingOption = document.createElement('option');
-            loadingOption.value = '';
-            this.safeSetText(loadingOption, 'Loading...');
-            timeSelect.appendChild(loadingOption);
 
             const response = await fetch(`/api/calendar/available-slots?date=${encodeURIComponent(dateInput.value)}`, {
                 headers: {
@@ -225,8 +222,6 @@ class Dashboard {
             });
 
             const data = await response.json();
-
-            // Clear loading option
             while (timeSelect.firstChild) {
                 timeSelect.removeChild(timeSelect.firstChild);
             }
@@ -236,7 +231,7 @@ class Dashboard {
                 defaultOption.value = '';
                 this.safeSetText(defaultOption, 'Select time');
                 timeSelect.appendChild(defaultOption);
-
+                //daca nu exista sloturi disponibile
                 if (data.availableSlots.length === 0) {
                     const noSlotsOption = document.createElement('option');
                     noSlotsOption.value = '';
@@ -246,7 +241,7 @@ class Dashboard {
                     data.availableSlots.forEach(slot => {
                         const sanitizedSlot = this.sanitizeObject(slot);
                         const option = document.createElement('option');
-                        option.value = sanitizedSlot.startTime;
+                        option.value = sanitizedSlot.startTime; //creez o optiune pt fiecare slot disponibil
                         this.safeSetText(option, `${sanitizedSlot.startTime} (${sanitizedSlot.availableSpots} slots available)`);
                         timeSelect.appendChild(option);
                     });
@@ -258,7 +253,6 @@ class Dashboard {
                 timeSelect.appendChild(errorOption);
             }
         } catch (error) {
-            // Clear existing content safely
             while (timeSelect.firstChild) {
                 timeSelect.removeChild(timeSelect.firstChild);
             }
@@ -288,7 +282,7 @@ class Dashboard {
             }
 
             let vehicleId = appointmentData.vehicleId;
-
+            //daca avem date pentru un vehicul nou
             if (!vehicleId && appointmentData.vehicle_type) {
                 const vehicleData = this.sanitizeObject({
                     vehicle_type: appointmentData.vehicle_type,
@@ -298,7 +292,7 @@ class Dashboard {
                     is_electric: appointmentData.is_electric === 'on',
                     notes: appointmentData.notes || null
                 });
-
+                //trimitem cererea pt a crea noul vehicul
                 const vehicleResponse = await fetch('/api/vehicles', {
                     method: 'POST',
                     headers: {
@@ -310,7 +304,7 @@ class Dashboard {
 
                 const vehicleResult = await vehicleResponse.json();
                 if (vehicleResult.success) {
-                    vehicleId = vehicleResult.vehicle.id;
+                    vehicleId = vehicleResult.vehicle.id; //salvez id ul vehicului creat
                     await this.loadVehicles();
                 } else {
                     alert(vehicleResult.message || 'Error creating vehicle');
@@ -318,21 +312,21 @@ class Dashboard {
                 }
             }
 
-            const appointmentPayload = this.sanitizeObject({
+            const appointment = this.sanitizeObject({
                 date: appointmentData.date,
                 time: appointmentData.time,
                 serviceType: appointmentData.serviceType,
                 description: appointmentData.description,
                 vehicleId: vehicleId || null
             });
-
+            //creez noua programare cu vehiculul existent sau cel nou
             const response = await fetch('/api/appointments', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(appointmentPayload)
+                body: JSON.stringify(appointment)
             });
 
             const data = await response.json();
@@ -346,7 +340,6 @@ class Dashboard {
                 alert(data.message || 'Error creating appointment');
             }
         } catch (error) {
-            console.error('Error creating appointment:', error);
             alert('Error creating appointment');
         }
     }
@@ -358,7 +351,6 @@ class Dashboard {
 
             const timeSelect = document.getElementById('appointment-time');
             if (timeSelect) {
-                // Clear existing content safely
                 while (timeSelect.firstChild) {
                     timeSelect.removeChild(timeSelect.firstChild);
                 }
@@ -391,6 +383,7 @@ class Dashboard {
             const data = await response.json();
 
             if (data.success) {
+                //verific daca nu am nicio programare
                 if (data.appointments.length === 0) {
                     this.displayEmptyAppointments(appointmentsContainer);
                 } else {
@@ -400,24 +393,22 @@ class Dashboard {
                 this.displayAppointmentsError(appointmentsContainer, data.message);
             }
         } catch (error) {
-            console.error('Error loading appointments:', error);
             const appointmentsContainer = document.getElementById('appointments-container');
             if (appointmentsContainer) {
-                this.displayAppointmentsError(appointmentsContainer, 'Connection error. Please try again.');
+                this.displayAppointmentsError(appointmentsContainer, 'Connection error');
             }
         }
     }
 
     displayEmptyAppointments(container) {
-        // Clear existing content safely
         while (container.firstChild) {
             container.removeChild(container.firstChild);
         }
 
-        const emptyMessage = this.createSafeElement('div', 'empty-message');
-        const h4 = this.createSafeElement('h4', '', 'No Appointments Yet');
-        const p = this.createSafeElement('p', '', "You don't have any appointments scheduled.");
-        const button = this.createSafeElement('button', 'primary-btn', 'Schedule Now');
+        const emptyMessage = this.createElement('div', 'empty-message');
+        const h4 = this.createElement('h4', '', 'No Appointments Yet');
+        const p = this.createElement('p', '', "You don't have any appointments scheduled.");
+        const button = this.createElement('button', 'primary-btn', 'Schedule Now');
         button.onclick = () => this.switchTab('new-appointment');
 
         emptyMessage.appendChild(h4);
@@ -427,14 +418,13 @@ class Dashboard {
     }
 
     displayAppointmentsError(container, message) {
-        // Clear existing content safely
         while (container.firstChild) {
             container.removeChild(container.firstChild);
         }
 
-        const errorMessage = this.createSafeElement('div', 'error-message');
-        const p = this.createSafeElement('p', '', `Error loading appointments: ${message}`);
-        const button = this.createSafeElement('button', 'secondary-btn', 'Try again');
+        const errorMessage = this.createElement('div', 'error-message');
+        const p = this.createElement('p', '', `Error loading appointments: ${message}`);
+        const button = this.createElement('button', 'secondary-btn', 'Try again');
         button.onclick = () => this.loadAppointments();
 
         errorMessage.appendChild(p);
@@ -443,14 +433,12 @@ class Dashboard {
     }
 
     displayAppointments(appointments) {
-        this.currentAppointments = appointments;
         const appointmentsContainer = document.getElementById('appointments-container');
 
-        // Clear existing content safely
         while (appointmentsContainer.firstChild) {
             appointmentsContainer.removeChild(appointmentsContainer.firstChild);
         }
-
+        //ordonez cronologic
         appointments.sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
         appointments.forEach(appointment => {
@@ -460,10 +448,9 @@ class Dashboard {
     }
 
     createAppointmentCard(appointment) {
-        const appointmentCard = this.createSafeElement('div', 'appointment-card');
+        const appointmentCard = this.createElement('div', 'appointment-card');
         appointmentCard.setAttribute('data-appointment-id', String(appointment.id));
 
-        // Parse and format date
         const [year, month, day] = appointment.date.split('-');
         const appointmentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         const formattedDate = appointmentDate.toLocaleDateString('en-US', {
@@ -473,63 +460,63 @@ class Dashboard {
             day: 'numeric'
         });
 
-        // Appointment header
-        const appointmentHeader = this.createSafeElement('div', 'appointment-header');
+        //header
+        const appointmentHeader = this.createElement('div', 'appointment-header');
 
-        const appointmentDateDiv = this.createSafeElement('div', 'appointment-date');
-        const h3 = this.createSafeElement('h3', '', formattedDate);
-        const timeP = this.createSafeElement('p', 'appointment-time', appointment.time);
+        const appointmentDateDiv = this.createElement('div', 'appointment-date');
+        const h3 = this.createElement('h3', '', formattedDate);
+        const timeP = this.createElement('p', 'appointment-time', appointment.time);
         appointmentDateDiv.appendChild(h3);
         appointmentDateDiv.appendChild(timeP);
 
         const statusText = this.getStatusText(appointment.status);
-        const statusClass = this.getStatusClass(appointment.status);
-        const appointmentStatus = this.createSafeElement('div', `appointment-status ${statusClass}`, statusText);
+        const statusClass = this.getStatusClass(appointment.status); //pt css
+        const appointmentStatus = this.createElement('div', `appointment-status ${statusClass}`, statusText);
 
         appointmentHeader.appendChild(appointmentDateDiv);
         appointmentHeader.appendChild(appointmentStatus);
 
-        // Appointment details
-        const appointmentDetails = this.createSafeElement('div', 'appointment-details');
+        //detalii
+        const appointmentDetails = this.createElement('div', 'appointment-details');
 
-        // Service type (if exists)
+        //service type
         if (appointment.serviceType) {
-            const serviceTypeDiv = this.createSafeElement('div', 'service-type');
-            const serviceStrong = this.createSafeElement('strong', '', 'Service: ');
+            const serviceTypeDiv = this.createElement('div', 'service-type');
+            const serviceStrong = this.createElement('strong', '', 'Service: ');
             serviceTypeDiv.appendChild(serviceStrong);
             serviceTypeDiv.appendChild(document.createTextNode(this.getServiceTypeText(appointment.serviceType)));
             appointmentDetails.appendChild(serviceTypeDiv);
         }
 
-        // Description
-        const descriptionDiv = this.createSafeElement('div', 'description');
-        const descStrong = this.createSafeElement('strong', '', 'Description: ');
+        //descriere
+        const descriptionDiv = this.createElement('div', 'description');
+        const descStrong = this.createElement('strong', '', 'Description: ');
         descriptionDiv.appendChild(descStrong);
         descriptionDiv.appendChild(document.createTextNode(appointment.description));
         appointmentDetails.appendChild(descriptionDiv);
 
-        // Admin response (if exists)
+        //raspuns de la admin
         if (appointment.adminResponse) {
-            const adminResponseDiv = this.createSafeElement('div', 'admin-response');
-            const adminStrong = this.createSafeElement('strong', '', 'Admin response: ');
+            const adminResponseDiv = this.createElement('div', 'admin-response');
+            const adminStrong = this.createElement('strong', '', 'Admin response: ');
             adminResponseDiv.appendChild(adminStrong);
             adminResponseDiv.appendChild(document.createTextNode(appointment.adminResponse));
             appointmentDetails.appendChild(adminResponseDiv);
         }
 
-        // Estimated price (if exists)
+        //pret estimativ
         if (appointment.estimatedPrice) {
-            const estimatedPriceDiv = this.createSafeElement('div', 'estimated-price');
-            const priceStrong = this.createSafeElement('strong', '', 'Estimated price: ');
+            const estimatedPriceDiv = this.createElement('div', 'estimated-price');
+            const priceStrong = this.createElement('strong', '', 'Estimated price: ');
             estimatedPriceDiv.appendChild(priceStrong);
             estimatedPriceDiv.appendChild(document.createTextNode(appointment.estimatedPrice));
             appointmentDetails.appendChild(estimatedPriceDiv);
         }
 
-        // Vehicle info (if exists)
+        //info vehicul
         if (appointment.vehicle) {
-            const vehicleInfoDiv = this.createSafeElement('div', 'vehicle-info');
-            const vehicleStrong = this.createSafeElement('strong', '', 'Vehicle: ');
+            const vehicleInfoDiv = this.createElement('div', 'vehicle-info');
+            const vehicleStrong = this.createElement('strong', '', 'Vehicle: ');
             const vehicleText = `${appointment.vehicle.brand} ${appointment.vehicle.model} (${appointment.vehicle.year})${appointment.vehicle.is_electric ? ' Electric' : ''}`;
             vehicleInfoDiv.appendChild(vehicleStrong);
             vehicleInfoDiv.appendChild(document.createTextNode(vehicleText));
@@ -553,6 +540,7 @@ class Dashboard {
         return statusMap[status] || status;
     }
 
+    //pt css
     getStatusClass(status) {
         return `status-${status}`;
     }
