@@ -36,12 +36,10 @@ const server = http.createServer(async (req, res) => {
         if (pathname.startsWith('/admin')) {
             return adminRoutes(req, res);
         }
-
-        // Inventory routes
         if (pathname.startsWith('/inventory')) {
             return inventoryRoutes(req, res);
         }
-
+        //paginile html
         if (pathname === '/' || pathname === '/homepage') {
             await serveFile(res, 'frontend/pages/homepage.html', 'text/html');
         }
@@ -64,7 +62,6 @@ const server = http.createServer(async (req, res) => {
             await serveFile(res, 'frontend/pages/accountant-dashboard.html', 'text/html');
         }
 
-        //fisierele statice
         else if (pathname.startsWith('/css/')) {
             await serveFile(res, `frontend${pathname}`, 'text/css');
         }
@@ -74,7 +71,6 @@ const server = http.createServer(async (req, res) => {
         else if (pathname.startsWith('/images/') || pathname.startsWith('/assets/')) {
             await serveFile(res, `frontend${pathname}`, getImageMimeType(pathname));
         }
-
         //api routes
         else if (pathname.startsWith('/api/')) {
             await handleApiRoutes(req, res, pathname, method, parsedUrl.query);
@@ -84,7 +80,6 @@ const server = http.createServer(async (req, res) => {
             res.end('Not Found');
         }
     } catch (error) {
-        console.error('Server error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'Internal server error' }));
     }
@@ -92,20 +87,8 @@ const server = http.createServer(async (req, res) => {
 
 async function handleApiRoutes(req, res, pathname, method, queryParams) {
     try {
-        // Auth routes
-        if (pathname === '/api/auth/register' && method === 'POST') {
-            try {
-                const body = await getRequestBody(req);
-                await authController.register(req, res, body);
-            } catch (error) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Invalid JSON in request body'
-                }));
-            }
-        }
-        else if (pathname === '/api/auth/register-request' && method === 'POST') {
+        //rute de autentificare
+        if (pathname === '/api/auth/register-request' && method === 'POST') {
             try {
                 const body = await getRequestBody(req);
                 await authController.submitRegistrationRequest(req, res, body);
@@ -130,7 +113,6 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
             }
         }
         else if (pathname.startsWith('/api/accountant')) {
-
             req.query = queryParams || {};
             return await accountantRoutes(req, res);
         }
@@ -155,7 +137,6 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
         }
 
     } catch (error) {
-        console.error('API route error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             success: false,
@@ -168,18 +149,18 @@ async function handleApiRoutes(req, res, pathname, method, queryParams) {
 
 async function getRequestBody(req) {
     return new Promise((resolve, reject) => {
-        let body = '';
+        let body = ''; //rezultatul
         req.on('data', chunk => {
             body += chunk.toString();
         });
         req.on('end', () => {
             try {
-                // Check if body is empty
+                //verificam daca body e empty
                 if (!body.trim()) {
                     resolve({});
                     return;
                 }
-                const parsed = JSON.parse(body);
+                const parsed = JSON.parse(body); //convertim stringul json intr un obiect js
                 resolve(parsed);
             } catch (error) {
                 reject(new Error('Invalid JSON in request body'));
