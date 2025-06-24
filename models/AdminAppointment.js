@@ -225,9 +225,6 @@ class AdminAppointment {
         }
     }
 
-    static async updateStatus(id, updateData, adminId = null) {
-        return this.updateStatusWithParts(id, updateData, [], adminId);
-    }
 }
 
 module.exports = AdminAppointment;

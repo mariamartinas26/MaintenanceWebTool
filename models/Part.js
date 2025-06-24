@@ -78,21 +78,6 @@ class Part {
         }
     }
 
-    static async getCategories() {
-        const query = `
-            SELECT DISTINCT category
-            FROM "Parts"
-            WHERE category IS NOT NULL
-            ORDER BY category ASC
-        `;
-
-        try {
-            const result = await pool.query(query);
-            return result.rows.map(row => row.category);
-        } catch (error) {
-            throw new Error(`Database error: ${error.message}`);
-        }
-    }
 
     static async updateStock(partId, quantityUsed, client = null) {
         const db = client || pool;
@@ -219,28 +204,7 @@ class Part {
         }
     }
 
-    static async getLowStockParts() {
-        const query = `
-            SELECT 
-                p.id,
-                p.name,
-                p.part_number,
-                p.stock_quantity,
-                p.minimum_stock_level,
-                s.company_name as supplier_name
-            FROM "Parts" p
-            LEFT JOIN "Suppliers" s ON p.supplier_id = s.id
-            WHERE p.stock_quantity <= p.minimum_stock_level
-            ORDER BY (p.stock_quantity - p.minimum_stock_level) ASC
-        `;
 
-        try {
-            const result = await pool.query(query);
-            return result.rows;
-        } catch (error) {
-            throw new Error(`Database error: ${error.message}`);
-        }
-    }
 }
 
 module.exports = Part;
