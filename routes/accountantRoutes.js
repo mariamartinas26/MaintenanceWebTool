@@ -58,7 +58,6 @@ const accountantRoutes = async (req, res) => {
             securePath.setSecurityHeaders(res);
             return await parseBodyAndExecute(req, res, ImportExportController.importData);
         }
-
         if (path === '/api/accountant/export' && method === 'POST') {
             securePath.setSecurityHeaders(res);
             return await parseBodyAndExecute(req, res, ImportExportController.exportData);

@@ -19,7 +19,7 @@ class ManagerDashboard {
 
     init() {
         this.checkAuth();
-        this.loadRequests();
+        this.loadRequestsFromAPI();
         this.setupEventListeners();
     }
 
@@ -45,106 +45,6 @@ class ManagerDashboard {
         } catch (error) {
             return null;
         }
-    }
-
-    sanitizeInput(input) {
-        if (typeof input !== 'string') return input;
-        return input
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;')
-            .replace(/\//g, '&#x2F;');
-    }
-
-    sanitizeObject(obj) {
-        if (obj === null || typeof obj !== 'object') {
-            return typeof obj === 'string' ? this.sanitizeInput(obj) : obj;
-        }
-
-        if (Array.isArray(obj)) {
-            return obj.map(item => this.sanitizeObject(item));
-        }
-
-        const sanitized = {};
-        for (const [key, value] of Object.entries(obj)) {
-            const sanitizedKey = this.sanitizeInput(key);
-            sanitized[sanitizedKey] = this.sanitizeObject(value);
-        }
-
-        return sanitized;
-    }
-
-    createElement(tag, className = '', textContent = '') {
-        const element = document.createElement(tag);
-        if (className) {
-            element.className = this.sanitizeInput(className);
-        }
-        if (textContent) {
-            element.textContent = String(textContent);
-        }
-        return element;
-    }
-
-    safeSetText(element, text) {
-        if (element && text !== null && text !== undefined) {
-            element.textContent = String(text);
-        }
-    }
-
-    async loadRequests() {
-        try {
-            const token = localStorage.getItem('token');
-
-            const response = await fetch('/api/manager/requests', {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.status === 401) {
-                window.location.href = '/login';
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error('Failed to load requests');
-            }
-
-            const data = await response.json();
-
-            this.allRequests = data.requests; //rapsunsul de la backend
-
-            this.displayRequests();
-            this.updateStats(); //statistici nr cereri pending,approved,rejected
-        } catch (error) {
-            this.allRequests = [];
-            this.displayRequests();
-        }
-    }
-
-    displayRequests() {
-        while (this.requestsContainer.firstChild) {
-            this.requestsContainer.removeChild(this.requestsContainer.firstChild);
-        }
-        //cazul in care nu avem requests
-        if (this.allRequests.length === 0) {
-            const emptyState = this.createElement('div', 'empty-state');
-            const h3 = this.createElement('h3', '', 'No requests found');
-            const p = this.createElement('p', '', 'There are currently no registration requests');
-
-            emptyState.appendChild(h3);
-            emptyState.appendChild(p);
-            this.requestsContainer.appendChild(emptyState);
-            return;
-        }
-
-        this.allRequests.forEach((request, index) => {
-            const card = this.createRequestCard(request);
-            this.requestsContainer.appendChild(card);
-        });
     }
 
     setupEventListeners() {
@@ -173,6 +73,60 @@ class ManagerDashboard {
         });
     }
 
+    async loadRequestsFromAPI() {
+        try {
+            const token = localStorage.getItem('token');
+
+            //cerere http
+            const response = await fetch('/api/manager/requests', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to load requests');
+            }
+
+            const data = await response.json();
+
+            this.allRequests = data.requests; //rapsunsul de la backend
+
+            this.displayRequests(); //afisam cererile
+            this.updateStats(); //statistici nr cereri pending,approved,rejected
+        } catch (error) {
+            this.allRequests = [];
+            this.displayRequests();
+        }
+    }
+
+    displayRequests() {
+        while (this.requestsContainer.firstChild) {
+            this.requestsContainer.removeChild(this.requestsContainer.firstChild);
+        }
+        //cazul in care nu avem requests
+        if (this.allRequests.length === 0) {
+            const emptyState = this.createElement('div', 'empty-state');
+            const h3 = this.createElement('h3', '', 'No requests found');
+            const p = this.createElement('p', '', 'There are currently no registration requests');
+
+            emptyState.appendChild(h3);
+            emptyState.appendChild(p);
+            this.requestsContainer.appendChild(emptyState);
+            return;
+        }
+
+        this.allRequests.forEach((request, index) => {
+            const card = this.createRequestCard(request);
+            this.requestsContainer.appendChild(card);
+        });
+    }
 
     createRequestCard(request) {
         const card = this.createElement('div', 'request-card');
@@ -258,6 +212,7 @@ class ManagerDashboard {
         this.safeSetText(this.approvedCount, approved);
         this.safeSetText(this.rejectedCount, rejected);
     }
+
     //modal detaliile despre request
     viewRequest(requestId) {
         const request = this.allRequests.find(r => r.id === requestId);
@@ -330,7 +285,7 @@ class ManagerDashboard {
         }
         this.showModal(this.rejectModal);
     }
-
+    //CONFIRM APPROVAL POST
     async confirmApproval() {
         if (!this.currentRequestId) return;
 
@@ -340,7 +295,6 @@ class ManagerDashboard {
             alert('Please select a role for the user');
             return;
         }
-
         try {
             const token = localStorage.getItem('token');
 
@@ -359,7 +313,7 @@ class ManagerDashboard {
 
             if (data.success) {
                 this.closeAllModals();
-                this.loadRequests();
+                this.loadRequestsFromAPI();
             } else {
                 alert(data.message || 'Failed to approve request');
             }
@@ -368,7 +322,7 @@ class ManagerDashboard {
             alert('Failed to approve request');
         }
     }
-
+    //REJECTION POST
     async confirmRejection() {
         if (!this.currentRequestId) return;
 
@@ -397,7 +351,7 @@ class ManagerDashboard {
             if (data.success) {
                 alert('Request rejected successfully!');
                 this.closeAllModals();
-                this.loadRequests();
+                this.loadRequestsFromAPI();
             } else {
                 alert(data.message || 'Failed to reject request');
             }
@@ -423,6 +377,52 @@ class ManagerDashboard {
         localStorage.removeItem('user');
         localStorage.clear();
         window.location.href = '/homepage';
+    }
+
+    sanitizeInput(input) {
+        if (typeof input !== 'string') return input;
+        return input
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .replace(/\//g, '&#x2F;');
+    }
+
+    sanitizeObject(obj) {
+        if (obj === null || typeof obj !== 'object') {
+            return typeof obj === 'string' ? this.sanitizeInput(obj) : obj;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.sanitizeObject(item));
+        }
+
+        const sanitized = {};
+        for (const [key, value] of Object.entries(obj)) {
+            const sanitizedKey = this.sanitizeInput(key);
+            sanitized[sanitizedKey] = this.sanitizeObject(value);
+        }
+
+        return sanitized;
+    }
+
+    createElement(tag, className = '', textContent = '') {
+        const element = document.createElement(tag);
+        if (className) {
+            element.className = this.sanitizeInput(className);
+        }
+        if (textContent) {
+            element.textContent = String(textContent);
+        }
+        return element;
+    }
+
+    safeSetText(element, text) {
+        if (element && text !== null && text !== undefined) {
+            element.textContent = String(text);
+        }
     }
 }
 

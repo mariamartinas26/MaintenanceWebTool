@@ -35,11 +35,6 @@ class AccountantDashboard {
         if (exportBtn) exportBtn.onclick = () => this.processExport();
     }
 
-    logout() {
-        localStorage.clear();
-        window.location.href = '/homepage';
-    }
-
     checkAuth() {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -55,6 +50,19 @@ class AccountantDashboard {
         }
 
         return true;
+    }
+
+    handleAuthError() {
+        alert('Session expired. Please login again.');
+        setTimeout(() => {
+            localStorage.clear();
+            window.location.href = '/login';
+        }, 1000);
+    }
+
+    logout() {
+        localStorage.clear();
+        window.location.href = '/homepage';
     }
 
     hideAllSections() {
@@ -101,6 +109,7 @@ class AccountantDashboard {
         this.showMainDashboard();
     }
 
+    //SUPPLIERS
     async loadSuppliersFromAPI() {
         try {
             //trimitem request GET la endpointul pt suppliers
@@ -193,6 +202,7 @@ class AccountantDashboard {
         return supplierItem;
     }
 
+    //IMPORT/EXPORT
     async processImport() {
         //colectam datele din interfata
         const dataType = document.getElementById('importDataType')?.value; //suppliers,parts,appointments
@@ -224,7 +234,7 @@ class AccountantDashboard {
                     'Authorization': `Bearer ${this.token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ //convertesc din obiect in string
+                body: JSON.stringify({ //convertesc un obiect in json
                     dataType: dataType,
                     format: format,
                     data: data
@@ -323,16 +333,7 @@ class AccountantDashboard {
     }
 
     displayError(message) {
-        console.error(message);
         alert(message);
-    }
-
-    handleAuthError() {
-        alert('Session expired. Please login again.');
-        setTimeout(() => {
-            localStorage.clear();
-            window.location.href = '/login';
-        }, 1000);
     }
 }
 

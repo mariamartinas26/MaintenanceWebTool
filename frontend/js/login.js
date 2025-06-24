@@ -210,5 +210,3 @@ class LoginManager {
         return true;
     }
 }
-
-const loginManager = new LoginManager();

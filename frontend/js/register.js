@@ -272,5 +272,3 @@ class RegisterManager {
         }
     }
 }
-
-const registerManager = new RegisterManager();

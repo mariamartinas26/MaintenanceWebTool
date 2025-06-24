@@ -12,178 +12,6 @@ class ImportExportController {
         res.end(JSON.stringify(data));
     }
 
-    static parseCSV(csvData) {
-        try {
-            //iau textul CSV il impart pe linii fara spatii si linii goale
-            const lines = csvData.trim().split('\n').filter(line => line.trim());
-
-            //prima linie contine header-ele
-            const headers = ImportExportController.parseCSVLine(lines[0]);
-            const results = [];
-            const errors = [];
-            //parcurg fiecare linie de date si o parsez
-            for (let i = 1; i < lines.length; i++) {
-                try {
-                    const values = ImportExportController.parseCSVLine(lines[i]);
-                    //verific daca nr de coloane la linia curenta = nr col headere
-                    if (values.length !== headers.length) {
-                        errors.push(`Not equal column number`);
-                        continue;
-                    }
-                    //pt fiecare linie valida fac un obiect
-                    //fac match intre header si valoare
-                    const obj = {};
-                    headers.forEach((header, index) => {
-                        const cleanHeader = header.trim().toLowerCase().replace(/\s+/g, '_');
-                        obj[cleanHeader] = values[index] ? values[index].trim() : '';
-                    });
-                    results.push(obj);
-                } catch (lineError) {
-                    errors.push(`Error`);
-                }
-            }
-            return results;
-        } catch (error) {
-            throw new Error(`CSV parsing failed: ${error.message}`);
-        }
-    }
-
-    //parsare linie csv
-    static parseCSVLine(line) {
-        const result = [];
-        let current = '';
-        let inQuotes = false;
-        let i = 0;
-
-        while (i < line.length) {
-            const char = line[i];
-            //gestionam ghilimelele
-            if (char === '"') {
-                inQuotes = !inQuotes;
-                i++;
-                //gestionare virgula
-            } else if (char === ',' && !inQuotes) {
-                result.push(current);
-                current = '';
-                i++;
-                //caracter nromal
-            } else {
-                current += char;
-                i++;
-            }
-        }
-        result.push(current);
-        return result;
-    }
-
-    static addQuotes(value) {
-        //convertesc tot la string
-        if (typeof value !== 'string') {
-            value = String(value);
-        }
-        //daca valoarea mea are virgule sau newline o pun intre ghilimele
-        if (value.includes(',') || value.includes('\n')) {
-            value = `"${value}"`;
-        }
-        return value;
-    }
-
-    static convertToCSV(data, dataType) {
-        if (!data || data.length === 0) {
-            return '';
-        }
-
-        const headers = ImportExportController.getCSVHeaders(dataType);//headere in functie de ce dorim sa exportam
-        const headerKeys = Object.keys(headers);
-        const headerValues = Object.values(headers);
-
-        //creez linia de header
-        let csv = headerValues.map(h => ImportExportController.addQuotes(h)).join(',') + '\n';
-
-        //liniile de date
-        data.forEach(row => {
-            const values = headerKeys.map(key => {
-                let value = row[key];
-
-                //valori invalide
-                if (value === null || value === undefined) {
-                    return '';
-                }
-
-                if (value instanceof Date) {
-                    return ImportExportController.addQuotes(value.toISOString());
-                }
-                //convertim tot la string si punem ghilimele daca e necesar
-                return ImportExportController.addQuotes(String(value));
-            });
-            csv += values.join(',') + '\n';
-        });
-
-        return csv;
-    }
-
-    static getCSVHeaders(dataType) {
-        switch (dataType) {
-            case 'suppliers':
-                return {
-                    id: 'ID',
-                    company_name: 'Company Name',
-                    contact_person: 'Contact Person',
-                    email: 'Email',
-                    phone: 'Phone',
-                    address: 'Address',
-                    delivery_time_days: 'Delivery Time (Days)',
-                };
-            case 'parts':
-                return {
-                    id: 'ID',
-                    name: 'Name',
-                    description: 'Description',
-                    part_number: 'Part Number',
-                    category: 'Category',
-                    price: 'Price',
-                    stock_quantity: 'Stock Quantity',
-                    supplier_id: 'Supplier ID',
-                    supplier_name: 'Supplier Name',
-                };
-            case 'appointments':
-                return {
-                    id: 'ID',
-                    user_id: 'User ID',
-                    first_name: 'First Name',
-                    last_name: 'Last Name',
-                    user_email: 'User Email',
-                    vehicle_id: 'Vehicle ID',
-                    brand: 'Vehicle Brand',
-                    model: 'Vehicle Model',
-                    year: 'Vehicle Year',
-                    appointment_date: 'Appointment Date',
-                    status: 'Status',
-                    problem_description: 'Problem Description',
-                    estimated_price: 'Estimated Price',
-                };
-            default:
-                return {};
-        }
-    }
-    //exportul din bd
-    static async getExportData(dataType) {
-        try {
-            switch (dataType) {
-                case 'suppliers':
-                    return await ImportExportModel.getAllSuppliers();
-                case 'parts':
-                    return await ImportExportModel.getAllParts();
-                case 'appointments':
-                    return await ImportExportModel.getAllAppointments();
-                default:
-                    throw new Error('Invalid data type');
-            }
-        } catch (error) {
-            throw new Error('Failed to export data');
-        }
-    }
-
     static async importData(req, res) {
         try {
             const userRole = req.user.role;
@@ -358,6 +186,180 @@ class ImportExportController {
             }
         }
     }
+
+
+    static parseCSV(csvData) {
+        try {
+            //iau textul CSV il impart pe linii fara spatii si linii goale
+            const lines = csvData.trim().split('\n').filter(line => line.trim());
+
+            //prima linie contine header-ele
+            const headers = ImportExportController.parseCSVLine(lines[0]);
+            const results = [];
+            const errors = [];
+            //parcurg fiecare linie de date si o parsez
+            for (let i = 1; i < lines.length; i++) {
+                try {
+                    const values = ImportExportController.parseCSVLine(lines[i]);
+                    //verific daca nr de coloane la linia curenta = nr col headere
+                    if (values.length !== headers.length) {
+                        errors.push(`Not equal column number`);
+                        continue;
+                    }
+                    //pt fiecare linie valida fac un obiect
+                    //fac match intre header si valoare
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        const cleanHeader = header.trim().toLowerCase().replace(/\s+/g, '_');
+                        obj[cleanHeader] = values[index] ? values[index].trim() : '';
+                    });
+                    results.push(obj);
+                } catch (lineError) {
+                    errors.push(`Error`);
+                }
+            }
+            return results;
+        } catch (error) {
+            throw new Error(`CSV parsing failed: ${error.message}`);
+        }
+    }
+
+    //parsare linie csv
+    static parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        let i = 0;
+
+        while (i < line.length) {
+            const char = line[i];
+            //gestionam ghilimelele
+            if (char === '"') {
+                inQuotes = !inQuotes;
+                i++;
+                //gestionare virgula ( separator)
+            } else if (char === ',' && !inQuotes) {
+                result.push(current);
+                current = '';
+                i++;
+                //caracter nromal
+            } else {
+                current += char;
+                i++;
+            }
+        }
+        result.push(current);
+        return result;
+    }
+
+    static addQuotes(value) {
+        //convertesc tot la string
+        if (typeof value !== 'string') {
+            value = String(value);
+        }
+        //daca valoarea mea are virgule sau newline o pun intre ghilimele
+        if (value.includes(',') || value.includes('\n')) {
+            value = `"${value}"`;
+        }
+        return value;
+    }
+
+    static convertToCSV(data, dataType) {
+        if (!data || data.length === 0) {
+            return '';
+        }
+
+        const headers = ImportExportController.getCSVHeaders(dataType);//headere in functie de ce dorim sa exportam
+        const headerKeys = Object.keys(headers);
+        const headerValues = Object.values(headers);
+
+        //creez linia de header
+        let csv = headerValues.map(h => ImportExportController.addQuotes(h)).join(',') + '\n';
+
+        //liniile de date
+        data.forEach(row => {
+            const values = headerKeys.map(key => {
+                let value = row[key];
+
+                //valori invalide
+                if (value === null || value === undefined) {
+                    return '';
+                }
+
+                if (value instanceof Date) {
+                    return ImportExportController.addQuotes(value.toISOString());
+                }
+                //convertim tot la string si punem ghilimele daca e necesar
+                return ImportExportController.addQuotes(String(value));
+            });
+            csv += values.join(',') + '\n';
+        });
+
+        return csv;
+    }
+
+    static getCSVHeaders(dataType) {
+        switch (dataType) {
+            case 'suppliers':
+                return {
+                    id: 'ID',
+                    company_name: 'Company Name',
+                    contact_person: 'Contact Person',
+                    email: 'Email',
+                    phone: 'Phone',
+                    address: 'Address',
+                    delivery_time_days: 'Delivery Time (Days)',
+                };
+            case 'parts':
+                return {
+                    id: 'ID',
+                    name: 'Name',
+                    description: 'Description',
+                    part_number: 'Part Number',
+                    category: 'Category',
+                    price: 'Price',
+                    stock_quantity: 'Stock Quantity',
+                    supplier_id: 'Supplier ID',
+                    supplier_name: 'Supplier Name',
+                };
+            case 'appointments':
+                return {
+                    id: 'ID',
+                    user_id: 'User ID',
+                    first_name: 'First Name',
+                    last_name: 'Last Name',
+                    user_email: 'User Email',
+                    vehicle_id: 'Vehicle ID',
+                    brand: 'Vehicle Brand',
+                    model: 'Vehicle Model',
+                    year: 'Vehicle Year',
+                    appointment_date: 'Appointment Date',
+                    status: 'Status',
+                    problem_description: 'Problem Description',
+                    estimated_price: 'Estimated Price',
+                };
+            default:
+                return {};
+        }
+    }
+    //exportul din bd
+    static async getExportData(dataType) {
+        try {
+            switch (dataType) {
+                case 'suppliers':
+                    return await ImportExportModel.getAllSuppliers();
+                case 'parts':
+                    return await ImportExportModel.getAllParts();
+                case 'appointments':
+                    return await ImportExportModel.getAllAppointments();
+                default:
+                    throw new Error('Invalid data type');
+            }
+        } catch (error) {
+            throw new Error('Failed to export data');
+        }
+    }
+
 
     //functia care face efectiv importul in bd
     static async processImport(dataType, data, userId) {
