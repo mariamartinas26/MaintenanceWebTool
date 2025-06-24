@@ -2,22 +2,20 @@ const http = require('http');
 const url = require('url');
 const fs = require('fs').promises;
 const path = require('path');
-const querystring = require('querystring');
 require('dotenv').config();
-const { authenticateToken } = require('./middleware/auth');
-const { accountantRoutes } = require('./routes/accountantRoutes');
 
 const authController = require('./controllers/authController');
+
+const { accountantRoutes } = require('./routes/accountantRoutes');
 const { handleAppointmentRoutes } = require('./routes/appointmentRoutes');
 const { handleCalendarRoutes } = require('./routes/calendarRoutes');
 const { handleVehicleRoutes } = require('./routes/vehicleRoutes');
 const adminRoutes = require('./routes/adminRoute');
 const inventoryRoutes = require('./routes/inventoryRoutes');
-const managerController = require('./controllers/managerController');
 const { handleSupplierRoutes } = require('./routes/supplierRoutes');
 const { handleManagerRoutes } = require('./routes/managerRoutes');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
