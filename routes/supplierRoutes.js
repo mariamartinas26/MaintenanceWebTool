@@ -1,6 +1,6 @@
 const url = require('url');
 const supplierController = require('../controllers/supplierController');
-const { verifyToken, requireAdmin } = require('../middleware/auth');
+const {verifyToken, requireAdmin} = require('../middleware/auth');
 const SecurePath = require('./SecurePath');
 
 const securePath = new SecurePath();
@@ -90,32 +90,51 @@ async function handleSupplierRoutes(req, res) {
         }
     }
 }
-//citeste si parseaza body ul requestului si il trimite la controller(pt post si put)
-const parseBodyAndExecute = (req, res, controllerFunction) => {
-    return new Promise((resolve) => {
-        securePath.processRequestBody(req, async (error, sanitizedBody) => {
-            if (error) {
-                return securePath.sendJSON(res, error.statusCode || 400, {
-                    success: false,
-                    message: error.message
-                });
-            }
 
-            try {
-                req.body = sanitizedBody;
-                await controllerFunction(req, res);
-                resolve();
-            } catch (controllerError) {
-                if (!res.headersSent) {
-                    return securePath.sendJSON(res, 500, {
-                        success: false,
-                        message: 'Controller execution error'
-                    });
-                }
-                resolve();
-            }
+//citeste si parseaza body ul requestului si il trimite la controller(pt post si put)
+async function parseBodyAndExecute(req, res, controllerMethod) {
+    try {
+        let body = '';
+
+        // Citește datele din request stream
+        req.on('data', chunk => {
+            body += chunk.toString();
         });
-    });
+
+        return new Promise((resolve, reject) => {
+            req.on('end', async () => {
+                try {
+                    // Parsează JSON-ul
+                    const data = body ? JSON.parse(body) : {};
+                    console.log('Parsed request body:', data); // Pentru debugging
+
+                    // Apelează metoda controller-ului cu datele parsate
+                    await controllerMethod(req, res, data);
+                    resolve();
+                } catch (error) {
+                    console.error('Error parsing JSON or executing controller:', error);
+                    res.writeHead(400, {'Content-Type': 'application/json'});
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: 'Invalid JSON or server error'
+                    }));
+                    reject(error);
+                }
+            });
+
+            req.on('error', (error) => {
+                console.error('Request error:', error);
+                reject(error);
+            });
+        });
+    } catch (error) {
+        console.error('Parse body error:', error);
+        res.writeHead(500, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({
+            success: false,
+            message: 'Server error'
+        }));
+    }
 };
 
-module.exports = { handleSupplierRoutes };
+module.exports = {handleSupplierRoutes};

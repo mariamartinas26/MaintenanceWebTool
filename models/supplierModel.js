@@ -62,7 +62,28 @@ class SupplierModel {
             minimum_stock_level: parseInt(part.minimum_stock_level) || 0
         }));
     }
+    static async getPartById(id) {
+        const query = `
+        SELECT p.*, s.company_name as supplier_name
+        FROM "Parts" p
+        LEFT JOIN "Suppliers" s ON p.supplier_id = s.id
+        WHERE p.id = $1
+    `;
 
+        const result = await pool.query(query, [id]);
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const part = result.rows[0];
+        return {
+            ...part,
+            price: parseFloat(part.price) || 0,
+            stock_quantity: parseInt(part.stock_quantity) || 0,
+            minimum_stock_level: parseInt(part.minimum_stock_level) || 0
+        };
+    }
     static async getAllOrders() {
         const query = `
             SELECT o.*, s.company_name as supplier_name,

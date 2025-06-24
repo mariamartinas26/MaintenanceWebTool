@@ -169,25 +169,37 @@ class OrderManager {
     }
 
     async saveOrderToAPI(orderData) {
-        const response = await fetch('/api/orders', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(this.sanitizeObject(orderData))
-        });
+        try {
+            const sanitizedData = this.sanitizeObject(orderData);
 
-        if (response.status === 401) {
-            this.handleAuthError();
-            return;
-        }
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(sanitizedData)
+            });
 
-        const result = await response.json();
-        if (result.success) {
-            await this.loadOrdersFromAPI();
-        } else {
-            throw new Error(result.message || 'Failed to save order');
+            if (response.status === 401) {
+                this.handleAuthError();
+                return;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Order saved successfully!');
+                await this.loadOrdersFromAPI();
+            } else {
+                throw new Error(result.message || 'Failed to save order');
+            }
+        } catch (error) {
+            alert('Error saving order: ' + error.message);
         }
     }
 
@@ -220,26 +232,32 @@ class OrderManager {
         }
     }
 
+
     saveOrder() {
         const supplierIdElement = document.getElementById('orderSupplier');
 
         if (!supplierIdElement) {
             return;
         }
-
+        //furnizorul selectat din dropdown
         const supplierId = supplierIdElement.value;
         if (!supplierId) {
             return;
         }
-        //furnizorul selectat din dropdown
+
         const supplier = this.suppliers.find(s => s.id === parseInt(supplierId));
+        if (!supplier) {
+            return;
+        }
 
         const orderItems = [];
         document.querySelectorAll('.order-item').forEach(item => {
             const partSelect = item.querySelector('.part-select');
-            const quantity = parseInt(item.querySelector('.quantity')?.value);
-            const unitPrice = parseFloat(item.querySelector('.unit-price')?.value);
+            const quantityInput = item.querySelector('.quantity');
+            const unitPriceInput = item.querySelector('.unit-price');
 
+            const quantity = parseInt(quantityInput?.value);
+            const unitPrice = parseFloat(unitPriceInput?.value);
             //creez cate un obiect pentru fiecare produs din comanda
             if (partSelect?.value && quantity && unitPrice) {
                 const selectedPart = this.parts.find(p => p.id === parseInt(partSelect.value));
@@ -247,7 +265,7 @@ class OrderManager {
                     orderItems.push({
                         name: selectedPart.name,
                         part_id: selectedPart.id,
-                        quantity,
+                        quantity: quantity,
                         unit_price: unitPrice
                     });
                 }
@@ -255,6 +273,7 @@ class OrderManager {
         });
 
         if (orderItems.length === 0) {
+            alert('Please add at least one item to the order');
             return;
         }
 
