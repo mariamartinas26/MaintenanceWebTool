@@ -71,10 +71,6 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             return AdminAppointmentsController.getAppointmentsForAdmin(req, res);
         }
 
-        if (path === '/admin/api/appointments/statistics' && method === 'GET') {
-            return AdminAppointmentsController.getAppointmentStatistics(req, res);
-        }
-
         if (path.match(/^\/admin\/api\/appointments\/(\d+)$/) && method === 'GET') {
             const matches = path.match(/^\/admin\/api\/appointments\/(\d+)$/);
             const appointmentId = securePath.validateNumericId(matches[1]);

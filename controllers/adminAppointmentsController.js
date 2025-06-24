@@ -127,7 +127,6 @@ class AdminAppointmentsController {
                 });
             }
 
-            const mediaFiles = await AdminAppointment.getAppointmentMedia(appointmentId);
             const appointmentParts = await AppointmentParts.getAppointmentParts(appointmentId);
 
             const formattedAppointment = {
@@ -154,14 +153,6 @@ class AdminAppointmentsController {
                     isElectric: Boolean(appointment.is_electric),
                     notes: validateInput(appointment.vehicle_notes)
                 },
-                mediaFiles: mediaFiles.map(file => ({
-                    id: file.id,
-                    fileName: validateInput(file.original_filename),
-                    fileType: validateInput(file.file_type),
-                    filePath: validateInput(file.file_path),
-                    mimeType: validateInput(file.mime_type),
-                    uploadedAt: file.uploaded_at
-                })),
                 selectedParts: appointmentParts.map(part => ({
                     id: part.id,
                     partId: part.part_id,
@@ -433,27 +424,6 @@ class AdminAppointmentsController {
         }
     }
 
-    static async getAppointmentStatistics(req, res) {
-        try {
-            setSecurityHeaders(res);
-
-            const statistics = await AdminAppointment.getStatistics();
-
-            sendJSON(res, 200, {
-                success: true,
-                statistics: statistics
-            });
-
-        } catch (error) {
-            console.error('Error in getAppointmentStatistics:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Error loading statistics',
-                error: process.env.NODE_ENV === 'development' ? validateInput(error.message) : undefined
-            });
-        }
-    }
-
     static async getLowStockParts(req, res) {
         try {
             setSecurityHeaders(res);
@@ -484,62 +454,6 @@ class AdminAppointmentsController {
                 message: 'Error loading low stock parts',
                 error: process.env.NODE_ENV === 'development' ? validateInput(error.message) : undefined
             });
-        }
-    }
-
-    static async getAppointmentsForExport(req, res) {
-        try {
-            setSecurityHeaders(res);
-
-            const result = await AdminAppointmentsController.getAppointmentsForExportData(req);
-
-            sendJSON(res, 200, {
-                success: true,
-                data: result,
-                total: result.length,
-                exported_at: new Date().toISOString()
-            });
-        } catch (error) {
-            console.error('Export appointments error:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Failed to export appointments data'
-            });
-        }
-    }
-
-    static async getAppointmentsForExportData(req) {
-        try {
-            const appointments = await AdminAppointment.getAllForAdmin({});
-
-            return appointments.map(appointment => ({
-                id: appointment.id,
-                client_name: `${validateInput(appointment.first_name) || ''} ${validateInput(appointment.last_name) || ''}`.trim(),
-                client_email: validateInput(appointment.email),
-                client_phone: validateInput(appointment.phone),
-                appointment_date: appointment.appointment_date ? new Date(appointment.appointment_date).toLocaleString() : null,
-                status: validateInput(appointment.status),
-                problem_description: validateInput(appointment.problem_description),
-                admin_response: validateInput(appointment.admin_response),
-                rejection_reason: validateInput(appointment.rejection_reason),
-                retry_days: validateInteger(appointment.retry_days),
-                estimated_price: validateNumber(appointment.estimated_price),
-                warranty_info: validateInput(appointment.warranty_info),
-                service_type: appointment.vehicle_type ?
-                    `${validateInput(appointment.vehicle_type)} ${validateInput(appointment.brand) || ''} ${validateInput(appointment.model) || ''}${appointment.year ? ` (${validateInteger(appointment.year)})` : ''}`.trim() :
-                    'Unknown Service',
-                vehicle_type: validateInput(appointment.vehicle_type),
-                vehicle_brand: validateInput(appointment.brand),
-                vehicle_model: validateInput(appointment.model),
-                vehicle_year: validateInteger(appointment.year),
-                is_electric: Boolean(appointment.is_electric),
-                created_at: appointment.created_at ? new Date(appointment.created_at).toLocaleString() : null,
-                updated_at: appointment.updated_at ? new Date(appointment.updated_at).toLocaleString() : null
-            }));
-
-        } catch (error) {
-            console.error('Error getting appointments for export:', error);
-            throw error;
         }
     }
 }

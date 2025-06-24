@@ -634,8 +634,12 @@ class AdminDashboard {
                 valueDiv.appendChild(statusSpan);
                 detailItem.appendChild(labelDiv);
                 detailItem.appendChild(valueDiv);
+            } else {
+                const labelDiv = this.createSafeElement('div', 'detail-label', item.label + ':');
+                const valueDiv = this.createSafeElement('div', 'detail-value', item.value);
+                detailItem.appendChild(labelDiv);
+                detailItem.appendChild(valueDiv);
             }
-
             section.appendChild(detailItem);
         });
 
