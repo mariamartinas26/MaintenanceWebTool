@@ -1,7 +1,6 @@
 const { pool } = require('../database/db');
 
 class Part {
-    // Get all parts with optional filters
     static async getAll(filters = {}) {
         let query = `
             SELECT
@@ -24,7 +23,6 @@ class Part {
         const conditions = [];
         const params = [];
 
-        // Search filter
         if (filters.search) {
             conditions.push(`(
                 LOWER(p.name) LIKE LOWER($${params.length + 1}) OR 
@@ -36,13 +34,11 @@ class Part {
             params.push(searchTerm, searchTerm, searchTerm, searchTerm);
         }
 
-        // Category filter
         if (filters.category) {
             conditions.push(`p.category = $${params.length + 1}`);
             params.push(filters.category);
         }
 
-        // Available only filter
         if (filters.available_only) {
             conditions.push(`p.stock_quantity > 0`);
         }
@@ -61,7 +57,6 @@ class Part {
         }
     }
 
-    // Get single part by ID
     static async getById(id) {
         const query = `
             SELECT
@@ -83,7 +78,6 @@ class Part {
         }
     }
 
-    // Get all categories
     static async getCategories() {
         const query = `
             SELECT DISTINCT category
@@ -100,9 +94,8 @@ class Part {
         }
     }
 
-    // Update stock quantity (for when parts are used)
     static async updateStock(partId, quantityUsed, client = null) {
-        const dbClient = client || pool;
+        const db = client || pool;
 
         const query = `
             UPDATE "Parts"
@@ -114,12 +107,11 @@ class Part {
         `;
 
         try {
-            const result = await dbClient.query(query, [partId, quantityUsed]);
+            const result = await db.query(query, [partId, quantityUsed]);
 
             if (result.rows.length === 0) {
-                // Check if part exists
                 const checkQuery = `SELECT id, name, stock_quantity FROM "Parts" WHERE id = $1`;
-                const checkResult = await dbClient.query(checkQuery, [partId]);
+                const checkResult = await db.query(checkQuery, [partId]);
 
                 if (checkResult.rows.length === 0) {
                     throw new Error(`Part with ID ${partId} not found`);
@@ -135,14 +127,12 @@ class Part {
         }
     }
 
-    // Bulk update stock for multiple parts
     static async updateMultipleStock(partsList, client = null) {
-        const dbClient = client || pool;
+        const db = client || pool;
         const updatedParts = [];
         const errors = [];
 
         try {
-            // First, validate all parts have sufficient stock
             for (const part of partsList) {
                 const checkQuery = `
                     SELECT id, name, stock_quantity 
@@ -150,7 +140,7 @@ class Part {
                     WHERE id = $1
                 `;
 
-                const checkResult = await dbClient.query(checkQuery, [part.partId]);
+                const checkResult = await db.query(checkQuery, [part.partId]);
 
                 if (checkResult.rows.length === 0) {
                     errors.push(`Part with ID ${part.partId} not found`);
@@ -163,14 +153,12 @@ class Part {
                 }
             }
 
-            // If there are any errors, throw them
             if (errors.length > 0) {
                 throw new Error(`Stock validation failed:\n${errors.join('\n')}`);
             }
 
-            // If validation passes, update all parts
             for (const part of partsList) {
-                const updatedPart = await this.updateStock(part.partId, part.quantity, dbClient);
+                const updatedPart = await this.updateStock(part.partId, part.quantity, db);
                 updatedParts.push({
                     ...updatedPart,
                     quantityUsed: part.quantity
@@ -188,7 +176,6 @@ class Part {
         }
     }
 
-    // Check if parts are available in required quantities
     static async checkAvailability(partsList) {
         const partIds = partsList.map(part => part.partId);
 
@@ -232,7 +219,6 @@ class Part {
         }
     }
 
-    // Get parts that are low in stock
     static async getLowStockParts() {
         const query = `
             SELECT 
@@ -253,32 +239,6 @@ class Part {
             return result.rows;
         } catch (error) {
             throw new Error(`Database error: ${error.message}`);
-        }
-    }
-
-    // Restore stock (in case of appointment cancellation or part return)
-    static async restoreStock(partId, quantityToRestore, client = null) {
-        const dbClient = client || pool;
-
-        const query = `
-            UPDATE "Parts"
-            SET 
-                stock_quantity = stock_quantity + $2,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
-            RETURNING id, name, stock_quantity, (stock_quantity - $2) as previous_stock
-        `;
-
-        try {
-            const result = await dbClient.query(query, [partId, quantityToRestore]);
-
-            if (result.rows.length === 0) {
-                throw new Error(`Part with ID ${partId} not found`);
-            }
-
-            return result.rows[0];
-        } catch (error) {
-            throw new Error(`Database error restoring stock: ${error.message}`);
         }
     }
 }

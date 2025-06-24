@@ -2,18 +2,15 @@ const { pool } = require('../database/db');
 
 class AppointmentParts {
     static async saveAppointmentParts(appointmentId, partsList, client = null) {
-        const dbClient = client || pool;
-
-        console.log('=== AppointmentParts.saveAppointmentParts called ===');
-        console.log('appointmentId:', appointmentId);
-        console.log('partsList:', JSON.stringify(partsList, null, 2));
+        const db = client || pool;
 
         try {
             if (!appointmentId) {
                 throw new Error('appointmentId is required');
             }
 
-            await dbClient.query(
+            //sterge tot ca sa insereze ce e nou
+            await db.query(
                 'DELETE FROM "AppointmentParts" WHERE appointment_id = $1',
                 [appointmentId]
             );
@@ -27,9 +24,7 @@ class AppointmentParts {
 
                 for (let i = 0; i < partsList.length; i++) {
                     const part = partsList[i];
-                    console.log(`Processing part ${i + 1}:`, part);
 
-                    // Validate part data
                     if (!part) {
                         throw new Error(`Part at index ${i} is null or undefined`);
                     }
@@ -42,7 +37,6 @@ class AppointmentParts {
                         throw new Error(`Part at index ${i} has invalid quantity (${part.quantity}). Part data: ${JSON.stringify(part)}`);
                     }
 
-                    // Check for unitPrice with multiple fallbacks
                     let unitPrice = part.unitPrice;
                     if (unitPrice === null || unitPrice === undefined || isNaN(unitPrice)) {
                         unitPrice = part.unit_price;
@@ -63,7 +57,7 @@ class AppointmentParts {
                         throw new Error(`Invalid price after parsing: ${price}`);
                     }
 
-                    await dbClient.query(insertQuery, [
+                    await db.query(insertQuery, [
                         appointmentId,
                         partId,
                         quantity,
@@ -129,45 +123,6 @@ class AppointmentParts {
         }
     }
 
-    static async deleteAppointmentParts(appointmentId) {
-        const query = `
-            DELETE FROM "AppointmentParts"
-            WHERE appointment_id = $1
-        `;
-
-        try {
-            await pool.query(query, [appointmentId]);
-            return true;
-        } catch (error) {
-            console.error('Error in deleteAppointmentParts:', error);
-            throw new Error(`Database error: ${error.message}`);
-        }
-    }
-
-    static validatePartsData(partsList) {
-        if (!partsList || !Array.isArray(partsList)) {
-            throw new Error('Parts list must be an array');
-        }
-
-        for (let i = 0; i < partsList.length; i++) {
-            const part = partsList[i];
-
-            if (!part.partId) {
-                throw new Error(`Part at index ${i} is missing partId`);
-            }
-
-            if (!part.quantity || part.quantity <= 0) {
-                throw new Error(`Part at index ${i} has invalid quantity`);
-            }
-
-            const unitPrice = part.unitPrice || part.unit_price || part.price;
-            if (!unitPrice || unitPrice < 0) {
-                throw new Error(`Part at index ${i} has invalid unit price`);
-            }
-        }
-
-        return true;
-    }
 }
 
 module.exports = AppointmentParts;

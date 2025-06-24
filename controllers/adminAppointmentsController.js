@@ -37,15 +37,11 @@ class AdminAppointmentsController {
             setSecurityHeaders(res);
 
             const status = validateInput(req.query.status);
-            const date_filter = validateInput(req.query.date_filter);
             const search = validateInput(req.query.search);
 
             const filters = {};
             if (status && status !== 'all' && validateStatus(status)) {
                 filters.status = status;
-            }
-            if (date_filter && date_filter !== 'all') {
-                filters.date_filter = date_filter;
             }
 
             const appointments = await AdminAppointment.getAllForAdmin(filters);
@@ -60,7 +56,6 @@ class AdminAppointmentsController {
                 problemDescription: validateInput(appointment.problem_description),
                 adminResponse: validateInput(appointment.admin_response),
                 rejectionReason: validateInput(appointment.rejection_reason),
-                retryDays: validateInteger(appointment.retry_days),
                 estimatedPrice: validateNumber(appointment.estimated_price),
                 estimatedCompletionTime: validateInput(appointment.estimated_completion_time),
                 warrantyInfo: validateInput(appointment.warranty_info),
@@ -141,7 +136,6 @@ class AdminAppointmentsController {
                 problemDescription: validateInput(appointment.problem_description),
                 adminResponse: validateInput(appointment.admin_response),
                 rejectionReason: validateInput(appointment.rejection_reason),
-                retryDays: validateInteger(appointment.retry_days),
                 estimatedPrice: validateNumber(appointment.estimated_price),
                 estimatedCompletionTime: validateInput(appointment.estimated_completion_time),
                 warrantyInfo: validateInput(appointment.warranty_info),
@@ -219,7 +213,6 @@ class AdminAppointmentsController {
             const estimatedPrice = validateNumber(req.body.estimatedPrice, 0);
             const warranty = validateInteger(req.body.warranty, 0);
             const rejectionReason = validateInput(req.body.rejectionReason);
-            const retryDays = validateInteger(req.body.retryDays, 1);
             const selectedParts = Array.isArray(req.body.selectedParts) ? req.body.selectedParts : [];
 
             if (!validateStatus(status)) {
@@ -288,7 +281,6 @@ class AdminAppointmentsController {
                 status,
                 adminResponse: null,
                 rejectionReason: null,
-                retryDays: null,
                 estimatedPrice: null,
                 warrantyInfo: null
             };
@@ -307,7 +299,6 @@ class AdminAppointmentsController {
 
                 const reasonText = rejectionReasons[rejectionReason] || rejectionReason;
                 updateData.rejectionReason = reasonText;
-                updateData.retryDays = retryDays && retryDays > 0 ? retryDays : null;
             }
 
             if (status === 'approved') {
@@ -377,7 +368,6 @@ class AdminAppointmentsController {
                     status: validateInput(updatedAppointment.status),
                     adminResponse: validateInput(updatedAppointment.admin_response),
                     rejectionReason: validateInput(updatedAppointment.rejection_reason),
-                    retryDays: validateInteger(updatedAppointment.retry_days),
                     estimatedPrice: validateNumber(updatedAppointment.estimated_price),
                     warrantyInfo: validateInput(updatedAppointment.warranty_info),
                     updatedAt: updatedAppointment.updated_at
