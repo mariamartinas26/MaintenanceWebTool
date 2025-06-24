@@ -78,7 +78,7 @@ function sendJSON(res, statusCode, data) {
 
 class SupplierController {
 
-    // GET /api/suppliers
+    // GET /api/suppliers pentru comanda noua
     async getAllSuppliers(req, res, query = {}) {
         try {
             setSecurityHeaders(res);
@@ -106,37 +106,7 @@ class SupplierController {
         }
     }
 
-    //toate comenzile
-    async getAllOrders(req, res, query = {}) {
-        try {
-            setSecurityHeaders(res);
-
-            const sanitizedQuery = {};
-            if (query.supplier_id) {
-                const supplierId = validateInteger(query.supplier_id, 1);
-                if (supplierId) sanitizedQuery.supplier_id = supplierId;
-            }
-            if (query.status) {
-                const status = validateStatus(query.status);
-                if (status) sanitizedQuery.status = status;
-            }
-
-            const orders = await SupplierModel.getAllOrders(sanitizedQuery);
-            const sanitizedOrders = orders.map(sanitizeOrder).filter(o => o !== null);
-
-            sendJSON(res, 200, {
-                success: true,
-                data: sanitizedOrders,
-                total: sanitizedOrders.length
-            });
-        } catch (error) {
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Error fetching orders: ' + validateInput(error.message)
-            });
-        }
-    }
-    //toate piesele
+    //toate piesele - pentru comanda noua de stoc
     async getAllParts(req, res, query = {}) {
         try {
             setSecurityHeaders(res);
@@ -174,6 +144,37 @@ class SupplierController {
             sendJSON(res, 500, {
                 success: false,
                 message: 'Error fetching parts: ' + validateInput(error.message)
+            });
+        }
+    }
+
+    //toate comenzile
+    async getAllOrders(req, res, query = {}) {
+        try {
+            setSecurityHeaders(res);
+
+            const sanitizedQuery = {};
+            if (query.supplier_id) {
+                const supplierId = validateInteger(query.supplier_id, 1);
+                if (supplierId) sanitizedQuery.supplier_id = supplierId;
+            }
+            if (query.status) {
+                const status = validateStatus(query.status);
+                if (status) sanitizedQuery.status = status;
+            }
+
+            const orders = await SupplierModel.getAllOrders(sanitizedQuery);
+            const sanitizedOrders = orders.map(sanitizeOrder).filter(o => o !== null);
+
+            sendJSON(res, 200, {
+                success: true,
+                data: sanitizedOrders,
+                total: sanitizedOrders.length
+            });
+        } catch (error) {
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error fetching orders: ' + validateInput(error.message)
             });
         }
     }
@@ -314,7 +315,7 @@ class SupplierController {
             if (!allowedStatuses.includes(data.status)) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Invalid status. Allowed: ' + allowedStatuses.join(', ')
+                    message: 'Invalid status'
                 });
             }
 

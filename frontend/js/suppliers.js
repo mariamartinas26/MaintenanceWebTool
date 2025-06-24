@@ -27,6 +27,15 @@ class OrderManager {
         return true;
     }
 
+    async initializeData() {
+        await Promise.all([
+            this.loadSuppliersFromAPI(),
+            this.loadPartsFromAPI(),
+            this.loadOrdersFromAPI()
+        ]);
+        this.checkForPreselectedPart(); //verific daca am deja o piesa selectata
+    }
+
     sanitizeInput(input) {
         if (typeof input !== 'string') return input;
         return input
@@ -82,7 +91,7 @@ class OrderManager {
         const orderForm = document.getElementById('orderForm');
         if (orderForm) {
             orderForm.addEventListener('submit', (e) => {
-                e.preventDefault(); //sa nu dam refresh
+                e.preventDefault(); //prevent sa nu dam refresh
                 this.saveOrder();
             });
         }
@@ -96,14 +105,7 @@ class OrderManager {
         });
     }
 
-    async initializeData() {
-        await Promise.all([
-            this.loadSuppliersFromAPI(),
-            this.loadPartsFromAPI(),
-            this.loadOrdersFromAPI()
-        ]);
-        this.checkForPreselectedPart(); //verific daca am deja o piesa selectata
-    }
+    //INCARCARE DATE DIN API
 
     async loadSuppliersFromAPI() {
         const response = await fetch('/api/suppliers', {
@@ -117,12 +119,11 @@ class OrderManager {
             this.handleAuthError();
             return;
         }
-
         const result = await response.json();
         if (result.success) {
+            //doar incarcam datele
             this.suppliers = result.data.map(supplier => this.sanitizeObject(supplier));
         }
-
     }
 
     async loadPartsFromAPI() {
@@ -141,6 +142,7 @@ class OrderManager {
 
             const result = await response.json();
             if (result.success) {
+                //doar incarcam datele
                 this.parts = result.data.map(part => this.sanitizeObject(part));
             }
         } catch (error) {
@@ -164,139 +166,11 @@ class OrderManager {
         const result = await response.json();
         if (result.success) {
             this.orders = result.data.map(order => this.sanitizeObject(order));
-            this.loadOrders(); //afisam comenzile
+            this.loadOrders(); //incarcam si afisam comenzile
         }
     }
 
-    async saveOrderToAPI(orderData) {
-        try {
-            const sanitizedData = this.sanitizeObject(orderData);
-
-            const response = await fetch('/api/orders', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(sanitizedData)
-            });
-
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
-            }
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Server error: ${response.status} - ${errorText}`);
-            }
-
-            const result = await response.json();
-            if (result.success) {
-                alert('Order saved successfully!');
-                await this.loadOrdersFromAPI();
-            } else {
-                throw new Error(result.message || 'Failed to save order');
-            }
-        } catch (error) {
-            alert('Error saving order: ' + error.message);
-        }
-    }
-
-    async updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
-        try {
-            const body = {status: this.sanitizeInput(status)};
-
-            if (actualDeliveryDate) {
-                body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
-            }
-
-            const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body)
-            });
-
-            if (response.status === 401) {
-                this.handleAuthError();
-                return;
-            }
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status} - ${errorText}`);
-            }
-
-            const result = await response.json();
-            if (result.success) {
-                await this.loadOrdersFromAPI();
-            } else {
-                throw new Error(result.message || 'Failed to update order status');
-            }
-        } catch (error) {
-            alert('Error updating order status: ' + error.message);
-        }
-    }
-
-
-    saveOrder() {
-        const supplierIdElement = document.getElementById('orderSupplier');
-
-        if (!supplierIdElement) {
-            return;
-        }
-        //furnizorul selectat din dropdown
-        const supplierId = supplierIdElement.value;
-        if (!supplierId) {
-            return;
-        }
-
-        const supplier = this.suppliers.find(s => s.id === parseInt(supplierId));
-        if (!supplier) {
-            return;
-        }
-
-        const orderItems = [];
-        document.querySelectorAll('.order-item').forEach(item => {
-            const partSelect = item.querySelector('.part-select');
-            const quantityInput = item.querySelector('.quantity');
-            const unitPriceInput = item.querySelector('.unit-price');
-
-            const quantity = parseInt(quantityInput?.value);
-            const unitPrice = parseFloat(unitPriceInput?.value);
-            //creez cate un obiect pentru fiecare produs din comanda
-            if (partSelect?.value && quantity && unitPrice) {
-                const selectedPart = this.parts.find(p => p.id === parseInt(partSelect.value));
-                if (selectedPart) {
-                    orderItems.push({
-                        name: selectedPart.name,
-                        part_id: selectedPart.id,
-                        quantity: quantity,
-                        unit_price: unitPrice
-                    });
-                }
-            }
-        });
-
-        if (orderItems.length === 0) {
-            alert('Please add at least one item to the order');
-            return;
-        }
-
-        const expectedDelivery = new Date();
-        expectedDelivery.setDate(expectedDelivery.getDate() + (supplier?.delivery_time_days || 7));
-
-        const orderData = {
-            supplier_id: parseInt(supplierId),
-            items: orderItems,
-            expected_delivery_date: expectedDelivery.toISOString().split('T')[0]
-        };
-
-        this.saveOrderToAPI(orderData);
-        this.closeOrderModal();
-    }
+    //AFISARE COMEZI
 
     loadOrders() {
         const ordersList = document.getElementById('orders-list');
@@ -341,6 +215,7 @@ class OrderManager {
 
         const orderItems = this.createSafeElement('div', 'order-items');
 
+        //mai multe produse comandate
         if (order.items && Array.isArray(order.items) && order.items.length > 0) {
             //afiseaza fiecare piesa din comanda
             order.items.forEach(item => {
@@ -353,7 +228,7 @@ class OrderManager {
                 orderItemDisplay.appendChild(itemPrice);
                 orderItems.appendChild(orderItemDisplay);
             });
-        } else {
+        } else { //un produs comandat
             const orderItemDisplay = this.createSafeElement('div', 'order-item-display');
 
             const productName = order.product_name || 'Order Items';
@@ -400,6 +275,8 @@ class OrderManager {
 
         return orderCard;
     }
+
+    //CREARE COMENZI NOI
 
     openOrderModal() {
         const modal = document.getElementById('orderModal');
@@ -453,11 +330,11 @@ class OrderManager {
             return;
         }
 
-        const orderItem = this.createOrderItemElement();
+        const orderItem = this.createOrder();
         container.appendChild(orderItem);
     }
 
-    createOrderItemElement() {
+    createOrder() {
         const orderItem = this.createSafeElement('div', 'order-item');
         const formRow = this.createSafeElement('div', 'form-row');
 
@@ -519,17 +396,12 @@ class OrderManager {
         return orderItem;
     }
 
-    closeOrderModal() {
-        const modal = document.getElementById('orderModal');
-        if (modal) modal.style.display = 'none';
-    }
-
     //mai adaugam o piesa la order
     addOrderItem() {
         const container = document.getElementById('orderItems');
         if (!container) return;
 
-        const newItem = this.createOrderItemElement();
+        const newItem = this.createOrder();
         container.appendChild(newItem);
     }
 
@@ -537,6 +409,19 @@ class OrderManager {
         const orderItem = button.closest('.order-item');
         if (document.querySelectorAll('.order-item').length > 1) {
             orderItem.remove();
+            this.calculateOrderTotal();
+        }
+    }
+
+    updatePartPrice(selectElement) {
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const price = selectedOption.getAttribute('data-price');//extrag pretul din optiunea selectata
+        const orderItem = selectElement.closest('.order-item');
+        const priceInput = orderItem.querySelector('.unit-price');
+
+        //actualizeaza pretul si recalculeaza totalul
+        if (price && priceInput) {
+            priceInput.value = parseFloat(price).toFixed(2);
             this.calculateOrderTotal();
         }
     }
@@ -557,18 +442,106 @@ class OrderManager {
         }
     }
 
-    updatePartPrice(selectElement) {
-        const selectedOption = selectElement.options[selectElement.selectedIndex];
-        const price = selectedOption.getAttribute('data-price');//extrag pretul din optiunea selectata
-        const orderItem = selectElement.closest('.order-item');
-        const priceInput = orderItem.querySelector('.unit-price');
+    saveOrder() {
+        const supplierIdElement = document.getElementById('orderSupplier');
 
-        //actualizeaza pretul si recalculeaza totalul
-        if (price && priceInput) {
-            priceInput.value = parseFloat(price).toFixed(2);
-            this.calculateOrderTotal();
+        if (!supplierIdElement) {
+            return;
+        }
+        //furnizorul selectat din dropdown
+        const supplierId = supplierIdElement.value;
+        if (!supplierId) {
+            return;
+        }
+
+        const supplier = this.suppliers.find(s => s.id === parseInt(supplierId));
+        if (!supplier) {
+            return;
+        }
+
+        const orderItems = [];
+        document.querySelectorAll('.order-item').forEach(item => {
+            const partSelect = item.querySelector('.part-select');
+            const quantityInput = item.querySelector('.quantity');
+            const unitPriceInput = item.querySelector('.unit-price');
+
+            const quantity = parseInt(quantityInput?.value);
+            const unitPrice = parseFloat(unitPriceInput?.value);
+            //creez cate un obiect pentru fiecare produs din comanda
+            if (partSelect?.value && quantity && unitPrice) {
+                const selectedPart = this.parts.find(p => p.id === parseInt(partSelect.value));
+                if (selectedPart) {
+                    orderItems.push({
+                        name: selectedPart.name,
+                        part_id: selectedPart.id,
+                        quantity: quantity,
+                        unit_price: unitPrice
+                    });
+                }
+            }
+        });
+
+        if (orderItems.length === 0) {
+            alert('Please add at least one item to the order');
+            return;
+        }
+
+        const expectedDelivery = new Date();
+        expectedDelivery.setDate(expectedDelivery.getDate() + (supplier?.delivery_time_days || 7));
+
+        const orderData = {
+            supplier_id: parseInt(supplierId),
+            items: orderItems,
+            expected_delivery_date: expectedDelivery.toISOString().split('T')[0]
+        };
+
+        this.saveOrderToAPI(orderData);
+        this.closeOrderModal();
+    }
+
+    closeOrderModal() {
+        const modal = document.getElementById('orderModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    //SALVAREA COMENZILOR IN API
+
+    async saveOrderToAPI(orderData) {
+        try {
+            const sanitizedData = this.sanitizeObject(orderData);
+
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(sanitizedData)
+            });
+
+            if (response.status === 401) {
+                this.handleAuthError();
+                return;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Order saved successfully!');
+                await this.loadOrdersFromAPI();
+            } else {
+                throw new Error(result.message || 'Failed to save order');
+            }
+        } catch (error) {
+            alert('Error saving order: ' + error.message);
         }
     }
+
+    //UPDATE STATUS LA O COMANDA
 
     updateOrderStatus(orderId) {
         const order = this.orders.find(o => o.id == orderId);
@@ -735,6 +708,45 @@ class OrderManager {
         }
     }
 
+    async updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
+        try {
+            const body = {status: this.sanitizeInput(status)};
+
+            if (actualDeliveryDate) {
+                body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
+            }
+
+            const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (response.status === 401) {
+                this.handleAuthError();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                await this.loadOrdersFromAPI();
+            } else {
+                throw new Error(result.message || 'Failed to update order status');
+            }
+        } catch (error) {
+            alert('Error updating order status: ' + error.message);
+        }
+    }
+
+    //PT COMANDA DIN INVENTORY
+
     checkForPreselectedPart() {
         const urlParams = new URLSearchParams(window.location.search);
         const preselectedPartData = localStorage.getItem('preselectedPart');
@@ -777,6 +789,7 @@ class OrderManager {
         //recalculam total
         this.calculateOrderTotal();
     }
+
 
     formatDate(dateString) {
         return dateString ? new Date(dateString).toLocaleDateString() : 'N/A';

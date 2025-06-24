@@ -282,7 +282,8 @@ class Dashboard {
             }
 
             let vehicleId = appointmentData.vehicleId;
-            //daca avem date pentru un vehicul nou
+
+            //daca nu am selectat un vehicul existent si avem date pentru un vehicul nou
             if (!vehicleId && appointmentData.vehicle_type) {
                 const vehicleData = this.sanitizeObject({
                     vehicle_type: appointmentData.vehicle_type,
@@ -373,6 +374,7 @@ class Dashboard {
             const appointmentsContainer = document.getElementById('appointments-container');
             if (!appointmentsContainer) return;
 
+            //face o cerere la backend
             const response = await fetch('/api/appointments', {
                 headers: {
                     'Authorization': `Bearer ${this.token}`,

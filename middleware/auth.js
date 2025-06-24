@@ -80,7 +80,6 @@ function safeDecodeJWT(token) {
         const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
         return safeJsonParse(decoded);
     } catch (error) {
-        console.error('Error decoding JWT safely:', error);
         return null;
     }
 }
@@ -229,53 +228,6 @@ function verifyToken(req, res, next) {
     }
 }
 
-async function authenticateToken(req, res, next) {
-    try {
-
-        setSecurityHeaders(res);
-
-        await new Promise((resolve, reject) => {
-            verifyToken(req, res, (error) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    resolve();
-                }
-            });
-        });
-
-        if (!req.userId) {
-            const error = new Error('User ID not found after token verification');
-            error.statusCode = 401;
-            return next(error);
-        }
-
-        const user = await User.findById ? await User.findById(req.userId) : null;
-
-        if (!user) {
-            const error = new Error('User not found');
-            error.statusCode = 401;
-            return next(error);
-        }
-
-        req.user = {
-            id: user.id,
-            email: sanitizeInput(user.email || ''),
-            first_name: sanitizeInput(user.first_name || ''),
-            last_name: sanitizeInput(user.last_name || ''),
-            role: sanitizeInput(user.role || ''),
-            phone: sanitizeInput(user.phone || ''),
-            created_at: user.created_at
-        };
-
-        return next();
-
-    } catch (error) {
-        const authError = new Error('Authentication failed');
-        authError.statusCode = 401;
-        return next(authError);
-    }
-}
 
 function validateRole(role, allowedRoles) {
     if (!role || typeof role !== 'string') {
@@ -306,7 +258,7 @@ async function requireAdmin(req, res, next) {
         }
 
 
-        if (!validateRole(user.role, ['admin', 'manager'])) {
+        if (!validateRole(user.role, ['admin'])) {
             const error = new Error('Admin access required');
             error.statusCode = 403;
             return next(error);
@@ -349,7 +301,7 @@ async function requireAccountant(req, res, next) {
         }
 
 
-        if (!validateRole(user.role, ['admin', 'manager', 'accountant'])) {
+        if (!validateRole(user.role, ['accountant'])) {
             const error = new Error('Accountant access required');
             error.statusCode = 403;
             return next(error);
@@ -433,7 +385,6 @@ function getUserIdFromToken(authHeader) {
 
 module.exports = {
     verifyToken,
-    authenticateToken,
     requireAdmin,
     requireAccountant,
     sanitizeInput,

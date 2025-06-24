@@ -47,14 +47,14 @@ class AppointmentController {
             const userId = getUserIdFromToken(req.headers.authorization);
 
             if (!userId) return sendError(res, 401, 'Invalid or missing token');
-
+            //punem body in sanitizedData
             const sanitizedData = sanitizeUserInput(body);
             const validation = validateAppointmentData(sanitizedData);
 
             if (!validation.isValid) {
                 return sendError(res, 400, validation.errors.join(', '));
             }
-
+            //extrag parametrii
             const { date, time, description, vehicleId } = sanitizedData;
 
             const appointmentDateTime = AppointmentController.validateAndCreateDateTime(date, time);
@@ -97,7 +97,6 @@ class AppointmentController {
                 };
 
                 sendCreated(res, { appointment: response }, 'Appointment created successfully!');
-
             } catch (error) {
                 await client.query('ROLLBACK');
                 throw error;
@@ -157,8 +156,9 @@ class AppointmentController {
     static async ensureSlotsExistForDate(date) {
         //verific daca exista deja sloturi pentru acea data
         const existingCount = await CalendarModel.getSlotsNumberForDate(date);
+        //daca avem sloturi iesim din functie
         if (existingCount > 0) return;
-
+        //daca nu avem slots generam
         const requestedDate = new Date(date);
         const dayOfWeek = requestedDate.getDay();
 
