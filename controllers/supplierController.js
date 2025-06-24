@@ -284,57 +284,67 @@ class SupplierController {
         }
     }
 
-    async updateOrderStatus(req, res, data) {
+    async updateOrderStatus(req, res, data, orderId) {
         try {
             setSecurityHeaders(res);
-
-            const orderId = validateInteger(data.orderId, 1);
-            const status = validateStatus(data.status);
-            const notes = validateTextLength(data.notes, 0, 1000);
 
             if (!orderId) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Valid order ID is required'
+                    message: 'Order ID is required'
                 });
             }
 
-            if (!status) {
+            const orderIdInt = validateInteger(orderId, 1);
+            if (!orderIdInt) {
                 return sendJSON(res, 400, {
                     success: false,
-                    message: 'Valid status is required '
+                    message: 'Invalid order ID'
                 });
             }
 
-            let actualDeliveryDate = null;
-            if (data.actual_delivery_date) {
-                const date = new Date(data.actual_delivery_date);
-                if (!isNaN(date.getTime())) {
-                    actualDeliveryDate = data.actual_delivery_date;
-                }
+            if (!data || !data.status) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Status is required'
+                });
             }
 
-            const order = await SupplierModel.updateOrderStatus(orderId, status, actualDeliveryDate, notes);
-            const sanitizedOrder = sanitizeOrder(order);
+            const allowedStatuses = ['ordered', 'in_transit', 'delivered', 'cancelled'];
+            if (!allowedStatuses.includes(data.status)) {
+                return sendJSON(res, 400, {
+                    success: false,
+                    message: 'Invalid status. Allowed: ' + allowedStatuses.join(', ')
+                });
+            }
 
-            sendJSON(res, 200, {
-                success: true,
-                data: sanitizedOrder,
-                message: `Order status updated to ${status} successfully`
-            });
-
-        } catch (error) {
-            if (error.message.includes('not found')) {
-                sendJSON(res, 404, {
+            //verific daca comanda exista
+            const existingOrder = await SupplierModel.getOrderById(orderIdInt);
+            if (!existingOrder) {
+                return sendJSON(res, 404, {
                     success: false,
                     message: 'Order not found'
                 });
-            } else {
-                sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error updating order status: ' + validateInput(error.message)
-                });
             }
+
+            //actualizez statusul
+            const updatedOrder = await SupplierModel.updateOrderStatus(
+                orderIdInt,
+                data.status,
+                data.actual_delivery_date || null
+            );
+
+            sendJSON(res, 200, {
+                success: true,
+                data: updatedOrder,
+                message: 'Order status updated successfully'
+            });
+
+        } catch (error) {
+            sendJSON(res, 500, {
+                success: false,
+                message: 'Error updating order status: ' + validateInput(error.message)
+            });
         }
     }
 }

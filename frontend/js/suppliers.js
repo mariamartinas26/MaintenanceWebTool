@@ -204,31 +204,39 @@ class OrderManager {
     }
 
     async updateOrderStatusAPI(orderId, status, actualDeliveryDate = null) {
-        //creez obiectul cu noul status
-        const body = {status: this.sanitizeInput(status)};
-        if (actualDeliveryDate) {
-            body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
-        }
+        try {
+            const body = {status: this.sanitizeInput(status)};
 
-        const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${this.token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body)
-        });
+            if (actualDeliveryDate) {
+                body.actual_delivery_date = this.sanitizeInput(actualDeliveryDate);
+            }
 
-        if (response.status === 401) {
-            this.handleAuthError();
-            return;
-        }
+            const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body)
+            });
 
-        const result = await response.json();
-        if (result.success) {
-            await this.loadOrdersFromAPI();
-        } else {
-            throw new Error(result.message || 'Failed to update order status');
+            if (response.status === 401) {
+                this.handleAuthError();
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                await this.loadOrdersFromAPI();
+            } else {
+                throw new Error(result.message || 'Failed to update order status');
+            }
+        } catch (error) {
+            alert('Error updating order status: ' + error.message);
         }
     }
 

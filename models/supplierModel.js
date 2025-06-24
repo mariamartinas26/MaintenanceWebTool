@@ -84,6 +84,18 @@ class SupplierModel {
             minimum_stock_level: parseInt(part.minimum_stock_level) || 0
         };
     }
+    static async getOrderById(id) {
+        const query = `
+        SELECT o.*, s.company_name as supplier_name
+        FROM "Orders" o
+        LEFT JOIN "Suppliers" s ON o.supplier_id = s.id
+        WHERE o.id = $1
+    `;
+
+        const result = await pool.query(query, [id]);
+        return result.rows[0] || null;
+    }
+
     static async getAllOrders() {
         const query = `
             SELECT o.*, s.company_name as supplier_name,
@@ -206,32 +218,29 @@ class SupplierModel {
             UPDATE "Orders" SET
                 status = $1,
                 actual_delivery_date = $2,
-                notes = CASE 
-                    WHEN $3 IS NOT NULL THEN 
-                        CONCAT(COALESCE(notes, ''), 
-                               CASE WHEN COALESCE(notes, '') = '' THEN '' ELSE '\n' END, 
-                               $3)
-                    ELSE notes 
-                END,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $4
+            WHERE id = $3
             RETURNING *
         `;
 
-            const values = [status, actualDeliveryDate, notes, orderId];
+            const values = [status, actualDeliveryDate, orderId];
+
             const result = await pool.query(query, values);
 
             if (result.rows.length === 0) {
                 throw new Error(`Order not found`);
             }
 
-            //daca comanda s-a livrat crete stocul
+            const updatedOrder = result.rows[0];
+
+            //daca comanda e livrata updatam stocul
             if (status === 'delivered') {
-                await this.updateInventoryFromOrder(result.rows[0]);
+                await this.updateInventoryFromOrder(updatedOrder);
             }
-
-            return result.rows[0];
-
+            return {
+                ...updatedOrder,
+                total_amount: parseFloat(updatedOrder.total_amount) || 0
+            };
         } catch (error) {
             throw error;
         }

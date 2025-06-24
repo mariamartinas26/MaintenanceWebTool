@@ -61,18 +61,11 @@ async function handleSupplierRoutes(req, res) {
 
         // PUT /api/orders/:id/status
         if (pathname.startsWith('/api/orders/') && pathname.endsWith('/status') && method === 'PUT') {
-            const orderId = pathname.slice(12, -7); //elimin /api/orders/ și /status
+            const pathParts = pathname.split('/');
+            const orderId = pathParts[3];
 
-            if (!orderId || isNaN(parseInt(orderId))) {
-                return securePath.sendJSON(res, 400, {
-                    success: false,
-                    message: 'Invalid order ID'
-                });
-            }
-
-            return await parseBodyAndExecute(req, res, (req, res) => {
-                req.body.orderId = parseInt(orderId);
-                return supplierController.updateOrderStatus(req, res);
+            return await parseBodyAndExecute(req, res, (req, res, data) => {
+                return supplierController.updateOrderStatus(req, res, data, orderId);
             });
         }
         return securePath.sendJSON(res, 404, {
@@ -96,7 +89,6 @@ async function parseBodyAndExecute(req, res, controllerMethod) {
     try {
         let body = '';
 
-        // Citește datele din request stream
         req.on('data', chunk => {
             body += chunk.toString();
         });
@@ -104,15 +96,12 @@ async function parseBodyAndExecute(req, res, controllerMethod) {
         return new Promise((resolve, reject) => {
             req.on('end', async () => {
                 try {
-                    // Parsează JSON-ul
                     const data = body ? JSON.parse(body) : {};
-                    console.log('Parsed request body:', data); // Pentru debugging
 
-                    // Apelează metoda controller-ului cu datele parsate
+                    //apelam metoda din controller
                     await controllerMethod(req, res, data);
                     resolve();
                 } catch (error) {
-                    console.error('Error parsing JSON or executing controller:', error);
                     res.writeHead(400, {'Content-Type': 'application/json'});
                     res.end(JSON.stringify({
                         success: false,
@@ -123,12 +112,10 @@ async function parseBodyAndExecute(req, res, controllerMethod) {
             });
 
             req.on('error', (error) => {
-                console.error('Request error:', error);
                 reject(error);
             });
         });
     } catch (error) {
-        console.error('Parse body error:', error);
         res.writeHead(500, {'Content-Type': 'application/json'});
         res.end(JSON.stringify({
             success: false,
