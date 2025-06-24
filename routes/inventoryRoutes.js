@@ -28,6 +28,7 @@ const requireAdminAccess = async (req, res, next) => {
             role: securePath.sanitizeInput(req.user.role)
         };
 
+        //a rulat cu succes
         next();
     } catch (error) {
         console.error('Admin access denied:', securePath.sanitizeInput(error.message));
@@ -113,8 +114,10 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
     if (path === '/inventory' || path === '/inventory/' || path === '/inventory/dashboard') {
         if (method === 'GET') {
             try {
+                //calea absoluta
                 const inventoryDashboardPath = pathModule.join(__dirname, '../frontend/pages/inventory-dashboard.html');
 
+                //verifica faca exista pe disc
                 if (!fs.existsSync(inventoryDashboardPath)) {
                     return securePath.sendJSON(res, 404, {
                         success: false,
@@ -122,9 +125,12 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
                     });
                 }
 
+                //citeste in memorie, ca un sir de caracyere
                 const html = fs.readFileSync(inventoryDashboardPath, 'utf8');
                 res.writeHead(200, {
+                    //se trmite un document html
                     'Content-Type': 'text/html; charset=utf-8',
+                    //cea mai recenta versine
                     'Cache-Control': 'no-cache'
                 });
                 res.end(html);
@@ -167,7 +173,7 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
     }
 
     if (path.startsWith('/css/') || path.startsWith('/js/')) {
-        return serveStaticFile(req, res, path);
+        return searchStaticFile(req, res, path);
     }
 
     return securePath.sendJSON(res, 404, {
@@ -176,7 +182,7 @@ const handleInventoryPageRoutes = (req, res, path, method) => {
     });
 };
 
-const serveStaticFile = (req, res, path) => {
+const searchStaticFile = (req, res, path) => {
     const fs = require('fs');
     const pathModule = require('path');
 
@@ -190,6 +196,7 @@ const serveStaticFile = (req, res, path) => {
             });
         }
 
+        //informatii despre fisier
         const stat = fs.statSync(fullPath);
         if (!stat.isFile()) {
             return securePath.sendJSON(res, 404, {
@@ -198,6 +205,7 @@ const serveStaticFile = (req, res, path) => {
             });
         }
 
+        //ce contiunt are
         const ext = pathModule.extname(fullPath).toLowerCase();
         const contentTypes = {
             '.html': 'text/html; charset=utf-8',
@@ -216,6 +224,7 @@ const serveStaticFile = (req, res, path) => {
             '.eot': 'application/vnd.ms-fontobject'
         };
 
+        //descarca fisierul
         const contentType = contentTypes[ext] || 'application/octet-stream';
 
         const staticHeaders = {

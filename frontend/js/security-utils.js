@@ -65,47 +65,7 @@ function validateToken(token) {
     return jwtRegex.test(token);
 }
 
-function safeDecodeJWT(token) {
-    try {
-        if (!validateToken(token)) {
-            return null;
-        }
 
-        const parts = token.split('.');
-        const payload = parts[1];
-
-        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-        return safeJsonParse(decoded);
-    } catch (error) {
-        console.error('Error decoding JWT safely:', error);
-        return null;
-    }
-}
-
-function getCurrentUserRole() {
-    try {
-        const userString = localStorage.getItem('user');
-        if (userString) {
-            const userData = safeJsonParse(userString);
-            if (userData && userData.role) {
-                return sanitizeInput(userData.role);
-            }
-        }
-
-        const token = localStorage.getItem('token');
-        if (token) {
-            const payload = safeDecodeJWT(token);
-            if (payload && payload.role) {
-                return sanitizeInput(payload.role);
-            }
-        }
-
-        return null;
-    } catch (error) {
-        console.error('Error getting user role:', error);
-        return null;
-    }
-}
 
 function getCurrentUserName() {
     try {
@@ -130,11 +90,8 @@ function getCurrentUserName() {
 if (typeof window !== 'undefined') {
     window.SecurityUtils = {
         sanitizeInput,
-        safeJsonParse,
         sanitizeObject,
         validateToken,
-        safeDecodeJWT,
-        getCurrentUserRole,
         getCurrentUserName
     };
 }

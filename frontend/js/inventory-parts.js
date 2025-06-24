@@ -46,11 +46,8 @@ class PartsManager {
 
     setupEventListeners() {
         document.getElementById('stockFilter').addEventListener('change', () => this.applyFilters());
-
-        // Modal close buttons
         document.getElementById('partDetailsClose').addEventListener('click', () => this.hidePartDetailsModal());
 
-        // Click outside modal to close
         document.querySelectorAll('.modal').forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
@@ -63,14 +60,6 @@ class PartsManager {
     }
 
     setupNavigationListeners() {
-        const providersLink = document.getElementById('providers-link');
-        if (providersLink) {
-            providersLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.location.href = '/suppliers';
-            });
-        }
-
         const ordersLink = document.getElementById('orders-link');
         if (ordersLink) {
             ordersLink.addEventListener('click', (e) => {
@@ -133,6 +122,7 @@ class PartsManager {
     applyFilters() {
         const stockFilter = this.SecurityUtils.sanitizeInput(document.getElementById('stockFilter').value);
 
+        //copie
         this.filteredParts = [...this.allParts];
 
         switch (stockFilter) {
@@ -150,6 +140,7 @@ class PartsManager {
                 break;
         }
 
+        //sortare alfabetica
         this.filteredParts.sort((a, b) => {
             const aVal = String(a.name || '').toLowerCase();
             const bVal = String(b.name || '').toLowerCase();
@@ -203,16 +194,13 @@ class PartsManager {
             return document.createElement('div');
         }
 
-        // Create main card div
         const partCard = document.createElement('div');
         partCard.className = `part-card ${stockClass}`;
         partCard.dataset.partId = partId;
 
-        // Create header
         const header = document.createElement('div');
         header.className = 'part-card-header';
 
-        // Create title section
         const titleDiv = document.createElement('div');
         titleDiv.className = 'part-title';
 
@@ -224,14 +212,12 @@ class PartsManager {
             const partNumberSpan = document.createElement('span');
             partNumberSpan.className = 'part-number';
             partNumberSpan.textContent = partNumber;
-            //titleDiv.appendChild(partNumberSpan);
         }
 
-        // Create actions section
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'part-actions';
 
-        // View details button
+        //arata detalii la un part
         const viewBtn = document.createElement('button');
         viewBtn.className = 'action-btn';
         viewBtn.title = 'View Details';
@@ -241,7 +227,7 @@ class PartsManager {
         viewIcon.className = 'fas fa-eye';
         viewBtn.appendChild(viewIcon);
 
-        // Order stock button
+        //order parti noi
         const orderBtn = document.createElement('button');
         orderBtn.className = 'action-btn stock';
         orderBtn.title = 'Order More Stock';
@@ -251,7 +237,6 @@ class PartsManager {
         orderIcon.className = 'fas fa-plus-circle';
         orderBtn.appendChild(orderIcon);
 
-        // Assemble everything
         actionsDiv.appendChild(viewBtn);
         actionsDiv.appendChild(orderBtn);
 
@@ -279,8 +264,10 @@ class PartsManager {
             minimumStockLevel: parseInt(part.minimumStockLevel) || 0
         };
 
+        //convert la string ca sa poata fi tinut in local storage
         localStorage.setItem('preselectedPart', JSON.stringify(partData));
 
+        //asteptam ca sa fie incarcat part-ul inainte ca sa fie redirect
         setTimeout(() => {
             window.location.href = '/suppliers?action=new-order&part=' + encodeURIComponent(part.id);
         }, 1000);
@@ -303,7 +290,6 @@ class PartsManager {
         const container = document.getElementById('partsContainer');
         if (!container) return;
 
-        // Clear container
         while (container.firstChild) {
             container.removeChild(container.firstChild);
         }
@@ -311,23 +297,15 @@ class PartsManager {
         const defaultMessage = 'No parts match your current filters.';
         const safeMessage = this.SecurityUtils.sanitizeInput(message || defaultMessage);
 
-        // Create empty state div
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
 
-        // Icon
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-boxes';
-
-        // Title
         const title = document.createElement('h3');
         title.textContent = 'No Parts Found';
 
-        // Message
         const messagePara = document.createElement('p');
         messagePara.textContent = safeMessage;
 
-        // Clear filters button
         const clearBtn = document.createElement('button');
         clearBtn.className = 'btn-secondary';
         clearBtn.addEventListener('click', () => this.clearAllFilters());
@@ -337,7 +315,6 @@ class PartsManager {
         clearBtn.appendChild(clearIcon);
         clearBtn.appendChild(document.createTextNode(' Clear All Filters'));
 
-        emptyState.appendChild(icon);
         emptyState.appendChild(title);
         emptyState.appendChild(messagePara);
         emptyState.appendChild(clearBtn);
@@ -363,6 +340,7 @@ class PartsManager {
                 this.displayPartDetails(sanitizedPart);
                 const modal = document.getElementById('partDetailsModal');
                 if (modal) {
+                    //devine vizibil
                     modal.style.display = 'flex';
                 }
             } else {
@@ -378,16 +356,13 @@ class PartsManager {
         const content = document.getElementById('partDetailsContent');
         if (!content) return;
 
-        // Clear content
         while (content.firstChild) {
             content.removeChild(content.firstChild);
         }
 
-        // Create simple details container
         const detailsContainer = document.createElement('div');
         detailsContainer.className = 'part-details-simple';
 
-        // Create detail items
         const details = [
             {label: 'Name', value: part.name || '', className: ''},
             {label: 'Part Number', value: part.partNumber || 'N/A', className: ''},
@@ -422,7 +397,6 @@ class PartsManager {
             detailsContainer.appendChild(detailItem);
         });
 
-        // Actions
         const actions = document.createElement('div');
         actions.className = 'modal-actions';
 

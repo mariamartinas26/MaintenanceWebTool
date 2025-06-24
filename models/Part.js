@@ -23,16 +23,6 @@ class Part {
         const conditions = [];
         const params = [];
 
-        if (filters.search) {
-            conditions.push(`(
-                LOWER(p.name) LIKE LOWER($${params.length + 1}) OR 
-                LOWER(p.part_number) LIKE LOWER($${params.length + 2}) OR 
-            )`);
-            const searchTerm = `%${filters.search}%`;
-            params.push(searchTerm, searchTerm, searchTerm, searchTerm);
-        }
-
-
         if (filters.available_only) {
             conditions.push(`p.stock_quantity > 0`);
         }

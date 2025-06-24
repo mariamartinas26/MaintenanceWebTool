@@ -121,7 +121,7 @@ class InventoryDashboard {
                 this.updateStatisticsDisplay(this.sanitizeObject(data.statistics));
             }
         } catch (error) {
-            // Handle error silently
+            console.error('Failed to load statistics:', error);
         }
     }
 
@@ -172,6 +172,7 @@ class InventoryDashboard {
                 );
             }
         } catch (error) {
+            console.error('Failed to load categories:', error);
         }
     }
 
@@ -179,12 +180,23 @@ class InventoryDashboard {
         const container = document.getElementById('categoriesGrid');
         if (!container) return;
 
-        const uniqueCategories = [...new Set(parts.map(part => part.category))].filter(Boolean);
+        const uniqueCategories = [];
+        const seenCategories = new Set();
+
+        for (const part of parts) {
+            const categoryName = part.category;
+
+            if (categoryName) {
+                if (!seenCategories.has(categoryName)) {
+                    uniqueCategories.push(categoryName);
+                    seenCategories.add(categoryName);
+                }
+            }
+        }
 
         if (uniqueCategories.length === 0) {
             return;
         }
-
 
         const categoryCounts = {};
         uniqueCategories.forEach(categoryName => {

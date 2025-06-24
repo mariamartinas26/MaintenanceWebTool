@@ -62,8 +62,6 @@ class AuthController {
             'X-Content-Type-Options': 'nosniff',
             'X-Frame-Options': 'DENY',
             'X-XSS-Protection': '1; mode=block',
-            'Referrer-Policy': 'strict-origin-when-cross-origin',
-            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
         };
     }
 
@@ -74,7 +72,6 @@ class AuthController {
 
         const payload = {
             userId: parseInt(userId),
-            user_id: parseInt(userId),
             iat: Math.floor(Date.now() / 1000)
         };
 

@@ -1,7 +1,6 @@
 const url = require('url');
 const AdminAppointmentsController = require('../controllers/adminAppointmentsController');
 const PartsController = require('../controllers/partsController');
-const SupplierController = require('../controllers/supplierController');
 const { verifyToken, requireAdmin } = require('../middleware/auth');
 const SecurePath = require('./SecurePath');
 

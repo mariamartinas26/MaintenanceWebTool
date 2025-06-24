@@ -2,7 +2,6 @@ const { pool } = require('../database/db');
 
 class InventoryModel {
 
-    // Get all parts with stock information
     static async getAllParts() {
         const query = `
             SELECT 
@@ -45,7 +44,6 @@ class InventoryModel {
         }
     }
 
-    // Get single part by ID
     static async getPartById(partId) {
         const query = `
             SELECT 
@@ -94,7 +92,6 @@ class InventoryModel {
         }
     }
 
-    // Get distinct categories
     static async getCategories() {
         const query = `
             SELECT DISTINCT category 
@@ -118,7 +115,6 @@ class InventoryModel {
         }
     }
 
-    // Get inventory statistics
     static async getInventoryStats() {
         const query = `
             SELECT 

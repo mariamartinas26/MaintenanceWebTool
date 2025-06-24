@@ -21,50 +21,6 @@ class SecurePath {
             .replace(/\//g, '&#x2F;');
     }
 
-    validatePath(path) {
-        if (typeof path !== 'string') return null;
-
-        if (path.length > this.maxPathLength) return null;
-
-        const sanitized = this.sanitizeInput(path);
-
-        if (this.hasPathTraversal(sanitized)) return null;
-
-        if (this.hasDangerousCharacters(sanitized)) return null;
-
-        const normalized = this.normalizePath(sanitized);
-
-        return normalized;
-    }
-
-    hasPathTraversal(path) {
-        const dangerousPatterns = [
-            /\.\./g,
-            /~[\/\\]/g,
-            /[\/\\]~[\/\\]/g,
-            /\0/g,
-            /%2e%2e/gi,
-            /%252e%252e/gi,
-            /\.\.%2f/gi,
-            /%c0%ae/gi,
-            /%c1%9c/gi,
-        ];
-
-        return dangerousPatterns.some(pattern => pattern.test(path));
-    }
-
-    hasDangerousCharacters(path) {
-        const dangerousChars = /[<>"|*?:\x00-\x1f\x7f-\x9f]/;
-        return dangerousChars.test(path);
-    }
-
-    normalizePath(path) {
-        return path
-            .replace(/[\/\\]+/g, '/')
-            .replace(/\/$/, '')
-            .toLowerCase();
-    }
-
     validateNumericId(idString) {
         const sanitized = this.sanitizeInput(String(idString));
         const id = parseInt(sanitized, 10);
@@ -76,6 +32,7 @@ class SecurePath {
         return id;
     }
 
+    //curata parametrii url
     sanitizeQuery(query) {
         if (!query || typeof query !== 'object') return {};
 
@@ -97,9 +54,6 @@ class SecurePath {
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('X-Frame-Options', 'DENY');
         res.setHeader('X-XSS-Protection', '1; mode=block');
-        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-        res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     }
 
     sendJSON(res, statusCode, data) {
@@ -108,30 +62,6 @@ class SecurePath {
         res.end(JSON.stringify(data));
     }
 
-
-    getContentType(filePath) {
-        const path = require('path');
-        const ext = path.extname(filePath).toLowerCase();
-
-        const contentTypes = {
-            '.html': 'text/html; charset=utf-8',
-            '.css': 'text/css; charset=utf-8',
-            '.js': 'application/javascript; charset=utf-8',
-            '.json': 'application/json; charset=utf-8',
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.svg': 'image/svg+xml',
-            '.ico': 'image/x-icon',
-            '.woff': 'font/woff',
-            '.woff2': 'font/woff2',
-            '.ttf': 'font/ttf',
-            '.eot': 'application/vnd.ms-fontobject'
-        };
-
-        return contentTypes[ext] || 'application/octet-stream';
-    }
 
     processRequestBody(req, callback) {
         let body = '';
@@ -201,7 +131,6 @@ class SecurePath {
 
         return sanitized;
     }
-
 
 }
 
