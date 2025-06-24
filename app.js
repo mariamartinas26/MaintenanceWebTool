@@ -63,9 +63,6 @@ const server = http.createServer(async (req, res) => {
         else if (pathname === '/accountant/dashboard') {
             await serveFile(res, 'frontend/pages/accountant-dashboard.html', 'text/html');
         }
-        else if (pathname === '/schedule') {
-            await serveFile(res, 'frontend/pages/schedule.html', 'text/html');
-        }
 
         //fisierele statice
         else if (pathname.startsWith('/css/')) {
