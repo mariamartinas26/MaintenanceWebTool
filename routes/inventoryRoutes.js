@@ -85,12 +85,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getInventoryStats(req, res);
         }
 
-        const categoryMatch = path.match(/^\/inventory\/api\/parts\/category\/(.+)$/);
-        if (categoryMatch && method === 'GET') {
-            const sanitizedCategory = securePath.sanitizeInput(decodeURIComponent(categoryMatch[1]));
-            req.params = { category: sanitizedCategory };
-            return InventoryController.getPartsByCategory(req, res);
-        }
 
         const partByIdMatch = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
         if (partByIdMatch && method === 'GET') {
@@ -116,19 +110,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             }
             req.params = { id: partId };
             return InventoryController.updatePartStock(req, res);
-        }
-
-        const deletePartMatch = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
-        if (deletePartMatch && method === 'DELETE') {
-            const partId = securePath.validateNumericId(deletePartMatch[1]);
-            if (!partId) {
-                return securePath.sendJSON(res, 400, {
-                    success: false,
-                    message: 'Invalid part ID'
-                });
-            }
-            req.params = { id: partId };
-            return InventoryController.deletePart(req, res);
         }
 
         return securePath.sendJSON(res, 404, {

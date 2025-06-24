@@ -120,10 +120,6 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             return PartsController.getAllParts(req, res);
         }
 
-        if (path === '/admin/api/parts/categories' && method === 'GET') {
-            return PartsController.getCategories(req, res);
-        }
-
         if (path.match(/^\/admin\/api\/parts\/(\d+)$/) && method === 'GET') {
             const matches = path.match(/^\/admin\/api\/parts\/(\d+)$/);
             const partId = securePath.validateNumericId(matches[1]);
@@ -137,9 +133,6 @@ const handleAdminApiRoutes = (req, res, path, method) => {
             return PartsController.getPartById(req, res);
         }
 
-        if (path === '/admin/api/orders' && method === 'GET') {
-            return SupplierController.getAllOrders(req, res, req.query);
-        }
 
         return securePath.sendJSON(res, 404, {
             success: false,
@@ -176,24 +169,6 @@ const handleAdminPageRoutes = (req, res, path, method) => {
                 return securePath.sendJSON(res, 500, {
                     success: false,
                     message: 'Error loading admin dashboard'
-                });
-            }
-        }
-    }
-
-    if (path === '/admin/login') {
-        if (method === 'GET') {
-            try {
-                const loginPath = pathModule.join(__dirname, '../frontend/pages/login.html');
-
-                const html = fs.readFileSync(loginPath, 'utf8');
-                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(html);
-                return;
-            } catch (error) {
-                return securePath.sendJSON(res, 500, {
-                    success: false,
-                    message: 'Error loading login page'
                 });
             }
         }

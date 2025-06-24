@@ -414,38 +414,7 @@ class AdminAppointmentsController {
         }
     }
 
-    static async getLowStockParts(req, res) {
-        try {
-            setSecurityHeaders(res);
 
-            const lowStockParts = await Part.getLowStockParts();
-
-            const sanitizedParts = lowStockParts.map(part => ({
-                ...part,
-                name: validateInput(part.name),
-                part_number: validateInput(part.part_number),
-                category: validateInput(part.category),
-                description: validateInput(part.description),
-                stock_quantity: validateInteger(part.stock_quantity, 0),
-                min_stock_level: validateInteger(part.min_stock_level, 0)
-            }));
-
-            sendJSON(res, 200, {
-                success: true,
-                message: 'Low stock parts loaded successfully',
-                parts: sanitizedParts,
-                count: sanitizedParts.length
-            });
-
-        } catch (error) {
-            console.error('Error in getLowStockParts:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Error loading low stock parts',
-                error: process.env.NODE_ENV === 'development' ? validateInput(error.message) : undefined
-            });
-        }
-    }
 }
 
 module.exports = AdminAppointmentsController;

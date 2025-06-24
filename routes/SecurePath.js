@@ -93,40 +93,6 @@ class SecurePath {
         return sanitized;
     }
 
-    validateFileExtension(filePath) {
-        const path = require('path');
-        const ext = path.extname(filePath).toLowerCase();
-        return this.allowedExtensions.includes(ext);
-    }
-
-    validateDirectory(filePath, allowedDirectory) {
-        const path = require('path');
-
-        const resolvedPath = path.resolve(filePath);
-        const resolvedAllowedDir = path.resolve(allowedDirectory);
-
-        return resolvedPath.startsWith(resolvedAllowedDir);
-    }
-
-    validateFile(filePath) {
-        const fs = require('fs');
-
-        try {
-            if (!fs.existsSync(filePath)) return { valid: false, error: 'File not found' };
-
-            const stat = fs.statSync(filePath);
-            if (!stat.isFile()) return { valid: false, error: 'Not a file' };
-
-            if (stat.size > this.maxFileSize) {
-                return { valid: false, error: 'File too large' };
-            }
-
-            return { valid: true, size: stat.size };
-        } catch (error) {
-            return { valid: false, error: 'File access error' };
-        }
-    }
-
     setSecurityHeaders(res) {
         res.setHeader('X-Content-Type-Options', 'nosniff');
         res.setHeader('X-Frame-Options', 'DENY');
@@ -142,62 +108,6 @@ class SecurePath {
         res.end(JSON.stringify(data));
     }
 
-    serveStaticFile(req, res, filePath, baseDirectory) {
-        const fs = require('fs');
-        const path = require('path');
-
-        const validatedPath = this.validatePath(filePath);
-        if (!validatedPath) {
-            return this.sendJSON(res, 400, {
-                success: false,
-                message: 'Invalid file path'
-            });
-        }
-
-        const fullPath = path.join(baseDirectory, validatedPath);
-
-        if (!this.validateDirectory(fullPath, baseDirectory)) {
-            return this.sendJSON(res, 403, {
-                success: false,
-                message: 'Access denied'
-            });
-        }
-
-        if (!this.validateFileExtension(fullPath)) {
-            return this.sendJSON(res, 403, {
-                success: false,
-                message: 'File type not allowed'
-            });
-        }
-
-        const fileValidation = this.validateFile(fullPath);
-        if (!fileValidation.valid) {
-            return this.sendJSON(res, 404, {
-                success: false,
-                message: fileValidation.error
-            });
-        }
-
-        try {
-            const contentType = this.getContentType(fullPath);
-            const fileContent = fs.readFileSync(fullPath);
-
-            this.setSecurityHeaders(res);
-            res.writeHead(200, {
-                'Content-Type': contentType,
-                'Content-Length': fileValidation.size,
-                'Cache-Control': 'public, max-age=3600'
-            });
-
-            res.end(fileContent);
-        } catch (error) {
-            console.error('Error serving file:', this.sanitizeInput(error.message || ''));
-            return this.sendJSON(res, 500, {
-                success: false,
-                message: 'Error serving file'
-            });
-        }
-    }
 
     getContentType(filePath) {
         const path = require('path');
@@ -292,42 +202,7 @@ class SecurePath {
         return sanitized;
     }
 
-    extractPathParams(path, pattern) {
-        const matches = path.match(pattern);
-        if (!matches) return null;
 
-        const params = {};
-
-        if (matches.length > 1) {
-            const id = this.validateNumericId(matches[1]);
-            if (!id) return null;
-            params.id = id;
-        }
-
-        return params;
-    }
-
-    validateRequest(req) {
-        const url = require('url');
-
-        const parsedUrl = url.parse(req.url, true);
-
-        const validatedPath = this.validatePath(parsedUrl.pathname);
-        if (!validatedPath) {
-            throw new Error('Invalid request path');
-        }
-
-        const sanitizedQuery = this.sanitizeQuery(parsedUrl.query);
-
-        const sanitizedMethod = this.sanitizeInput(req.method);
-
-        return {
-            path: validatedPath,
-            query: sanitizedQuery,
-            method: sanitizedMethod,
-            originalUrl: req.url
-        };
-    }
 }
 
 module.exports = SecurePath;

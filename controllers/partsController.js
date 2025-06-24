@@ -142,31 +142,6 @@ class PartsController {
         }
     }
 
-    static async getCategories(req, res) {
-        try {
-            setSecurityHeaders(res);
-
-            const categories = await Part.getCategories();
-
-            const sanitizedCategories = categories.map(category => ({
-                id: category.id,
-                name: validateInput(category.name),
-                count: validateInteger(category.count, 0, 100000)
-            }));
-
-            sendJSON(res, 200, {
-                success: true,
-                categories: sanitizedCategories
-            });
-
-        } catch (error) {
-            console.error('Error in getCategories:', error);
-            sendJSON(res, 500, {
-                success: false,
-                message: 'Error loading categories'
-            });
-        }
-    }
 }
 
 module.exports = PartsController;
