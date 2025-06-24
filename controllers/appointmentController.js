@@ -8,6 +8,7 @@ const { validateAppointmentData, sanitizeUserInput } = require('../utils/validat
 class AppointmentController {
     static async getAppointments(req, res) {
         try {
+
             const userId = getUserIdFromToken(req.headers.authorization);
             if (!userId) return sendError(res, 401, 'Invalid or missing token');
 
@@ -19,20 +20,21 @@ class AppointmentController {
                 id: row.id,
                 date: row.appointment_date.toISOString().split('T')[0],
                 time: row.appointment_date.toTimeString().slice(0, 5),
-                status: validateInput(row.status),
+                status: row.status,
                 serviceType: 'general',
-                description: validateInput(row.problem_description),
-                adminResponse: validateInput(row.admin_response),
+                description: row.problem_description,
+                adminResponse: row.admin_response,
                 estimatedPrice: row.estimated_price,
-                estimatedCompletionTime: validateInput(row.estimated_completion_time),
+                estimatedCompletionTime: row.estimated_completion_time,
                 createdAt: row.created_at,
                 vehicle: row.vehicle_type ? {
-                    type: validateInput(row.vehicle_type),
-                    brand: validateInput(row.brand),
-                    model: validateInput(row.model),
-                    year: validateInteger(row.year)
+                    type: row.vehicle_type,
+                    brand: row.brand,
+                    model: row.model,
+                    year: row.year
                 } : null
             }));
+
             sendSuccess(res, { appointments: formattedAppointments }, 'Appointments loaded successfully');
         } catch (error) {
             sendError(res, 500, 'Error getting appointments: ' + validateInput(error.message));
@@ -89,8 +91,8 @@ class AppointmentController {
                     id: newAppointment.id,
                     date: newAppointment.appointment_date.toISOString().split('T')[0],
                     time: newAppointment.appointment_date.toTimeString().slice(0, 5),
-                    status: validateInput(newAppointment.status),
-                    description: validateInput(newAppointment.problem_description),
+                    status: newAppointment.status,
+                    description: newAppointment.problem_description,
                     createdAt: newAppointment.created_at
                 };
 
@@ -109,7 +111,11 @@ class AppointmentController {
     }
 
     static validateAndCreateDateTime(date, time) {
-        const appointmentDateTime = new Date(`${date}`);
+        const withoutSec = time.includes(':') && time.split(':').length === 3
+            ? time.substring(0, 5)  //elimin secundele
+            : time;
+
+        const appointmentDateTime = new Date(`${date}T${withoutSec}:00`);
 
         //returneaza true daca nu e un nr valid
         if (isNaN(appointmentDateTime.getTime())) {
