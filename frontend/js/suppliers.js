@@ -326,32 +326,6 @@ class OrderManager {
 
     createOrderCard(order) {
         const totalAmount = parseFloat(order.total_amount);
-
-        let productName = 'Order Items';
-        let quantity = 1;
-
-        //numele profusului
-        for (const key of Object.keys(order)) {
-            const value = order[key];
-            if (typeof value === 'string' && value.length > 2 &&
-                !['status', 'notes'].includes(key) &&
-                !key.includes('date') && !key.includes('id') &&
-                !key.includes('supplier') && !key.includes('amount')) {
-                productName = value;
-                break;
-            }
-        }
-        //cantitatea
-        for (const key of Object.keys(order)) {
-            const value = order[key];
-            if (typeof value === 'number' && value > 0 && value < 1000 && !key.includes('amount') && !key.includes('id')) {
-                quantity = value;
-                break;
-            }
-        }
-        //pretul per bucata
-        const unitPrice = quantity > 0 ? totalAmount / quantity : totalAmount;
-
         const orderCard = this.createSafeElement('div', `order-card ${order.status || ''}`);
 
         //header comanda
@@ -365,21 +339,38 @@ class OrderManager {
         //order supplier
         const orderSupplier = this.createSafeElement('p', 'order-supplier', `Supplier: ${order.supplier_name}`);
 
-        //order items
         const orderItems = this.createSafeElement('div', 'order-items');
-        const orderItemDisplay = this.createSafeElement('div', 'order-item-display');
 
-        const itemName = this.createSafeElement('span', '', `${productName} (${quantity}x)`);
-        const itemPrice = this.createSafeElement('span', '', `RON ${(quantity * unitPrice).toFixed(2)}`);
+        if (order.items && Array.isArray(order.items) && order.items.length > 0) {
+            //afiseaza fiecare piesa din comanda
+            order.items.forEach(item => {
+                const orderItemDisplay = this.createSafeElement('div', 'order-item-display');
 
-        orderItemDisplay.appendChild(itemName);
-        orderItemDisplay.appendChild(itemPrice);
-        orderItems.appendChild(orderItemDisplay);
+                const itemName = this.createSafeElement('span', '', `${item.name} (${item.quantity}x)`);
+                const itemPrice = this.createSafeElement('span', '', `RON ${(item.quantity * item.unit_price).toFixed(2)}`);
+
+                orderItemDisplay.appendChild(itemName);
+                orderItemDisplay.appendChild(itemPrice);
+                orderItems.appendChild(orderItemDisplay);
+            });
+        } else {
+            const orderItemDisplay = this.createSafeElement('div', 'order-item-display');
+
+            const productName = order.product_name || 'Order Items';
+            const quantity = order.product_quantity || 1;
+
+            const itemName = this.createSafeElement('span', '', `${productName} (${quantity}x)`);
+            const itemPrice = this.createSafeElement('span', '', `RON ${totalAmount.toFixed(2)}`);
+
+            orderItemDisplay.appendChild(itemName);
+            orderItemDisplay.appendChild(itemPrice);
+            orderItems.appendChild(orderItemDisplay);
+        }
 
         //order total
         const orderTotal = this.createSafeElement('div', 'order-total', `Total: RON ${totalAmount.toFixed(2)}`);
 
-        //orddar date
+        //order date
         const orderDate = this.createSafeElement('div', 'order-date', `Ordered: ${this.formatDate(order.order_date)}`);
 
         let deliveryDate = null;
@@ -587,7 +578,9 @@ class OrderManager {
         this.openOrderStatusModal(orderId);
     }
 
+    //modal pt update order status
     openOrderStatusModal(orderId) {
+        //gaseste comanda
         const order = this.orders.find(o => o.id == orderId);
         if (!order) return;
 
@@ -597,7 +590,7 @@ class OrderManager {
 
         const modalContent = this.createSafeElement('div', 'modal-content');
 
-        // Modal header
+        //header
         const modalHeader = this.createSafeElement('div', 'modal-header');
         const h2 = this.createSafeElement('h2', '', 'Update Order Status');
         const closeBtn = this.createSafeElement('span', 'close-modal', '×');
@@ -606,23 +599,23 @@ class OrderManager {
         modalHeader.appendChild(h2);
         modalHeader.appendChild(closeBtn);
 
-        // Modal body
+        //body
         const modalBody = this.createSafeElement('div', 'modal-body');
 
-        // Order info
+        //info
         const orderInfo = this.createSafeElement('div', 'order-info');
         const orderIdP = this.createSafeElement('p');
         const orderIdStrong = this.createSafeElement('strong', '', `Order #${order.id}`);
         orderIdP.appendChild(orderIdStrong);
 
-        const supplierP = this.createSafeElement('p', '', `Supplier: ${order.supplier_name || 'N/A'}`);
+        const supplierP = this.createSafeElement('p', '', `Supplier: ${order.supplier_name}`);
         const currentP = this.createSafeElement('p', '', `Current: ${(order.status || 'ordered').toUpperCase()}`);
 
         orderInfo.appendChild(orderIdP);
         orderInfo.appendChild(supplierP);
         orderInfo.appendChild(currentP);
 
-        // Form
+        //actualizare status form
         const form = document.createElement('form');
         form.id = 'orderStatusForm';
 
@@ -631,7 +624,6 @@ class OrderManager {
         hiddenInput.id = 'statusOrderId';
         hiddenInput.value = String(order.id);
 
-        // Status select group
         const statusGroup = this.createSafeElement('div', 'form-group');
         const statusLabel = this.createSafeElement('label', '', 'New Status:');
         statusLabel.setAttribute('for', 'newStatus');
@@ -653,6 +645,7 @@ class OrderManager {
             {value: 'cancelled', label: 'Cancelled'}
         ];
 
+        //afisam doar statusurile diferite de cel actual
         statuses.filter(s => s.value !== order.status).forEach(status => {
             const option = document.createElement('option');
             option.value = status.value;
@@ -663,7 +656,7 @@ class OrderManager {
         statusGroup.appendChild(statusLabel);
         statusGroup.appendChild(statusSelect);
 
-        // Delivery date group (initially hidden)
+        //delivery date
         const deliveryDateGroup = this.createSafeElement('div', 'form-group');
         deliveryDateGroup.id = 'deliveryDateGroup';
         deliveryDateGroup.style.display = 'none';
@@ -680,7 +673,6 @@ class OrderManager {
         deliveryDateGroup.appendChild(deliveryLabel);
         deliveryDateGroup.appendChild(deliveryInput);
 
-        // Form actions
         const formActions = this.createSafeElement('div', 'form-actions');
         const cancelBtn = this.createSafeElement('button', 'btn secondary-btn', 'Cancel');
         cancelBtn.type = 'button';
@@ -706,7 +698,6 @@ class OrderManager {
 
         document.body.appendChild(modal);
 
-        // Event listeners
         statusSelect.addEventListener('change', (e) => {
             const deliveryDateGroup = document.getElementById('deliveryDateGroup');
             deliveryDateGroup.style.display = e.target.value === 'delivered' ? 'block' : 'none';
@@ -752,120 +743,39 @@ class OrderManager {
             try {
                 const partData = JSON.parse(preselectedPartData);
                 localStorage.removeItem('preselectedPart');
-                setTimeout(() => this.openOrderModalWithPreselectedPart(partData), 500);
+                setTimeout(() => this.modalWithPreselectedPart(partData), 500);
             } catch (error) {
                 localStorage.removeItem('preselectedPart');
             }
         }
     }
 
-    openOrderModalWithPreselectedPart(partData) {
-        const modal = document.getElementById('orderModal');
-        const supplierSelect = document.getElementById('orderSupplier');
+    modalWithPreselectedPart(partData) {
+        this.openOrderModal();
+        setTimeout(() => {
+            this.preselectPartInModal(partData);
+        }, 100);
+    }
 
-        if (!modal || !supplierSelect || !this.parts?.length) return;
+    preselectPartInModal(partData) {
+        const partSelect = document.querySelector('.order-item .part-select');
+        if (!partSelect) return;
 
-        // Clear and populate supplier select safely
-        while (supplierSelect.firstChild) {
-            supplierSelect.removeChild(supplierSelect.firstChild);
-        }
+        //selectam piesa
+        partSelect.value = String(partData.id);
 
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        this.safeSetText(defaultOption, 'Select Supplier');
-        supplierSelect.appendChild(defaultOption);
+        //pretul pt piesa selectata
+        this.updatePartPrice(partSelect);
 
-        this.suppliers.forEach(supplier => {
-            const option = document.createElement('option');
-            option.value = String(supplier.id);
-            this.safeSetText(option, supplier.company_name || supplier.name || '');
-            supplierSelect.appendChild(option);
-        });
-
-        const orderForm = document.getElementById('orderForm');
-        if (orderForm) orderForm.reset();
-
-        const orderItems = document.getElementById('orderItems');
-        if (orderItems) {
-            // Clear existing content safely
-            while (orderItems.firstChild) {
-                orderItems.removeChild(orderItems.firstChild);
-            }
-
-            const orderItem = this.createSafeElement('div', 'order-item');
-            const formRow = this.createSafeElement('div', 'form-row');
-
-            // Part select group with preselected part
-            const partGroup = this.createSafeElement('div', 'form-group');
-            const partSelect = document.createElement('select');
-            partSelect.className = 'part-select';
-            partSelect.required = true;
-            partSelect.onchange = () => this.updatePartPrice(partSelect);
-
-            const defaultPartOption = document.createElement('option');
-            defaultPartOption.value = '';
-            this.safeSetText(defaultPartOption, 'Select Part');
-            partSelect.appendChild(defaultPartOption);
-
-            this.parts.forEach(part => {
-                const option = document.createElement('option');
-                option.value = String(part.id);
-                option.setAttribute('data-price', String(part.price));
-                if (part.id === partData.id) {
-                    option.selected = true;
-                }
-                this.safeSetText(option, `${part.name} - RON ${parseFloat(part.price).toFixed(2)}`);
-                partSelect.appendChild(option);
-            });
-
-            partGroup.appendChild(partSelect);
-
-            // Quantity group with suggested quantity
-            const quantityGroup = this.createSafeElement('div', 'form-group');
-            const quantityInput = document.createElement('input');
-            quantityInput.type = 'number';
-            quantityInput.placeholder = 'Quantity';
-            quantityInput.className = 'quantity';
-            quantityInput.min = '1';
-            quantityInput.required = true;
-            quantityInput.onchange = () => this.calculateOrderTotal();
-
-            const suggestedQuantity = Math.max(1, (partData.minimumStockLevel || 10) - (partData.stockQuantity || 0));
+        //cantitate sugerata ca sa avem cel putin nivelul minim de stoc
+        const quantityInput = partSelect.closest('.order-item').querySelector('.quantity');
+        if (quantityInput) {
+            const suggestedQuantity = Math.max(1, (partData.minimumStockLevel) - (partData.stockQuantity || 0));
             quantityInput.value = String(suggestedQuantity);
-
-            quantityGroup.appendChild(quantityInput);
-
-            // Unit price group with preselected price
-            const priceGroup = this.createSafeElement('div', 'form-group');
-            const priceInput = document.createElement('input');
-            priceInput.type = 'number';
-            priceInput.placeholder = 'Unit Price';
-            priceInput.className = 'unit-price';
-            priceInput.step = '0.01';
-            priceInput.min = '0';
-            priceInput.required = true;
-            priceInput.readOnly = true;
-
-            const preselectedPrice = parseFloat(partData.price || 0).toFixed(2);
-            priceInput.value = preselectedPrice;
-
-            priceGroup.appendChild(priceInput);
-
-            // Remove button
-            const removeBtn = this.createSafeElement('button', 'btn danger-btn', 'Remove');
-            removeBtn.type = 'button';
-            removeBtn.onclick = () => this.removeOrderItem(removeBtn);
-
-            formRow.appendChild(partGroup);
-            formRow.appendChild(quantityGroup);
-            formRow.appendChild(priceGroup);
-            formRow.appendChild(removeBtn);
-            orderItem.appendChild(formRow);
-            orderItems.appendChild(orderItem);
         }
 
+        //recalculam total
         this.calculateOrderTotal();
-        modal.style.display = 'flex';
     }
 
     formatDate(dateString) {
@@ -885,11 +795,9 @@ class OrderManager {
     }
 }
 
-// Initialize
 const orderManager = new OrderManager();
 document.addEventListener('DOMContentLoaded', () => orderManager.init());
 
-// Global functions for HTML onclick events
 function openOrderModal() {
     orderManager.openOrderModal();
 }
@@ -900,10 +808,6 @@ function closeOrderModal() {
 
 function addOrderItem() {
     orderManager.addOrderItem();
-}
-
-function removeOrderItem(button) {
-    orderManager.removeOrderItem(button);
 }
 
 function saveOrder() {
