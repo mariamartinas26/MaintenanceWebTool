@@ -27,17 +27,11 @@ class Part {
             conditions.push(`(
                 LOWER(p.name) LIKE LOWER($${params.length + 1}) OR 
                 LOWER(p.part_number) LIKE LOWER($${params.length + 2}) OR 
-                LOWER(p.description) LIKE LOWER($${params.length + 3}) OR
-                LOWER(p.category) LIKE LOWER($${params.length + 4})
             )`);
             const searchTerm = `%${filters.search}%`;
             params.push(searchTerm, searchTerm, searchTerm, searchTerm);
         }
 
-        if (filters.category) {
-            conditions.push(`p.category = $${params.length + 1}`);
-            params.push(filters.category);
-        }
 
         if (filters.available_only) {
             conditions.push(`p.stock_quantity > 0`);

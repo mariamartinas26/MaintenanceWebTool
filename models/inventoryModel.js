@@ -45,47 +45,6 @@ class InventoryModel {
         }
     }
 
-    // Get parts by category
-    static async getPartsByCategory(category) {
-        const query = `
-            SELECT 
-                p.id,
-                p.name,
-                p.description,
-                p.part_number,
-                p.category,
-                p.price,
-                p.stock_quantity,
-                p.minimum_stock_level,
-                p.supplier_id,
-                s.company_name as supplier_name,
-                CASE 
-                    WHEN p.stock_quantity <= p.minimum_stock_level THEN true 
-                    ELSE false 
-                END as is_low_stock,
-                p.created_at,
-                p.updated_at
-            FROM "Parts" p
-            LEFT JOIN "Suppliers" s ON p.supplier_id = s.id
-            WHERE p.category = $1
-            ORDER BY p.name ASC
-        `;
-
-        try {
-            const result = await pool.query(query, [category]);
-            return {
-                success: true,
-                data: result.rows
-            };
-        } catch (error) {
-            console.error('Error fetching parts by category:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-
     // Get single part by ID
     static async getPartById(partId) {
         const query = `
@@ -166,8 +125,7 @@ class InventoryModel {
                 COUNT(*) as total_parts,
                 COUNT(CASE WHEN stock_quantity <= minimum_stock_level THEN 1 END) as low_stock_count,
                 SUM(stock_quantity * price) as total_inventory_value,
-                COUNT(DISTINCT category) as total_categories,
-                AVG(price) as average_price
+                COUNT(DISTINCT category) as total_categories
             FROM "Parts"
         `;
 

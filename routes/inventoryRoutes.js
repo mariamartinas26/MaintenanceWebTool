@@ -85,7 +85,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getInventoryStats(req, res);
         }
 
-
         const partByIdMatch = path.match(/^\/inventory\/api\/parts\/(\d+)$/);
         if (partByIdMatch && method === 'GET') {
             const partId = securePath.validateNumericId(partByIdMatch[1]);
@@ -99,18 +98,6 @@ const handleInventoryApiRoutes = (req, res, path, method) => {
             return InventoryController.getPartById(req, res);
         }
 
-        const stockUpdateMatch = path.match(/^\/inventory\/api\/parts\/(\d+)\/stock$/);
-        if (stockUpdateMatch && method === 'PUT') {
-            const partId = securePath.validateNumericId(stockUpdateMatch[1]);
-            if (!partId) {
-                return securePath.sendJSON(res, 400, {
-                    success: false,
-                    message: 'Invalid part ID'
-                });
-            }
-            req.params = { id: partId };
-            return InventoryController.updatePartStock(req, res);
-        }
 
         return securePath.sendJSON(res, 404, {
             success: false,

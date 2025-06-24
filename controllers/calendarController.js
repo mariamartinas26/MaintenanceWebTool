@@ -1,6 +1,6 @@
 const CalendarModel = require('../models/calendarModel');
 const { sendSuccess, sendError } = require('../utils/response');
-const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+const { sanitizeInput, setSecurityHeaders } = require('../middleware/auth');
 
 function validateInput(input) {
     if (typeof input !== 'string') return input;

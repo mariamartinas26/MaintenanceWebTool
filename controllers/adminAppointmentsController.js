@@ -1,7 +1,7 @@
 const AdminAppointment = require('../models/AdminAppointment');
 const AppointmentParts = require('../models/AppointmentParts');
 const Part = require('../models/Part');
-const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+const { sanitizeInput,  setSecurityHeaders } = require('../middleware/auth');
 
 function validateInput(input) {
     if (typeof input !== 'string') return input;

@@ -46,12 +46,9 @@ class PartsManager {
 
     setupEventListeners() {
         document.getElementById('stockFilter').addEventListener('change', () => this.applyFilters());
-        document.getElementById('stockUpdateForm').addEventListener('submit', (e) => this.handleStockUpdate(e));
 
         // Modal close buttons
         document.getElementById('partDetailsClose').addEventListener('click', () => this.hidePartDetailsModal());
-        document.getElementById('stockUpdateClose').addEventListener('click', () => this.hideStockUpdateModal());
-        document.getElementById('stockUpdateCancel').addEventListener('click', () => this.hideStockUpdateModal());
 
         // Click outside modal to close
         document.querySelectorAll('.modal').forEach(modal => {
@@ -150,7 +147,6 @@ class PartsManager {
                 break;
             case 'all':
             default:
-                // Show all parts, no filtering needed
                 break;
         }
 
@@ -451,51 +447,6 @@ class PartsManager {
         content.appendChild(actions);
     }
 
-
-    async handleStockUpdate(e) {
-        e.preventDefault();
-
-        const partId = this.SecurityUtils.sanitizeInput(document.getElementById('updatePartId').value);
-        const operation = this.SecurityUtils.sanitizeInput(document.getElementById('stockOperation').value);
-        const quantityInput = document.getElementById('stockQuantity').value;
-        const reasonInput = document.getElementById('stockReason').value;
-
-        const quantity = parseInt(quantityInput);
-        const reason = this.SecurityUtils.sanitizeInput(reasonInput.trim());
-
-        if (!quantity || quantity <= 0 || isNaN(quantity)) {
-            return;
-        }
-
-        if (!['add', 'subtract', 'set'].includes(operation)) {
-            return;
-        }
-
-        try {
-            const headers = this.getAuthHeaders();
-            if (!headers) return;
-
-            const response = await fetch(`/inventory/api/parts/${encodeURIComponent(partId)}/stock`, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify({
-                    quantity,
-                    operation,
-                    reason
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.hideStockUpdateModal();
-                await this.loadParts();
-            }
-        } catch (error) {
-            console.error('Error updating stock:', error);
-        }
-    }
-
     hidePartDetailsModal() {
         const modal = document.getElementById('partDetailsModal');
         if (modal) {
@@ -503,13 +454,6 @@ class PartsManager {
         }
     }
 
-    hideStockUpdateModal() {
-        const modal = document.getElementById('stockUpdateModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        this.updatePartId = null;
-    }
 
     hideAllModals() {
         document.querySelectorAll('.modal').forEach(modal => {

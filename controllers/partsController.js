@@ -1,5 +1,5 @@
 const Part = require('../models/Part');
-const { sanitizeInput, safeJsonParse, setSecurityHeaders } = require('../middleware/auth');
+const { sanitizeInput,  setSecurityHeaders } = require('../middleware/auth');
 
 function validateInput(input) {
     if (typeof input !== 'string') return input;
@@ -16,22 +16,6 @@ function validateInteger(input, min = 0, max = Number.MAX_SAFE_INTEGER) {
     const num = parseInt(input);
     if (isNaN(num) || num < min || num > max) return null;
     return num;
-}
-
-function validateCategory(category) {
-    if (!category || typeof category !== 'string') return null;
-    const cleanCategory = sanitizeInput(category.trim());
-    if (cleanCategory.length > 100 || cleanCategory.length < 1) return null;
-    if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanCategory)) return null;
-    return cleanCategory;
-}
-
-function validateSearchTerm(search) {
-    if (!search || typeof search !== 'string') return null;
-    const cleanSearch = sanitizeInput(search.trim());
-    if (cleanSearch.length > 100 || cleanSearch.length < 1) return null;
-    if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanSearch)) return null;
-    return cleanSearch;
 }
 
 function sanitizePart(part) {
@@ -65,21 +49,9 @@ class PartsController {
     static async getAllParts(req, res) {
         try {
             setSecurityHeaders(res);
-
-            const search = validateSearchTerm(req.query.search);
-            const category = validateCategory(req.query.category);
             const availableOnly = req.query.available_only === 'true';
 
             const filters = {};
-
-            if (search) {
-                filters.search = search;
-            }
-
-            if (category && category !== 'all') {
-                filters.category = category;
-            }
-
             if (availableOnly) {
                 filters.available_only = true;
             }
