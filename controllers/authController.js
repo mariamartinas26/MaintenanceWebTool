@@ -72,8 +72,8 @@ class AuthController {
 
         const options = {
             expiresIn: '30d',
-            issuer: 'your-app-name',
-            audience: 'your-app-users'
+            issuer: 'MaT',
+            audience: 'service-client'
         };
 
         return jwt.sign(payload, secret, options);
