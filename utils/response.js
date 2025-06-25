@@ -1,8 +1,8 @@
 /**
- * Trimite răspuns JSON
+ * Sends JSON response
  * @param {Object} res - Response object
- * @param {number} statusCode - Codul de status HTTP
- * @param {Object} data - Datele de trimis
+ * @param {number} statusCode - HTTP status code
+ * @param {Object} data - Data to send
  */
 function sendJSON(res, statusCode, data) {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
@@ -10,10 +10,10 @@ function sendJSON(res, statusCode, data) {
 }
 
 /**
- * Trimite răspuns de succes
+ * Sends success response
  * @param {Object} res - Response object
- * @param {Object} data - Datele de trimis
- * @param {string} message - Mesajul de succes
+ * @param {Object} data - Data to send
+ * @param {string} message - Success message
  */
 function sendSuccess(res, data = {}, message = 'Success') {
     sendJSON(res, 200, {
@@ -24,11 +24,11 @@ function sendSuccess(res, data = {}, message = 'Success') {
 }
 
 /**
- * Trimite răspuns de eroare
+ * Sends error response
  * @param {Object} res - Response object
- * @param {number} statusCode - Codul de eroare
- * @param {string} message - Mesajul de eroare
- * @param {Object} errors - Erorile de validare (opțional)
+ * @param {number} statusCode - Error status code
+ * @param {string} message - Error message
+ * @param {Object} errors - Validation errors (optional)
  */
 function sendError(res, statusCode, message, errors = null) {
     const response = {
@@ -44,20 +44,20 @@ function sendError(res, statusCode, message, errors = null) {
 }
 
 /**
- * Trimite răspuns pentru cerere invalidă (400)
+ * Sends bad request response (400)
  * @param {Object} res - Response object
- * @param {string} message - Mesajul de eroare
- * @param {Object} errors - Erorile de validare (opțional)
+ * @param {string} message - Error message
+ * @param {Object} errors - Validation errors (optional)
  */
 function sendBadRequest(res, message = 'Bad Request', errors = null) {
     sendError(res, 400, message, errors);
 }
 
 /**
- * Trimite răspuns pentru resursă creată
+ * Sends created resource response
  * @param {Object} res - Response object
- * @param {Object} data - Datele de trimis
- * @param {string} message - Mesajul de succes
+ * @param {Object} data - Data to send
+ * @param {string} message - Success message
  */
 function sendCreated(res, data = {}, message = 'Created successfully') {
     sendJSON(res, 201, {
@@ -68,36 +68,36 @@ function sendCreated(res, data = {}, message = 'Created successfully') {
 }
 
 /**
- * Trimite răspuns de unauthorized
+ * Sends unauthorized response
  * @param {Object} res - Response object
- * @param {string} message - Mesajul de eroare
+ * @param {string} message - Error message
  */
 function sendUnauthorized(res, message = 'Unauthorized') {
     sendError(res, 401, message);
 }
 
 /**
- * Trimite răspuns de forbidden
+ * Sends forbidden response
  * @param {Object} res - Response object
- * @param {string} message - Mesajul de eroare
+ * @param {string} message - Error message
  */
 function sendForbidden(res, message = 'Forbidden') {
     sendError(res, 403, message);
 }
 
 /**
- * Trimite răspuns de not found
+ * Sends not found response
  * @param {Object} res - Response object
- * @param {string} message - Mesajul de eroare
+ * @param {string} message - Error message
  */
 function sendNotFound(res, message = 'Not Found') {
     sendError(res, 404, message);
 }
 
 /**
- * Trimite răspuns de server error
+ * Sends server error response
  * @param {Object} res - Response object
- * @param {string} message - Mesajul de eroare
+ * @param {string} message - Error message
  */
 function sendServerError(res, message = 'Internal server error') {
     sendError(res, 500, message);
@@ -109,8 +109,6 @@ module.exports = {
     sendError,
     sendBadRequest,
     sendCreated,
-    sendUnauthorized,
-    sendForbidden,
     sendNotFound,
     sendServerError
 };
