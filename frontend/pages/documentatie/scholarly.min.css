@@ -73,7 +73,35 @@ footer {
     margin: 20px 0;
     text-align: center;
 }
+.diagram-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
 
+.diagram-item {
+    text-align: center;
+}
+
+.diagram-item h4 {
+    margin: 10px 0;
+    color: #34495e;
+    font-size: 1.1em;
+}
+
+.imag {
+    text-align: center;
+    margin: 10px 0;
+}
+
+.uml {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-s
+}
 .interface img {
     max-width: 100%;
     height: auto;

@@ -170,7 +170,6 @@ class LoginManager {
                     if (user && typeof user === 'object' && user.role) {
                         this.redirectUser(user);
                     } else {
-                        console.log('Invalid user data, clearing auth');
                         this.clearAuthData();
                     }
                 } catch (parseError) {

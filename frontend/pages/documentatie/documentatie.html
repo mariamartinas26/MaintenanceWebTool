@@ -131,20 +131,50 @@
     </ul>
 
 
-    <h3>3.2 Funcțiile produsului</h3>
+    <h3>3.2 Arhitectura sistemului - Diagrame C4</h3>
     <p>
-      Utilizatorul poate accesa paginile Statistics, News, Nominations și Register:
+      Pentru a ilustra arhitectura aplicației Maintenance Web Tool, am utilizat modelul de diagramare C4
+      care oferă o perspectivă ierarhică asupra sistemului, de la contextul general până la
+      detaliile de implementare. Diagramele C4 (Context, Container, Component, Code) permit
+      o înțelegere graduală a structurii aplicației de gestionare a programărilor pentru service-ul de motociclete, biciclete și trotinete.
     </p>
-    <div class="imag">
-      <img class="uml" src="view/umldiagramsag.png" typeof="sa:image" alt="Diagrama UML a paginilor aplicației (SAG Awards)">
+
+    <div class="diagram-grid">
+      <div class="diagram-item">
+        <h4>Context Diagram (C1)</h4>
+        <div class="imag">
+          <img class="uml" src="C1.png" typeof="sa:image" alt="Diagrama C1 - Context">
+        </div>
+      </div>
+
+      <div class="diagram-item">
+        <h4>Container Diagram (C2)</h4>
+        <div class="imag">
+          <img class="uml" src="C2.png" typeof="sa:image" alt="Diagrama C2 - Container">
+        </div>
+      </div>
+
+      <div class="diagram-item">
+        <h4>Component Diagram (C3)</h4>
+        <div class="imag">
+          <img class="uml" src="C3.png.jpg" typeof="sa:image" alt="Diagrama C3 - Component">
+        </div>
+      </div>
+
+      <div class="diagram-item">
+        <h4>Code Diagram (C4)</h4>
+        <div class="imag">
+          <img class="uml" src="C4.png" typeof="sa:image" alt="Diagrama C4 - Code">
+        </div>
+      </div>
     </div>
+
     <p>
-      În cadrul acestora, ne vom folosi de două baze de date pentru preluarea datelor despre actori, filme și
-      nominalizările lor (SAG Awards și TheMovieDB) și o bază de date pentru memorarea utilizatorilor:
+      Diagrama de context (C1) prezintă sistemul Maintenance Web Tool în relație cu utilizatorii (clienți, administratori, manageri, contabili) și
+      sistemele externe. Diagrama de containere (C2) detaliază componentele principale ale aplicației web și baza de date PostgreSQL.
+      Diagrama de componente (C3) explorează structura internă a aplicației Node.js, iar diagrama de cod (C4) oferă detalii despre
+      implementarea claselor și metodelor cheie pentru gestionarea programărilor și inventarului.
     </p>
-    <div class="imag">
-      <img class="uml" src="view/databaseUml.png" typeof="sa:image" alt="Diagrama UML a bazelor de date">
-    </div>
 
     <h3>3.3 Clasele și caracteristicile utilizatorilor</h3>
     <p>
@@ -382,9 +412,9 @@
           <span property="schema:givenName"><a href="https://github.com/rick4470">rick4470</a></span>
         </span>
       </li>
-      <li typeof="schema:WebPage" resource="https://www.draw.io/index.html" property="schema:citation">
+      <li typeof="schema:WebPage" resource="https://www.mermaidchart.com/" property="schema:citation">
         <cite property="schema:name">
-          <a href="https://www.draw.io/index.html">Creare diagrame draw.io</a>
+          <a href="https://www.mermaidchart.com//index.html">Creare diagrame C4 cu mermaid chart</a>
         </cite>
       </li>
     </ul>

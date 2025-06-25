@@ -223,21 +223,6 @@ class RegisterManager {
             return false;
         }
 
-        if (data.company_name && data.company_name.length > 100) {
-            this.showMessage('Company name is too long', 'error');
-            return false;
-        }
-
-        if (data.message && data.message.length > 1000) {
-            this.showMessage('Message is too long', 'error');
-            return false;
-        }
-
-        if (data.experience_years && (data.experience_years < 0 || data.experience_years > 50)) {
-            this.showMessage('Experience years must be between 0 and 50', 'error');
-            return false;
-        }
-
         return true;
     }
 
