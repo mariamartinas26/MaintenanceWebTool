@@ -42,6 +42,10 @@ function sendNotFound(res, message = 'Not Found') {
 function sendServerError(res, message = 'Internal server error') {
     sendError(res, 500, message);
 }
+
+function sendUnauthorized(res, message = 'Unauthorized') {
+    sendError(res, 401, message);
+}
 module.exports = {
     sendJSON,
     sendSuccess,
@@ -49,5 +53,6 @@ module.exports = {
     sendBadRequest,
     sendCreated,
     sendNotFound,
-    sendServerError
+    sendServerError,
+    sendUnauthorized
 };
