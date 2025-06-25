@@ -186,6 +186,11 @@ main {
     line-height: 1.5;
 }
 
+.or-divider {
+    text-align: center;
+    margin: 10px 0;
+}
+
 .form-group {
     margin-bottom: 20px;
 }

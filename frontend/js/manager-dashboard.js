@@ -274,6 +274,7 @@ class ManagerDashboard {
                 assignRoleSelect.value = request.role;
             }
         }
+        //dropdown cu rolurile disponibile
         this.showModal(this.approveModal);
     }
 

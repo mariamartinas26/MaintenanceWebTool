@@ -187,10 +187,9 @@ class ImportExportController {
         }
     }
 
-
     static parseCSV(csvData) {
         try {
-            //iau textul CSV il impart pe linii fara spatii si linii goale
+            //iau textul il impart pe linii fara spatii si linii goale
             const lines = csvData.trim().split('\n').filter(line => line.trim());
 
             //prima linie contine header-ele
@@ -360,7 +359,6 @@ class ImportExportController {
         }
     }
 
-
     //functia care face efectiv importul in bd
     static async processImport(dataType, data, userId) {
         const results = {
@@ -402,7 +400,7 @@ class ImportExportController {
         if (!validation.isValid) {
             throw new Error(`Validation error`);
         }
-
+        //extrag parametriii
         const {company_name, contact_person, email, phone, address, delivery_time_days} = item;
 
         //verific daca exista deja

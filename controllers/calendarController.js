@@ -116,8 +116,6 @@ class CalendarController {
             sendSuccess(res, result, 'Available slots loaded successfully');
 
         } catch (error) {
-            console.error('Error in getAvailableSlots:', error);
-
             if (error.message.includes('Date is necessary') ||
                 error.message.includes('You can not schedule an appointment in the past') ||
                 error.message.includes('Date too far in the future')) {

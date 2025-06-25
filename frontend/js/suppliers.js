@@ -283,7 +283,7 @@ class OrderManager {
         const supplierSelect = document.getElementById('orderSupplier');
 
         if (!modal || !supplierSelect) return;
-
+        //daca nu avem piese disponibile nu facem comada
         if (!this.parts?.length) {
             return;
         }
@@ -296,7 +296,7 @@ class OrderManager {
         defaultOption.value = '';
         this.safeSetText(defaultOption, 'Select Supplier');
         supplierSelect.appendChild(defaultOption);
-        //populeaza dropdown
+        //populeaza dropdown furnizori
         this.suppliers.forEach(supplier => {
             const option = document.createElement('option');
             option.value = String(supplier.id);
@@ -307,11 +307,11 @@ class OrderManager {
         const orderForm = document.getElementById('orderForm');
         if (orderForm) orderForm.reset();
 
+        //creeaza sectiunea cu piese
         const orderItems = document.getElementById('orderItems');
         if (orderItems) {
-            this.populateOrderItems(orderItems);//dropdown cu piese
+            this.populateOrderItems(orderItems); //creez primul rand de comanda
         }
-
         this.calculateOrderTotal();
         modal.style.display = 'flex';
     }
@@ -331,7 +331,7 @@ class OrderManager {
         }
 
         const orderItem = this.createOrder();
-        container.appendChild(orderItem);
+        container.appendChild(orderItem); //adaugam itemul in container
     }
 
     createOrder() {
@@ -360,7 +360,7 @@ class OrderManager {
 
         partGroup.appendChild(partSelect);
 
-        //cantitatea
+        //input pt cantitate
         const quantityGroup = this.createSafeElement('div', 'form-group');
         const quantityInput = document.createElement('input');
         quantityInput.type = 'number';
@@ -371,6 +371,7 @@ class OrderManager {
         quantityInput.onchange = () => this.calculateOrderTotal();
         quantityGroup.appendChild(quantityInput);
 
+        //input pt pred (readonly)
         const priceGroup = this.createSafeElement('div', 'form-group');
         const priceInput = document.createElement('input');
         priceInput.type = 'number';
@@ -387,11 +388,11 @@ class OrderManager {
         removeBtn.type = 'button';
         removeBtn.onclick = () => this.removeOrderItem(removeBtn);
 
-        formRow.appendChild(partGroup);
-        formRow.appendChild(quantityGroup);
-        formRow.appendChild(priceGroup);
-        formRow.appendChild(removeBtn);
-        orderItem.appendChild(formRow);
+        formRow.appendChild(partGroup); //dropdown piese
+        formRow.appendChild(quantityGroup); //input cantitate
+        formRow.appendChild(priceGroup); //input pret
+        formRow.appendChild(removeBtn); //buton remove
+        orderItem.appendChild(formRow); //toate in rand
 
         return orderItem;
     }
@@ -442,6 +443,7 @@ class OrderManager {
         }
     }
 
+    //construim un array cu toate datele unei comenzi si trimitem la saveOrderAPI
     saveOrder() {
         const supplierIdElement = document.getElementById('orderSupplier');
 
@@ -458,7 +460,7 @@ class OrderManager {
         if (!supplier) {
             return;
         }
-
+        //construim un array cu toate piesele din comanda
         const orderItems = [];
         document.querySelectorAll('.order-item').forEach(item => {
             const partSelect = item.querySelector('.part-select');
