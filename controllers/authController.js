@@ -2,7 +2,7 @@ const User = require('../models/User');
 const AccountRequest = require('../models/AccountRequest');
 const jwt = require('jsonwebtoken');
 const { validateRegisterData } = require('../utils/validation');
-const { sendCreated, sendBadRequest, sendServerError, sendSuccess } = require('../utils/response');
+const { sendCreated, sendBadRequest, sendServerError, sendSuccess, sendUnauthorized } = require('../utils/response');
 const { sanitizeInput, setSecurityHeaders } = require('../middleware/auth');
 
 class AuthController {
@@ -55,16 +55,6 @@ class AuthController {
         if (/<script|javascript:|on\w+\s*=|data:/i.test(cleanText)) return null;
         return cleanText;
     }
-
-    getSecurityHeaders() {
-        return {
-            'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self';",
-            'X-Content-Type-Options': 'nosniff',
-            'X-Frame-Options': 'DENY',
-            'X-XSS-Protection': '1; mode=block',
-        };
-    }
-
     generateToken(userId) {
         if (!userId || isNaN(userId) || userId <= 0) {
             throw new Error('Invalid user ID for token generation');
@@ -180,42 +170,18 @@ class AuthController {
             const password = this.validatePassword(body.password);
 
             if (!email || !password) {
-                res.writeHead(400, {
-                    'Content-Type': 'application/json',
-                    ...this.getSecurityHeaders()
-                });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Valid email and password are required'
-                }));
-                return;
+                return sendBadRequest(res, 'Valid email and password are required');
             }
 
             if (email.length > 254 || password.length > 128) {
-                res.writeHead(400, {
-                    'Content-Type': 'application/json',
-                    ...this.getSecurityHeaders()
-                });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Email or password too long'
-                }));
-                return;
+                return sendBadRequest(res, 'Email or password too long');
             }
             //cautam utilizatorul in bd
             const user = await User.findByEmail(email);
 
             if (!user) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                res.writeHead(401, {
-                    'Content-Type': 'application/json',
-                    ...this.getSecurityHeaders()
-                });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Invalid credentials'
-                }));
-                return;
+                return sendUnauthorized(res, 'Invalid credentials');
             }
             //verificarea parolei
             const bcrypt = require('bcryptjs');
@@ -223,33 +189,16 @@ class AuthController {
 
             if (!isValidPassword) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                res.writeHead(401, {
-                    'Content-Type': 'application/json',
-                    ...this.getSecurityHeaders()
-                });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'Invalid credentials'
-                }));
-                return;
+                return sendUnauthorized(res, 'Invalid credentials');
             }
 
             if (!user.id || user.id <= 0) {
-                res.writeHead(500, {
-                    'Content-Type': 'application/json',
-                    ...this.getSecurityHeaders()
-                });
-                res.end(JSON.stringify({
-                    success: false,
-                    message: 'User account error'
-                }));
-                return;
+                return sendServerError(res, 'User account error');
             }
             //genram token ul
             const token = this.generateToken(user.id);
             //pregatim raspunsul pt frontend
-            const responseData = {
-                success: true,
+            sendSuccess(res, {
                 token: token,
                 user: {
                     id: user.id,
@@ -258,22 +207,10 @@ class AuthController {
                     last_name: this.validateInput(user.last_name),
                     role: this.validateInput(user.role)
                 }
-            };
-            res.writeHead(200, {
-                'Content-Type': 'application/json',
-                ...this.getSecurityHeaders()
-            });
-            res.end(JSON.stringify(responseData));
+            }, 'Login successful');
 
         } catch (error) {
-            res.writeHead(500, {
-                'Content-Type': 'application/json',
-                ...this.getSecurityHeaders()
-            });
-            res.end(JSON.stringify({
-                success: false,
-                message: 'Server error'
-            }));
+            return sendServerError(res, 'Server error');
         }
     }
 }
